@@ -42,4 +42,5 @@ yog.check(actor="alice", action="delete", resource="database1")
 
 ## License
 
-TBD
+MIT, see [LICENSE](LICENSE)
+
