@@ -1,0 +1,301 @@
+# ================================================================
+# GROUP A — admin-only delete
+# (examples.md Ex1, more_examples.md Ex1, Real_world_examples.md #2
+#  — these three were the SAME use case, written 3 different times)
+# ================================================================
+fact role(a_agent, developer)
+fact role(a_admin,  admin)
+
+allow can_delete(User, DB):
+    role(User, admin)
+
+query can_delete(a_agent, database_1)
+query can_delete(a_admin, database_1)
+
+
+# ================================================================
+# GROUP B — role + environment (examples.md Ex2, my_examples.md Ex3)
+# my_examples.md used role "release_manager" instead of "developer" —
+# same pattern, different role name, so shown once, noted once.
+# ================================================================
+fact role(b_agent, developer)
+fact environment(database_2, staging)
+fact environment(database_1, production)   # reuse fact, harmless with new name below
+fact environment(payments_service, protected)
+
+allow can_deploy(User, DB):
+    role(User, developer)
+    environment(DB, staging)
+
+query can_deploy(b_agent, database_2)   # staging  -> expect TRUE
+query can_deploy(b_agent, payments_service)   # not staging -> FALSE
+
+
+# ================================================================
+# GROUP C — ownership-based (examples.md Ex3)
+# ================================================================
+fact owner(c_database_1, finance)
+fact member(c_finance_user, finance)
+
+allow can_modify(User, DB):
+    owner(DB, Team)
+    member(User, Team)
+
+query can_modify(c_finance_user, c_database_1)
+
+
+# ================================================================
+# GROUP D — combined AND policy (examples.md Ex4)
+# NOTE: this is a DIFFERENT rule than Group A (all 3 conditions
+# required, not just role), so it needs its own predicate name —
+# reusing "can_delete" here would silently OR with Group A's rule
+# and let any admin through regardless of environment/owner.
+# ================================================================
+fact role(d_admin, admin)
+fact environment(d_database_1, production)
+fact owner(d_database_1, finance)
+
+allow can_delete_prod(User, DB):
+    role(User, admin)
+    environment(DB, production)
+    owner(DB, finance)
+
+query can_delete_prod(d_admin, d_database_1)
+
+
+# ================================================================
+# GROUP E — read a file (more_examples.md Ex2)
+# Original had a typo predicate `sensitivity(...)` unused in the
+# rule — fine to drop, since the rule never referenced it. Kept a
+# clean version: admin-only read.
+# ================================================================
+fact role(e_agent, analyst)
+fact sensitivity(passwd_file, high)
+
+allow can_read(User, File):
+    role(User, admin)
+
+query can_read(e_agent, passwd_file)
+
+
+# ================================================================
+# GROUP F — send email (more_examples.md Ex3)
+# BUG in the original: `internal(Domain)` was written as if
+# "internal" were a predicate name, but "internal" is a VALUE.
+# Correct form: domain(Address, internal).
+# ================================================================
+fact role(f_agent, support)
+fact domain(external_addr, external)
+fact domain(internal_addr, internal)
+
+allow can_send_email(User, Address):
+    role(User, admin)
+
+allow can_send_email(User, Address):
+    role(User, support)
+    domain(Address, internal)
+
+query can_send_email(f_agent, external_addr)   # support + external -> DENY-able (FALSE)
+query can_send_email(f_agent, internal_addr)   # support + internal -> TRUE
+
+
+# ================================================================
+# GROUP G — modify configuration (more_examples.md Ex4)
+# ================================================================
+fact role(g_agent, devops)
+fact environment(app_yaml, staging)
+fact service(app_yaml, core)
+
+allow can_update_config(User, File):
+    role(User, admin)
+
+allow can_update_config(User, File):
+    role(User, devops)
+    environment(File, staging)
+
+query can_update_config(g_agent, app_yaml)
+
+
+# ================================================================
+# GROUP H — create a user (more_examples.md Ex5)
+# Original passed the department itself as the "resource" — kept
+# that shape; department(Dept, Classification) is the schema fact.
+# ================================================================
+fact role(h_agent, hr_bot)
+fact department(engineering, technical)
+fact department(facilities, non_technical)
+
+allow can_create_user(User, Dept):
+    role(User, admin)
+
+allow can_create_user(User, Dept):
+    role(User, hr_bot)
+    department(Dept, non_technical)
+
+query can_create_user(h_agent, engineering)     # technical dept -> DENY
+query can_create_user(h_agent, facilities)      # non_technical  -> ALLOW
+
+
+# ================================================================
+# GROUP I — transfer money, canonical version
+# (Real_world_examples.md #1 banking example, and
+#  more_examples.md Ex6, ARE the same use case: role + amount limit.
+#  Real_world's version is strictly better — per-user limit as a
+#  FACT rather than a hardcoded number baked into the rule — so
+#  that's the one to standardize on.)
+# ================================================================
+fact role(i_customer, customer)
+fact transfer_limit(i_customer, 10000)
+fact account(i_acct_999, active)
+fact amount(i_placeholder_acct, 0)         # placeholder so amount/2 is a known
+                                            # predicate -- MUST use a key that
+                                            # can never collide with a real
+                                            # account, or it silently satisfies
+                                            # any Amt <= Limit check for free
+
+allow can_transfer(User, Account):
+    role(User, finance_admin)
+
+allow can_transfer(User, Account):
+    transfer_limit(User, Limit)
+    amount(Account, Amt)
+    Amt <= Limit
+
+# amount is per-request context — this is why check() supports
+# injecting extra facts just for one query (see yog.py: `context=`)
+# NOTE: this one can't use `query` like the others above, because
+# the amount being transferred isn't known until request time.
+# Verify with check() + injected context instead:
+#
+#   from yog import load_policy, Atom, Const
+#   eng = load_policy("all_examples.yog")
+#   eng.check("i_customer", "can_transfer", "i_acct_999",
+#             context=[Atom("amount", [Const("i_acct_999"), Const(9000)])])
+#   -> ALLOW   (9000 <= limit 10000)
+#   eng.check("i_customer", "can_transfer", "i_acct_999",
+#             context=[Atom("amount", [Const("i_acct_999"), Const(50000)])])
+#   -> DENY    (50000 > limit 10000)
+
+
+# ================================================================
+# GROUP J — run a shell command (more_examples.md Ex8)
+# ================================================================
+fact role(j_agent, dev_agent)
+fact command(rm_rf, destructive)
+fact environment(j_host, production)
+fact sandboxed(j_sandboxed_agent)
+fact safe_command(ls_command)
+
+allow can_run_command(User, Cmd):
+    role(User, admin)
+
+allow can_run_command(User, Cmd):
+    sandboxed(User)
+    safe_command(Cmd)
+
+query can_run_command(j_agent, rm_rf)                    # not admin, not sandboxed -> DENY
+query can_run_command(j_sandboxed_agent, ls_command)     # sandboxed + safe -> ALLOW
+
+
+# ================================================================
+# GROUP K — upload a file (more_examples.md Ex9)
+# The original conflated "bucket" and "file" as if one resource —
+# they're two separate things, so the bucket a file is headed to
+# is modeled as its own fact, `destination`.
+# ================================================================
+fact role(k_agent, analyst)
+fact bucket(prod_bucket, production)
+fact bucket(stage_bucket, staging)
+fact file_type(report_pdf, confidential)
+fact file_type(notes_txt, non_confidential)
+fact destination(report_pdf, prod_bucket)
+fact destination(notes_txt, stage_bucket)
+
+allow can_upload(User, File):
+    role(User, admin)
+
+allow can_upload(User, File):
+    role(User, analyst)
+    destination(File, Bucket)
+    bucket(Bucket, staging)
+    file_type(File, non_confidential)
+
+query can_upload(k_agent, report_pdf)    # confidential + prod -> DENY
+query can_upload(k_agent, notes_txt)     # non_confidential + staging -> ALLOW
+
+
+# ================================================================
+# GROUP L — access an API (more_examples.md Ex7)
+# Domain used directly as the resource, as the original did.
+# ================================================================
+fact role(l_agent, researcher)
+fact domain(allowed_api, allowed_research)
+fact domain(blocked_api, external)
+
+allow can_call_api(User, Domain):
+    role(User, admin)
+
+allow can_call_api(User, Domain):
+    role(User, researcher)
+    domain(Domain, allowed_research)
+
+query can_call_api(l_agent, allowed_api)
+query can_call_api(l_agent, blocked_api)
+
+
+# ================================================================
+# GROUP M/N/O/P/Q — my_examples.md
+# All five are the SAME shape as groups already shown (single-role
+# gate on a resource): delete_file~=GroupA/E, cloud-deploy~=GroupB,
+# sensitive-file-read~=GroupE, external-API~=GroupL. Only the
+# ROLE NAME required differs, so one compact block covers all of
+# them instead of repeating the identical pattern five times.
+# ================================================================
+fact role(m_agent, developer)
+fact role(n_agent, developer)
+fact role(o_agent, developer)
+fact role(p_agent, analyst)
+fact role(q_agent, support_bot)
+
+allow can_delete_file(User, File):
+    role(User, admin)
+
+allow can_modify_admin(User, DB):
+    role(User, database_admin)
+
+allow can_deploy_release(User, Service):
+    role(User, release_manager)
+
+allow can_read_sensitive(User, File):
+    role(User, finance)
+
+allow can_call_payment(User, Endpoint):
+    role(User, payment_admin)
+
+query can_delete_file(m_agent, config_yaml)      # all DENY: none of
+query can_modify_admin(n_agent, database_1)      # these agents hold
+query can_deploy_release(o_agent, payments_svc)  # the required role
+query can_read_sensitive(p_agent, payroll_csv)
+query can_call_payment(q_agent, refund_endpoint)
+
+
+# ================================================================
+# GROUP R — override pattern (syntax_explanation.md)
+# "Employees can access documents, EXCEPT confidential ones."
+# This was described only conceptually in the source file with
+# invented "Rule 2 overrides Rule 1" language. You don't need any
+# override mechanism for this — it's exactly what deny/allow with
+# fixed deny > allow precedence already gives you for free.
+# ================================================================
+fact employee(r_alice)
+fact confidential(payroll_doc)
+
+allow can_access(User, Doc):
+    employee(User)
+
+deny can_access(User, Doc):
+    employee(User)
+    confidential(Doc)
+
+query can_access(r_alice, normal_doc)     # employee, not confidential -> ALLOW
+query can_access(r_alice, payroll_doc)    # employee, but confidential -> DENY
