@@ -161,3 +161,79 @@ The following checks were completed successfully in the team repository:
 - Execution of the supplied example policy file
 
 These results validate the tested packaging and authorization workflows. They do not represent complete automated test-suite coverage.
+
+## Command-Line Demo (CLI)
+
+The YOG CLI provides a simple way to run authorization checks against a `.yog` policy file without writing additional Python code.
+
+### Requirements
+
+- Python 3.10 or later
+- The YOG Engine repository
+- The existing `all_examples.yog` policy file
+
+### 1. Install the package
+
+From the repository root, run:
+
+```powershell
+python -m pip install -e .
+```
+
+### 2. Display CLI help
+
+```powershell
+python .\yog_cli.py --help
+```
+
+### 3. Run the predefined demo
+
+```powershell
+python .\yog_cli.py --demo
+```
+
+The demo checks four authorization scenarios: an administrator deleting a database, a developer attempting the same action, and deployment requests to permitted and restricted resources.
+
+### 4. Run a custom authorization check
+
+```powershell
+python .\yog_cli.py --actor a_admin --action can_delete --resource database_1
+```
+
+The CLI displays the decision, reason, and evaluation trace.
+
+### 5. Display the full evaluation trace
+
+```powershell
+python .\yog_cli.py --actor a_admin --action can_delete --resource database_1 --trace
+```
+
+### 6. Select another policy file
+
+```powershell
+python .\yog_cli.py --policy path\to\policy.yog --demo
+```
+
+Replace the path with the location of your policy file.
+
+### 7. Run the CLI regression tests
+
+```powershell
+python -m unittest discover -s tests -v
+```
+
+The current CLI test suite covers help output, demo decisions, custom authorization checks, and missing policy files.
+
+### CLI options
+
+| Option | Purpose |
+|---|---|
+| `--policy` | Select the policy file |
+| `--actor` | Specify the requesting actor |
+| `--action` | Specify the action to check |
+| `--resource` | Specify the target resource |
+| `--trace` | Display the detailed result and trace |
+| `--demo` | Run predefined authorization examples |
+| `--help` | Display usage instructions |
+
+**Note:** This CLI is a demonstration interface for the Python reference engine. It does not yet provide integration with the C library.
