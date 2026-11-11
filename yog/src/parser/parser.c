@@ -128,33 +128,38 @@ static YogParseStatus parse_atom(Parser *p, YogAtom *out)
     if (status != YOG_PARSE_OK) return status;
     status = expect(p, TOK_LPAREN, "'('", NULL);
     if (status != YOG_PARSE_OK) return status;
-    if (!match(p, TOK_RPAREN)) {
-        for (;;) {
-            YogTerm term;
-            status = parse_term(p, &term);
-            if (status != YOG_PARSE_OK) { free(terms); return status; }
-            if (count == capacity) {
-                size_t next = capacity == 0 ? 4 : capacity * 2;
-                YogTerm *grown;
-                if (next < capacity || next > SIZE_MAX / sizeof(*grown)) {
-                    free(terms); return set_error(p, &pred, YOG_PARSE_OUT_OF_MEMORY, "Too many atom arguments");
-                }
-                grown = realloc(terms, next * sizeof(*grown));
-                if (grown == NULL) { free(terms); return set_error(p, &pred, YOG_PARSE_OUT_OF_MEMORY, "Out of memory parsing atom"); }
-                terms = grown; capacity = next;
-            }
-            terms[count++] = term;
-            if (!match(p, TOK_COMMA)) break;
-        }
-        status = expect(p, TOK_RPAREN, "')'", NULL);
+    for (;;) {
+        YogTerm term;
+        status = parse_term(p, &term);
         if (status != YOG_PARSE_OK) { free(terms); return status; }
+        if (count == capacity) {
+            size_t next = capacity == 0 ? 4 : capacity * 2;
+            YogTerm *grown;
+            if (next < capacity || next > SIZE_MAX / sizeof(*grown)) {
+                free(terms); return set_error(p, &pred, YOG_PARSE_OUT_OF_MEMORY, "Too many atom arguments");
+            }
+            grown = realloc(terms, next * sizeof(*grown));
+            if (grown == NULL) { free(terms); return set_error(p, &pred, YOG_PARSE_OUT_OF_MEMORY, "Out of memory parsing atom"); }
+            terms = grown; capacity = next;
+        }
+        terms[count++] = term;
+        if (!match(p, TOK_COMMA)) break;
     }
+    status = expect(p, TOK_RPAREN, "')'", NULL);
+    if (status != YOG_PARSE_OK) { free(terms); return status; }
     out->predicate = text_of(&pred);
     out->terms = terms;
     out->term_count = count;
     out->line = pred.line;
     out->column = pred.column;
     return YOG_PARSE_OK;
+}
+
+/* The reference grammar only allows variables and literals on the left of an
+ * operator, so `foo == bar` is rejected instead of being read as a comparison. */
+static int is_comparison_operand(TokenType t)
+{
+    return t == TOK_VAR || t == TOK_INT || t == TOK_STRING;
 }
 
 static int is_comparison(TokenType t)
@@ -185,7 +190,7 @@ static YogParseStatus parse_goal(Parser *p, YogGoal *out)
         status = parse_atom(p, &out->as.atom);
         return status;
     }
-    if (start != NULL && is_term(start->type) && is_comparison(peek(p, 1)->type)) {
+    if (start != NULL && is_comparison_operand(start->type) && is_comparison(peek(p, 1)->type)) {
         Token left_token;
         status = parse_term(p, &out->as.comparison.left);
         if (status != YOG_PARSE_OK) return status;

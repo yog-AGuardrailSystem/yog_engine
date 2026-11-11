@@ -5,7 +5,7 @@ from yog import load_policy
 from yog import Atom, Const
 
 
-PROJECT_DIR = Path(__file__).resolve().parents[1]
+PROJECT_DIR = Path(__file__).resolve().parents[3]
 POLICY_FILE = PROJECT_DIR / "all_examples.yog"
 
 
