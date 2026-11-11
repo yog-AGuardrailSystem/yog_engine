@@ -19,7 +19,7 @@
 cmake -S . -B build -DYOG_SANITIZE=ON      # sanitizers on = catches memory bugs
 cmake --build build
 cd build && ctest --output-on-failure      # run the unit tests
-./lexdump ../examples/example.yog          # see the tokens of any policy file
+./lexdump ../../all_examples.yog          # see the tokens of any policy file
 ```
 
 `lexdump` output is `LINE:COL TYPE [text]`. If the parser misbehaves, run

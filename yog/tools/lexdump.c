@@ -1,7 +1,7 @@
 /*
  * lexdump -- print the token stream of a .yog file.  A debugging aid:
  *
- *     ./lexdump examples/example.yog
+ *     ./lexdump path/to/policy.yog
  *
  * Output, one token per line:   LINE:COL  TYPE  [text]
  * Exit status: 0 = ok, 1 = lexical error (message on stderr), 2 = usage/IO.

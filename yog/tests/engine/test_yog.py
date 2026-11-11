@@ -4,7 +4,7 @@ from pathlib import Path
 from yog import load_policy, YogError, Parser, tokenize, Engine
 
 
-PROJECT_DIR = Path(__file__).parent
+PROJECT_DIR = Path(__file__).resolve().parents[3]
 EXAMPLES_FILE = PROJECT_DIR / "all_examples.yog"
 
 
