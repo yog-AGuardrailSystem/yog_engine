@@ -150,6 +150,10 @@ static void test_empty_and_blank_inputs(void)
     Lexer lx;                                              /* NULL source is treated as "" */
     lexer_init(&lx, NULL, 123);
     CHECK(lexer_next(&lx).type == TOK_EOF);
+
+    lexer_init(&lx, "ignored", 0);
+    CHECK(lexer_next(&lx).type == TOK_EOF);
+    CHECK(lexer_error(&lx) == NULL);
 }
 
 static void test_simple_fact(void)
