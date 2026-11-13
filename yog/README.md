@@ -68,6 +68,8 @@ ctest --test-dir yog/build --output-on-failure
 | `test_ir` | clause table, wildcard slots, constant interning, dump |
 | `test_vm` | unification, backtracking, context facts, precedence |
 | `test_api` | ownership, diagnostics, trace opt-in, exact reasons |
+| `test_security` | step/depth limits, fail-closed errors, context isolation, concurrency |
+| `test_fuzz_smoke` | deterministic malformed-input robustness |
 
 ### Differential tests against the Python reference
 
@@ -78,6 +80,30 @@ python yog/tests/differential/diff_vs_python.py --yogc yog/build/yogc
 This runs every query and every ground decision request in `all_examples.yog`
 through both engines and compares the decision, reason and bindings. It is
 also run by CI.
+
+### Independent conformance and property tests
+
+```sh
+python yog/tests/conformance/run_conformance.py --yogc yog/build/yogc
+python yog/tests/property/property_conformance.py
+```
+
+The conformance suite states the expected result for every Group A–V request
+and every compile error directly in `cases.json`, independently of `yog.py`.
+The property suite generates acyclic policies and compares the engine with a
+plain-Python oracle that does not use the YOG solver. See
+[`../docs/CORRECTNESS.md`](../docs/CORRECTNESS.md).
+
+### Fuzzing
+
+`test_fuzz_smoke` runs on every build. Coverage-guided fuzzing is opt-in:
+
+```sh
+cmake -S yog -B yog/build-fuzz -DCMAKE_BUILD_TYPE=Debug \
+      -DYOG_SANITIZE=ON -DYOG_FUZZ=ON
+cmake --build yog/build-fuzz --parallel
+./yog/build-fuzz/fuzz_compile -max_len=4096 -timeout=10
+```
 
 ### Python reference tests
 
@@ -90,10 +116,13 @@ python -m pytest yog/tests -q
 `yogc` is the developer tool built next to the libraries:
 
 ```sh
-yogc run   policy.yog                 # evaluate every `query` statement
-yogc ir    policy.yog                 # dump the compiled clause table
-yogc check policy.yog ACTOR ACTION RESOURCE [--context "fact amount(acct_1, 9000)"] [--trace]
-yogc batch policy.yog                 # "actor action resource [| context]" per stdin line
+yogc run      policy.yog                 # evaluate every `query` statement
+yogc ir       policy.yog                 # dump the compiled clause table
+yogc validate policy.yog                 # compile only and report
+yogc explain  policy.yog                 # summarise decisions, clauses and limits
+yogc explain  policy.yog ACTOR ACTION RESOURCE [--context "..."] [--trace]
+yogc check    policy.yog ACTOR ACTION RESOURCE [--context "fact amount(acct_1, 9000)"] [--trace]
+yogc batch    policy.yog                 # "actor action resource [| context]" per stdin line
 ```
 
 Exit status: `0` allowed/ok, `1` compile error, `2` usage or I/O error,
@@ -126,7 +155,21 @@ yog_free(yog);
 `yog_compile()` copies the source, so the caller's buffer may be freed
 immediately. `YogResult` strings are owned by the result. `yog_check()` returns
 `false` only for evaluation or I/O errors; a denied request is a successful
-check with `result.decision == YOG_DENY`.
+check with `result.decision == YOG_DENY`. On `false`, `result.decision` is still
+initialized to `YOG_DENY`, so a caller that ignores the return value cannot
+accidentally allow the action.
+
+Evaluation budgets can be lowered from their defaults:
+
+```c
+YogLimits limits = { .max_steps = 50000, .max_depth = 64 };
+yog_set_limits(yog, limits);
+```
+
+The compiled module is immutable, and every `yog_check()` creates its own
+evaluator, so concurrent checks on the same `Yog` are safe. Call
+`yog_set_limits()` during setup, before sharing the object; concurrent
+mutation is a data race. See [`../docs/SECURITY.md`](../docs/SECURITY.md).
 
 ## Source map
 
@@ -158,9 +201,11 @@ check with `result.decision == YOG_DENY`.
   AST, symbol table, IR and engine it has built so far.
 - **Untrusted policies are bounded.** Depth, step count, clause count, constant
   count and argument counts are capped. Limits fail closed.
+- **Requests are isolated.** The compiled module is immutable; every check owns
+  a fresh evaluator, store and trace. Context facts never survive a call.
 - **Recursion is rejected in v1.** This is a documented language limitation
   that makes termination predictable; it is not required by the architecture.
 - **No premature indexing.** Predicate lookup is a linear scan over a dynamic
-  array, which is the right complexity for policies with tens of predicates.
-  A hash table or per-predicate indexing can be added when profiling justifies
-  it.
+  array. The benchmark shows the cost on the default-deny path as policies
+  grow ([`../docs/BENCHMARKS.md`](../docs/BENCHMARKS.md)); indexing and clause
+  ordering are the next optimization step, not a v1 requirement.

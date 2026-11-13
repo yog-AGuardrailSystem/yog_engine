@@ -81,7 +81,7 @@ static bool lexeme_is(const Token *t, const char *text)
     return t->length == strlen(text) && memcmp(t->start, text, t->length) == 0;
 }
 
-static int count_type(const Lexed *l, TokenType type)
+static int count_type(const Lexed *l, YogTokenType type)
 {
     int n = 0;
     for (int i = 0; i < l->count; i++) if (l->toks[i].type == type) n++;
@@ -90,7 +90,7 @@ static int count_type(const Lexed *l, TokenType type)
 
 /* Compare the whole type sequence; on mismatch print expected vs actual. */
 static void expect_types(const char *file, int line, const char *src,
-                         const TokenType *expected, int n)
+                         const YogTokenType *expected, int n)
 {
     Lexed *l = lex(src);
     bool ok = (l->count == n);
@@ -109,7 +109,7 @@ static void expect_types(const char *file, int line, const char *src,
 
 #define EXPECT_TYPES(src, ...)                                                   \
     do {                                                                         \
-        const TokenType exp_[] = {__VA_ARGS__};                                  \
+        const YogTokenType exp_[] = {__VA_ARGS__};                                  \
         expect_types(__FILE__, __LINE__, (src), exp_, (int)(sizeof exp_ / sizeof exp_[0])); \
     } while (0)
 
@@ -451,7 +451,7 @@ static void test_max_indent_depth(void)
 /* Tests: positions                                                    */
 /* ------------------------------------------------------------------ */
 
-typedef struct { TokenType type; int line; int column; } Pos;
+typedef struct { YogTokenType type; int line; int column; } Pos;
 
 static void test_line_and_column_tracking(void)
 {
@@ -592,10 +592,10 @@ static void test_tokens_point_into_source(void)
 static void test_token_names(void)
 {
     for (int t = 0; t < TOK_TYPE_COUNT; t++) {
-        const char *name = token_type_name((TokenType)t);
+        const char *name = token_type_name((YogTokenType)t);
         CHECK(name != NULL && strcmp(name, "UNKNOWN") != 0);
         for (int u = t + 1; u < TOK_TYPE_COUNT; u++)
-            CHECK(strcmp(name, token_type_name((TokenType)u)) != 0);   /* all distinct */
+            CHECK(strcmp(name, token_type_name((YogTokenType)u)) != 0);   /* all distinct */
     }
     CHECK(strcmp(token_type_name(TOK_TYPE_COUNT), "UNKNOWN") == 0);
 }

@@ -28,7 +28,7 @@
 
 typedef struct {
     const char *text;
-    TokenType   type;
+    YogTokenType   type;
 } TextEntry;
 
 #define COUNT_OF(a) (sizeof(a) / sizeof((a)[0]))
@@ -150,7 +150,7 @@ static void describe_byte(char c, char out[8])
  * 5. Token construction
  * ====================================================================== */
 
-static Token make_token(const Lexer *lx, TokenType type, size_t start, size_t length,
+static Token make_token(const Lexer *lx, YogTokenType type, size_t start, size_t length,
                         int line, int column)
 {
     Token t;
@@ -164,7 +164,7 @@ static Token make_token(const Lexer *lx, TokenType type, size_t start, size_t le
 }
 
 /* Zero-length token located at the cursor (NEWLINE, INDENT, DEDENT, EOF). */
-static Token marker_token(const Lexer *lx, TokenType type)
+static Token marker_token(const Lexer *lx, YogTokenType type)
 {
     return make_token(lx, type, lx->pos, 0, lx->line, column_at(lx, lx->pos));
 }
@@ -306,7 +306,7 @@ static Token scan_word(Lexer *lx)
     size_t start = lx->pos;
     int column = column_at(lx, start);
     size_t length;
-    TokenType type;
+    YogTokenType type;
     const TextEntry *kw;
 
     while (!at_end(lx) && is_word_part(lx->src[lx->pos])) lx->pos++;

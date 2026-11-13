@@ -1,24 +1,27 @@
-# YOG Engine
+# YOG
 
-A small, deterministic policy engine for checking whether an AI agent's or
-application's action is allowed **before** it happens.
+An experimental, C-based declarative policy compiler and authorization engine.
+YOG checks whether an application's or AI agent's action is allowed **before**
+it happens, and returns **ALLOW / DENY** with the reason.
 
-> **Status:** early but working. The C lexer, parser, semantic analyser,
-> clause-table IR, evaluator, C API and CLI are implemented and tested. The
-> Python package/bindings are the next milestone.
+> **Status: experimental, not production-ready.** The lexer, parser, semantic
+> analyser, clause-table IR, evaluator, C API and CLI are implemented and
+> tested. The correctness, security and benchmark harnesses are in place. The
+> Python bindings and packaging are not part of this milestone.
 
-## What it does
+YOG's working identity is an **AI-agent guardrail** decision point: a small,
+deterministic, fail-closed engine called before a shell command, database
+write, API call or financial transaction. General authorization (RBAC, ABAC,
+ownership, deny overrides) is the underlying engine. That identity is a
+research hypothesis, not a completed claim; see [`docs/RESEARCH.md`](docs/RESEARCH.md).
 
-An app or AI agent proposes an action. YOG checks it against your rules and
-returns **ALLOW / DENY** with the **reason**.
+## The decision contract
 
 ```text
 fact role(alice, admin)
 
 allow can_delete(User, DB):
     role(User, admin)
-
-query can_delete(alice, database_1)
 ```
 
 ```console
@@ -26,53 +29,92 @@ $ yogc check policy.yog alice can_delete database_1
 ALLOW|allow clause at line 3 matched
 ```
 
-The precedence is **deny > allow > default deny**, so the engine is
-fail-closed: an unknown action or an evaluation error never yields ALLOW.
+- **deny > allow > default deny**;
+- an unknown action is denied;
+- an evaluation error or limit violation is an error and the result is
+  initialized to `DENY` (fail closed);
+- policies are declarative: no I/O, no native calls, recursion rejected in v1.
 
 ## Repository layout
 
 | Path | What it is |
 | --- | --- |
-| `all_examples.yog` | conformance corpus (Groups A–R and beyond) |
-| `yog.py` | Python behavioural reference (parser, checker, engine) |
+| `all_examples.yog` | canonical demonstration and conformance corpus (Groups A–V) |
+| `yog.py` | Python behavioural reference (not the sole correctness oracle) |
 | `yog/` | C implementation: lexer → parser → sema → IR → VM → API → CLI |
-| `yog/tests/` | C semantic tests, Python reference tests, differential tests |
+| `yog/tests/` | C semantic/security tests, conformance, property, differential, fuzz |
+| `examples/ai_guardrails/` | four runnable guardrail policies + enforcement demo |
+| `benchmarks/` | corpus generator, C harness, orchestration, Cedar/OPA/Casbin adapters |
 | `docs/COMPILER.md` | frozen language and compiler contract |
-| `yog/README.md` | architecture, build, test and API guide for the C engine |
+| `docs/CORRECTNESS.md` | how correctness is validated |
+| `docs/SECURITY.md` | threat model, limits, context-isolation rules |
+| `docs/BENCHMARKS.md` | benchmark methodology and local results |
+| `docs/RESEARCH.md` | RQ1–RQ3, positioning, limitations, presentation outline |
+| `yog/README.md` | architecture, build, test and C API guide |
 
 ## Build and test
 
 ```sh
-cmake -S yog -B yog/build -DCMAKE_BUILD_TYPE=Debug -DYOG_SANITIZE=ON
+cmake -S yog -B yog/build -DCMAKE_BUILD_TYPE=Debug
 cmake --build yog/build --parallel
 ctest --test-dir yog/build --output-on-failure
+
+python yog/tests/conformance/run_conformance.py --yogc yog/build/yogc
+python yog/tests/property/property_conformance.py
 python yog/tests/differential/diff_vs_python.py --yogc yog/build/yogc
 python -m pytest yog/tests -q
 ```
 
-On Windows, run the commands from a Visual Studio developer prompt (or after
-`vcvars64.bat`). See [`yog/README.md`](yog/README.md) for the full build,
-testing and C API documentation.
+Sanitizers (GCC/Clang):
 
-## How it's built
+```sh
+cmake -S yog -B yog/build-asan -DCMAKE_BUILD_TYPE=Debug -DYOG_SANITIZE=ON
+cmake --build yog/build-asan --parallel
+ctest --test-dir yog/build-asan --output-on-failure
+```
 
-- **Core engine:** C11 (lexer, parser, semantic analyser, clause-table IR,
-  unification/backtracking VM, authorization layer, C API, CLI).
-- **Python reference:** `yog.py`, kept as the behavioural oracle and compared
-  against the C engine on the conformance corpus.
-- **Testing:** independent semantic tests (the specification decides the
-  expected result) *and* differential tests (C versus Python), so a bug shared
-  by both implementations is not invisible.
-- **Python wrapper / packaging:** `ctypes` bindings and a pip-installable
-  package are planned.
+On Windows, use a Visual Studio developer prompt (or run `vcvars64.bat`) so
+`cl`/`nmake` and the Windows SDK are on `PATH`. See
+[`yog/README.md`](yog/README.md) for details.
 
-## Contributing (team members)
+## AI guardrail demo
 
-- Never push to `main` directly. It's protected.
-- Create a branch: `feature/<what-you're-doing>`
-- Push your branch and open a **Pull Request** into `main`.
-- An **admin** must approve before it can be merged.
+```sh
+python examples/ai_guardrails/enforce_demo.py
+```
+
+The four policies cover shell commands, database writes, external API calls and
+financial transfers. The demo includes unknown actions and malformed context to
+show the fail-closed path. See
+[`examples/ai_guardrails/README.md`](examples/ai_guardrails/README.md).
+
+## Correctness and security
+
+Correctness is validated by independent semantic tests, a conformance corpus
+with hard-coded expected outcomes, a property-based oracle that does not use the
+YOG solver, differential testing against `yog.py`, ASan/UBSan and fuzzing. See
+[`docs/CORRECTNESS.md`](docs/CORRECTNESS.md).
+
+The security model states the trust boundaries, the fail-closed contract,
+evaluation limits and the concurrency contract. The most important operational
+rule: **request context is authorization data**. An agent that controls its own
+context can forge facts, so context must be built by the trusted enforcement
+layer. See [`docs/SECURITY.md`](docs/SECURITY.md).
+
+## Benchmarks
+
+The suite separates engine latency from end-to-end CLI cost and reports p50,
+p95, p99, throughput and approximate RSS. It also generates Cedar, OPA and
+Casbin translations. The first results are local Debug-build measurements and
+are **not** a comparison with other engines; see
+[`docs/BENCHMARKS.md`](docs/BENCHMARKS.md).
+
+## Contributing
+
+- Never push to `main` directly. It is protected.
+- Create a branch: `feature/<what-you-are-doing>`.
+- Open a pull request into `main`; an admin must approve.
 
 ## License
 
-MIT, see [LICENSE](LICENSE)
+MIT, see [LICENSE](LICENSE).
