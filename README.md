@@ -46,6 +46,7 @@ ALLOW|allow clause at line 3 matched
 | `examples/ai_guardrails/` | four runnable guardrail policies + enforcement demo |
 | `benchmarks/` | corpus generator, C harness, orchestration, Cedar/OPA/Casbin adapters |
 | `docs/COMPILER.md` | frozen language and compiler contract |
+| `docs/ARCHITECTURE_CHEATSHEET.md` | plain-language architecture and file guide |
 | `docs/CORRECTNESS.md` | how correctness is validated |
 | `docs/SECURITY.md` | threat model, limits, context-isolation rules |
 | `docs/BENCHMARKS.md` | benchmark methodology and local results |
