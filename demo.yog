@@ -1,0 +1,15 @@
+fact role(agent_admin, admin)
+fact sandboxed(agent_sandbox)
+fact safe_command(cmd_ls)
+fact destructive_command(cmd_rm)
+
+allow can_run_command(User, Command):
+    role(User, admin)
+
+allow can_run_command(User, Command):
+    sandboxed(User)
+    safe_command(Command)
+    not destructive_command(Command)
+
+deny can_run_command(User, Command):
+    destructive_command(Command)
