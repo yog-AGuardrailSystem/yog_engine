@@ -49,6 +49,10 @@ On Windows, configure from a Visual Studio developer prompt or after running
 `vcvars64.bat`. `-DYOG_SANITIZE=ON` is ignored for MSVC; use Clang or GCC to
 run with AddressSanitizer and UndefinedBehaviorSanitizer.
 
+If Windows Application Control blocks `yogc.exe`, the executable is being
+denied by the machine's security policy. Ask the administrator to approve an
+authorized build; this repository cannot override that policy.
+
 Warnings are errors (`-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Werror`,
 or `/W4 /WX`).
 

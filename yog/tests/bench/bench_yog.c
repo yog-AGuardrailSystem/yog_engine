@@ -9,6 +9,10 @@
  * startup, file I/O and the CLI are measured end-to-end by
  * benchmarks/run_benchmarks.py.
  */
+#ifndef _WIN32
+#define _POSIX_C_SOURCE 200809L
+#endif
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
