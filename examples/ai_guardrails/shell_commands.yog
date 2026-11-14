@@ -1,0 +1,31 @@
+# AI guardrail: shell tool
+#
+# An agent may run a shell command only when it is sandboxed AND the command
+# is on the safe list.  Destructive commands are denied even in a sandbox, so
+# the deny clause wins over any allow clause (deny > allow > default deny).
+
+fact role(agent_support, support)
+fact role(agent_admin, admin)
+fact sandboxed(agent_sandbox)
+fact safe_command(cmd_ls)
+fact safe_command(cmd_cat)
+fact safe_command(cmd_grep)
+fact destructive_command(cmd_rm_rf)
+fact destructive_command(cmd_curl_pipe_sh)
+
+allow can_run_command(User, Command):
+    role(User, admin)
+
+allow can_run_command(User, Command):
+    sandboxed(User)
+    safe_command(Command)
+    not destructive_command(Command)
+
+deny can_run_command(User, Command):
+    destructive_command(Command)
+
+# Expected (yogc check):
+#   agent_support  cmd_ls       -> DENY  (not sandboxed, not admin)
+#   agent_sandbox  cmd_ls       -> ALLOW (sandboxed + safe)
+#   agent_sandbox  cmd_rm_rf    -> DENY  (deny clause overrides allow)
+#   agent_admin    cmd_curl_pipe_sh -> DENY (deny still overrides admin)

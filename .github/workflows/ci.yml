@@ -23,6 +23,21 @@ jobs:
       - name: Differential check against yog.py
         run: python yog/tests/differential/diff_vs_python.py --yogc yog/build/yogc
 
+      - name: Independent conformance suite
+        run: python yog/tests/conformance/run_conformance.py --yogc yog/build/yogc
+
+      - name: Property-based oracle
+        run: python yog/tests/property/property_conformance.py
+
+      - name: AI guardrail examples
+        run: python examples/ai_guardrails/enforce_demo.py --yogc yog/build/yogc
+
+      - name: Benchmark smoke test
+        run: |
+          python benchmarks/gen_corpus.py
+          yog/build/bench_yog check benchmarks/generated/small.yog u0000 can_access r0000 --iterations 100
+          yog/build/bench_yog compile benchmarks/generated/small.yog --iterations 10
+
   python-tests:
     name: Python reference tests
     runs-on: ubuntu-latest

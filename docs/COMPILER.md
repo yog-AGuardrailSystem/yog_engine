@@ -4,18 +4,30 @@ This document freezes the behaviour that both implementations must agree on:
 
 - `yog.py` is the behavioural reference;
 - the C compiler in `yog/` is the production implementation;
-- `all_examples.yog` is the conformance corpus.
+- `all_examples.yog` is the canonical demonstration and conformance corpus
+  (Groups A–V).
 
-The C implementation is validated in two independent ways:
+The C implementation is validated in several independent ways:
 
 1. **semantic tests** that state the expected authorization result directly
    (`yog/tests/sema`, `yog/tests/ir`, `yog/tests/vm`, `yog/tests/api`);
-2. **differential tests** that compare the C engine with `yog.py`
+2. **conformance cases** with hard-coded decisions and diagnostics
+   (`yog/tests/conformance/cases.json`);
+3. **property tests** against a non-YOG oracle
+   (`yog/tests/property/property_conformance.py`);
+4. **differential tests** that compare the C engine with `yog.py`
    (`yog/tests/differential/diff_vs_python.py`).
 
 Agreement with `yog.py` alone is not enough: a bug shared by both
 implementations would be invisible. Group R, for example, independently
-establishes that a matching deny overrides a matching allow.
+establishes that a matching deny overrides a matching allow. See
+[`CORRECTNESS.md`](CORRECTNESS.md) for the full strategy.
+
+`query` and `check()` answer different questions. `query` evaluates the
+logical program and reports whether a clause body is satisfiable; `check()`
+applies the authorization contract below. Group R's confidential-document
+query is `TRUE` (the allow body is satisfiable) while `check()` returns `DENY`
+because the deny clause matches.
 
 ## 1. Grammar
 
@@ -166,6 +178,36 @@ program, and a context containing anything other than `fact` statements is
 rejected. `request.*` namespaces and implicit request atoms are deliberately
 not part of the language.
 
+Context is **authorization data**: if the caller supplies
+`fact role(attacker, admin)`, an admin rule may match. The enforcement layer
+must construct context from trusted data, not from raw model or end-user
+output. See [`SECURITY.md`](SECURITY.md) §2.
+
+### Declaring a context-only predicate
+
+C4 requires every predicate called from a body to be defined by a fact or a
+rule. A predicate whose facts only arrive through context therefore needs a
+declaration. Do **not** use a sentinel fact:
+
+```yog
+fact amount(reserved_account, 0)   # unsafe: grants 0 <= Limit to that resource
+```
+
+A sentinel fact creates a real solution for one resource. Use a rule with a
+guard that can never be true instead:
+
+```yog
+fact reserved_schema(reserved_account, reserved_amount)
+rule amount(Account, Amount):
+    reserved_schema(Account, Amount)
+    0 == 1
+```
+
+The rule satisfies C4, never produces a solution, and context facts (tried
+before rules, §5) remain the only source of amounts. Group I in
+`all_examples.yog` uses this pattern, and the conformance suite asserts that
+the sentinel cannot be used as an account.
+
 ## 8. Limits (security controls)
 
 Policies are untrusted input. The implementation enforces fixed caps in
@@ -185,11 +227,31 @@ addition to the acyclic-rule restriction:
 
 Exceeding a limit is an error (fail-closed), never a partial result.
 
-## 9. Errors
+The two per-check budgets are configurable through the public API:
+
+```c
+YogLimits limits = { .max_steps = 50000, .max_depth = 64 };
+yog_set_limits(yog, limits);
+```
+
+A zero field keeps the default. Lowering the budgets is appropriate for
+latency-sensitive guardrails; the module-size caps are compile-time constants.
+
+## 9. Concurrency
+
+A `Yog` is immutable after `yog_compile()`. `yog_check()` and
+`yog_run_queries()` create their own evaluator, substitution store and trace,
+so concurrent calls on one `Yog` are safe. `yog_set_limits()` mutates the
+`Yog`; call it during setup, before sharing the object. `yog_free()` must not
+run while another thread is using the module.
+
+## 10. Errors
 
 Compilation errors carry a 1-based line and column and a NUL-terminated
 message. `yog_compile()` returns `NULL`; `yog_check()` returns `false` only
-for evaluation or I/O errors, never for a denied request.
+for evaluation or I/O errors, never for a denied request. On `false`, the
+result is still initialized with `decision = YOG_DENY`, so ignoring the return
+value cannot turn an error into an allow.
 
 The diagnostics are part of the contract and are asserted by the tests:
 
@@ -201,7 +263,7 @@ The diagnostics are part of the contract and are asserted by the tests:
 - `<name>/<arity> is not defined by any fact or rule`
 - `rule cycle: <name>/<arity> -> ...`
 
-## 10. Ownership
+## 11. Ownership
 
 - `yog_compile()` copies the source. The caller may free its buffer as soon as
   the call returns.

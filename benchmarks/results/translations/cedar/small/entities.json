@@ -1,0 +1,942 @@
+[
+  {
+    "uid": {
+      "type": "Action",
+      "id": "can_access"
+    },
+    "attrs": {},
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Role",
+      "id": "admin"
+    },
+    "attrs": {},
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Role",
+      "id": "engineer"
+    },
+    "attrs": {},
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Role",
+      "id": "guest"
+    },
+    "attrs": {},
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Role",
+      "id": "manager"
+    },
+    "attrs": {},
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Team",
+      "id": "t000"
+    },
+    "attrs": {},
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Team",
+      "id": "t001"
+    },
+    "attrs": {},
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Team",
+      "id": "t002"
+    },
+    "attrs": {},
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Team",
+      "id": "t003"
+    },
+    "attrs": {},
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Team",
+      "id": "t004"
+    },
+    "attrs": {},
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Team",
+      "id": "public"
+    },
+    "attrs": {},
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "User",
+      "id": "u0000"
+    },
+    "attrs": {
+      "clearance": 3
+    },
+    "parents": [
+      {
+        "type": "Role",
+        "id": "admin"
+      },
+      {
+        "type": "Team",
+        "id": "t000"
+      }
+    ]
+  },
+  {
+    "uid": {
+      "type": "User",
+      "id": "u0001"
+    },
+    "attrs": {
+      "clearance": 4
+    },
+    "parents": [
+      {
+        "type": "Role",
+        "id": "guest"
+      }
+    ]
+  },
+  {
+    "uid": {
+      "type": "User",
+      "id": "u0002"
+    },
+    "attrs": {
+      "clearance": 1
+    },
+    "parents": [
+      {
+        "type": "Role",
+        "id": "engineer"
+      }
+    ]
+  },
+  {
+    "uid": {
+      "type": "User",
+      "id": "u0003"
+    },
+    "attrs": {
+      "clearance": 4
+    },
+    "parents": [
+      {
+        "type": "Role",
+        "id": "manager"
+      },
+      {
+        "type": "Team",
+        "id": "t003"
+      }
+    ]
+  },
+  {
+    "uid": {
+      "type": "User",
+      "id": "u0004"
+    },
+    "attrs": {
+      "clearance": 2
+    },
+    "parents": [
+      {
+        "type": "Role",
+        "id": "engineer"
+      },
+      {
+        "type": "Team",
+        "id": "t004"
+      }
+    ]
+  },
+  {
+    "uid": {
+      "type": "User",
+      "id": "u0005"
+    },
+    "attrs": {
+      "clearance": 4
+    },
+    "parents": [
+      {
+        "type": "Role",
+        "id": "engineer"
+      },
+      {
+        "type": "Team",
+        "id": "t000"
+      }
+    ]
+  },
+  {
+    "uid": {
+      "type": "User",
+      "id": "u0006"
+    },
+    "attrs": {
+      "clearance": 2
+    },
+    "parents": [
+      {
+        "type": "Role",
+        "id": "engineer"
+      },
+      {
+        "type": "Team",
+        "id": "t001"
+      }
+    ]
+  },
+  {
+    "uid": {
+      "type": "User",
+      "id": "u0007"
+    },
+    "attrs": {
+      "clearance": 3
+    },
+    "parents": [
+      {
+        "type": "Role",
+        "id": "engineer"
+      },
+      {
+        "type": "Team",
+        "id": "t002"
+      }
+    ]
+  },
+  {
+    "uid": {
+      "type": "User",
+      "id": "u0008"
+    },
+    "attrs": {
+      "clearance": 1
+    },
+    "parents": [
+      {
+        "type": "Role",
+        "id": "manager"
+      },
+      {
+        "type": "Team",
+        "id": "t003"
+      }
+    ]
+  },
+  {
+    "uid": {
+      "type": "User",
+      "id": "u0009"
+    },
+    "attrs": {
+      "clearance": 2
+    },
+    "parents": [
+      {
+        "type": "Role",
+        "id": "engineer"
+      },
+      {
+        "type": "Team",
+        "id": "t004"
+      }
+    ]
+  },
+  {
+    "uid": {
+      "type": "User",
+      "id": "u0010"
+    },
+    "attrs": {
+      "clearance": 1
+    },
+    "parents": [
+      {
+        "type": "Role",
+        "id": "engineer"
+      },
+      {
+        "type": "Team",
+        "id": "t000"
+      }
+    ]
+  },
+  {
+    "uid": {
+      "type": "User",
+      "id": "u0011"
+    },
+    "attrs": {
+      "clearance": 4
+    },
+    "parents": [
+      {
+        "type": "Role",
+        "id": "engineer"
+      },
+      {
+        "type": "Team",
+        "id": "t001"
+      }
+    ]
+  },
+  {
+    "uid": {
+      "type": "User",
+      "id": "u0012"
+    },
+    "attrs": {
+      "clearance": 5
+    },
+    "parents": [
+      {
+        "type": "Role",
+        "id": "guest"
+      },
+      {
+        "type": "Team",
+        "id": "t002"
+      }
+    ]
+  },
+  {
+    "uid": {
+      "type": "User",
+      "id": "u0013"
+    },
+    "attrs": {
+      "clearance": 4
+    },
+    "parents": [
+      {
+        "type": "Role",
+        "id": "guest"
+      },
+      {
+        "type": "Team",
+        "id": "t003"
+      }
+    ]
+  },
+  {
+    "uid": {
+      "type": "User",
+      "id": "u0014"
+    },
+    "attrs": {
+      "clearance": 3
+    },
+    "parents": [
+      {
+        "type": "Role",
+        "id": "engineer"
+      },
+      {
+        "type": "Team",
+        "id": "t004"
+      }
+    ]
+  },
+  {
+    "uid": {
+      "type": "User",
+      "id": "u0015"
+    },
+    "attrs": {
+      "clearance": 5
+    },
+    "parents": [
+      {
+        "type": "Role",
+        "id": "manager"
+      },
+      {
+        "type": "Team",
+        "id": "t000"
+      }
+    ]
+  },
+  {
+    "uid": {
+      "type": "User",
+      "id": "u0016"
+    },
+    "attrs": {
+      "clearance": 3
+    },
+    "parents": [
+      {
+        "type": "Role",
+        "id": "manager"
+      },
+      {
+        "type": "Team",
+        "id": "t001"
+      }
+    ]
+  },
+  {
+    "uid": {
+      "type": "User",
+      "id": "u0017"
+    },
+    "attrs": {
+      "clearance": 2
+    },
+    "parents": [
+      {
+        "type": "Role",
+        "id": "engineer"
+      },
+      {
+        "type": "Team",
+        "id": "t002"
+      }
+    ]
+  },
+  {
+    "uid": {
+      "type": "User",
+      "id": "u0018"
+    },
+    "attrs": {
+      "clearance": 5
+    },
+    "parents": [
+      {
+        "type": "Role",
+        "id": "engineer"
+      },
+      {
+        "type": "Team",
+        "id": "t003"
+      }
+    ]
+  },
+  {
+    "uid": {
+      "type": "User",
+      "id": "u0019"
+    },
+    "attrs": {
+      "clearance": 1
+    },
+    "parents": [
+      {
+        "type": "Role",
+        "id": "guest"
+      },
+      {
+        "type": "Team",
+        "id": "t004"
+      }
+    ]
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r0000"
+    },
+    "attrs": {
+      "classification": 2,
+      "public": false,
+      "owner": {
+        "type": "Team",
+        "id": "t000"
+      }
+    },
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r0001"
+    },
+    "attrs": {
+      "classification": 4,
+      "public": false,
+      "owner": {
+        "type": "Team",
+        "id": "t001"
+      }
+    },
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r0002"
+    },
+    "attrs": {
+      "classification": 2,
+      "public": false,
+      "owner": {
+        "type": "Team",
+        "id": "t002"
+      }
+    },
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r0003"
+    },
+    "attrs": {
+      "classification": 2,
+      "public": true,
+      "owner": {
+        "type": "Team",
+        "id": "t003"
+      }
+    },
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r0004"
+    },
+    "attrs": {
+      "classification": 2,
+      "public": false,
+      "owner": {
+        "type": "Team",
+        "id": "t004"
+      }
+    },
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r0005"
+    },
+    "attrs": {
+      "classification": 2,
+      "public": true,
+      "owner": {
+        "type": "Team",
+        "id": "t000"
+      }
+    },
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r0006"
+    },
+    "attrs": {
+      "classification": 4,
+      "public": false,
+      "owner": {
+        "type": "Team",
+        "id": "t001"
+      }
+    },
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r0007"
+    },
+    "attrs": {
+      "classification": 1,
+      "public": false,
+      "owner": {
+        "type": "Team",
+        "id": "t002"
+      }
+    },
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r0008"
+    },
+    "attrs": {
+      "classification": 5,
+      "public": false,
+      "owner": {
+        "type": "Team",
+        "id": "t003"
+      }
+    },
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r0009"
+    },
+    "attrs": {
+      "classification": 3,
+      "public": false,
+      "owner": {
+        "type": "Team",
+        "id": "t004"
+      }
+    },
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r0010"
+    },
+    "attrs": {
+      "classification": 5,
+      "public": true,
+      "owner": {
+        "type": "Team",
+        "id": "t000"
+      }
+    },
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r0011"
+    },
+    "attrs": {
+      "classification": 5,
+      "public": false,
+      "owner": {
+        "type": "Team",
+        "id": "t001"
+      }
+    },
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r0012"
+    },
+    "attrs": {
+      "classification": 1,
+      "public": false,
+      "owner": {
+        "type": "Team",
+        "id": "t002"
+      }
+    },
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r0013"
+    },
+    "attrs": {
+      "classification": 1,
+      "public": false,
+      "owner": {
+        "type": "Team",
+        "id": "t003"
+      }
+    },
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r0014"
+    },
+    "attrs": {
+      "classification": 1,
+      "public": true,
+      "owner": {
+        "type": "Team",
+        "id": "t004"
+      }
+    },
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r0015"
+    },
+    "attrs": {
+      "classification": 4,
+      "public": false,
+      "owner": {
+        "type": "Team",
+        "id": "t000"
+      }
+    },
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r0016"
+    },
+    "attrs": {
+      "classification": 1,
+      "public": true,
+      "owner": {
+        "type": "Team",
+        "id": "t001"
+      }
+    },
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r0017"
+    },
+    "attrs": {
+      "classification": 3,
+      "public": false,
+      "owner": {
+        "type": "Team",
+        "id": "t002"
+      }
+    },
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r0018"
+    },
+    "attrs": {
+      "classification": 1,
+      "public": true,
+      "owner": {
+        "type": "Team",
+        "id": "t003"
+      }
+    },
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r0019"
+    },
+    "attrs": {
+      "classification": 5,
+      "public": false,
+      "owner": {
+        "type": "Team",
+        "id": "t004"
+      }
+    },
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r0020"
+    },
+    "attrs": {
+      "classification": 1,
+      "public": true,
+      "owner": {
+        "type": "Team",
+        "id": "t000"
+      }
+    },
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r0021"
+    },
+    "attrs": {
+      "classification": 3,
+      "public": false,
+      "owner": {
+        "type": "Team",
+        "id": "t001"
+      }
+    },
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r0022"
+    },
+    "attrs": {
+      "classification": 3,
+      "public": false,
+      "owner": {
+        "type": "Team",
+        "id": "t002"
+      }
+    },
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r0023"
+    },
+    "attrs": {
+      "classification": 3,
+      "public": true,
+      "owner": {
+        "type": "Team",
+        "id": "t003"
+      }
+    },
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r0024"
+    },
+    "attrs": {
+      "classification": 3,
+      "public": false,
+      "owner": {
+        "type": "Team",
+        "id": "t004"
+      }
+    },
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r0025"
+    },
+    "attrs": {
+      "classification": 2,
+      "public": false,
+      "owner": {
+        "type": "Team",
+        "id": "t000"
+      }
+    },
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r0026"
+    },
+    "attrs": {
+      "classification": 2,
+      "public": false,
+      "owner": {
+        "type": "Team",
+        "id": "t001"
+      }
+    },
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r0027"
+    },
+    "attrs": {
+      "classification": 1,
+      "public": false,
+      "owner": {
+        "type": "Team",
+        "id": "t002"
+      }
+    },
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r0028"
+    },
+    "attrs": {
+      "classification": 4,
+      "public": false,
+      "owner": {
+        "type": "Team",
+        "id": "t003"
+      }
+    },
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r0029"
+    },
+    "attrs": {
+      "classification": 4,
+      "public": false,
+      "owner": {
+        "type": "Team",
+        "id": "t004"
+      }
+    },
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r_denied"
+    },
+    "attrs": {
+      "classification": 5,
+      "public": false,
+      "owner": {
+        "type": "Team",
+        "id": "public"
+      }
+    },
+    "parents": []
+  },
+  {
+    "uid": {
+      "type": "Resource",
+      "id": "r_secret"
+    },
+    "attrs": {
+      "classification": 5,
+      "public": false,
+      "owner": {
+        "type": "Team",
+        "id": "public"
+      }
+    },
+    "parents": []
+  }
+]

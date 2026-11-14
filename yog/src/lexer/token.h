@@ -53,10 +53,10 @@ typedef enum {
     YOG_TOKEN_TYPES(YOG_X)
 #undef YOG_X
     TOK_TYPE_COUNT /* not a real token: number of token types */
-} TokenType;
+} YogTokenType;
 
 /* Human-readable name, for error messages, tests and debug dumps. */
-static inline const char *token_type_name(TokenType type)
+static inline const char *token_type_name(YogTokenType type)
 {
     switch (type) {
 #define YOG_X(id, name) case id: return name;
@@ -79,7 +79,7 @@ static inline const char *token_type_name(TokenType type)
  * line and column are 1-based.
  */
 typedef struct {
-    TokenType   type;
+    YogTokenType   type;
     const char *start;
     size_t      length;
     long long   int_value; /* meaningful only when type == TOK_INT */

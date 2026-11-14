@@ -64,7 +64,7 @@ static YogParseStatus fail_here(Parser *p, YogParseStatus code, const char *expe
                      t != NULL ? token_type_name(t->type) : "no token");
 }
 
-static int match(Parser *p, TokenType type)
+static int match(Parser *p, YogTokenType type)
 {
     const Token *t = current(p);
     if (t == NULL || t->type != type) return 0;
@@ -72,7 +72,7 @@ static int match(Parser *p, TokenType type)
     return 1;
 }
 
-static YogParseStatus expect(Parser *p, TokenType type, const char *description, Token *out)
+static YogParseStatus expect(Parser *p, YogTokenType type, const char *description, Token *out)
 {
     const Token *t = current(p);
     if (t == NULL || t->type != type) return fail_here(p, YOG_PARSE_SYNTAX_ERROR, description);
@@ -88,12 +88,12 @@ static YogText text_of(const Token *t)
     return text;
 }
 
-static int is_term(TokenType t)
+static int is_term(YogTokenType t)
 {
     return t == TOK_VAR || t == TOK_IDENT || t == TOK_STRING || t == TOK_INT || t == TOK_WILDCARD;
 }
 
-static YogTermType term_type(TokenType t)
+static YogTermType term_type(YogTokenType t)
 {
     switch (t) {
     case TOK_VAR: return YOG_TERM_VARIABLE;
@@ -157,16 +157,16 @@ static YogParseStatus parse_atom(Parser *p, YogAtom *out)
 
 /* The reference grammar only allows variables and literals on the left of an
  * operator, so `foo == bar` is rejected instead of being read as a comparison. */
-static int is_comparison_operand(TokenType t)
+static int is_comparison_operand(YogTokenType t)
 {
     return t == TOK_VAR || t == TOK_INT || t == TOK_STRING;
 }
 
-static int is_comparison(TokenType t)
+static int is_comparison(YogTokenType t)
 {
     return t == TOK_EQ || t == TOK_NEQ || t == TOK_LT || t == TOK_LTE || t == TOK_GT || t == TOK_GTE;
 }
-static YogComparisonOperator comparison_type(TokenType t)
+static YogComparisonOperator comparison_type(YogTokenType t)
 {
     switch (t) {
     case TOK_EQ: return YOG_COMPARE_EQ;
@@ -239,7 +239,7 @@ static YogParseStatus parse_statement(Parser *p, YogStatement *out)
     memset(out, 0, sizeof(*out));
     if (t == NULL) return fail_here(p, YOG_PARSE_SYNTAX_ERROR, "statement keyword");
     if (t->type == TOK_FACT || t->type == TOK_QUERY) {
-        TokenType kind = t->type;
+        YogTokenType kind = t->type;
         keyword = take(p);
         out->type = kind == TOK_FACT ? YOG_STATEMENT_FACT : YOG_STATEMENT_QUERY;
         out->line = keyword.line; out->column = keyword.column;
