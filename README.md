@@ -60,11 +60,14 @@ cmake -S yog -B yog/build -DCMAKE_BUILD_TYPE=Debug
 cmake --build yog/build --parallel
 ctest --test-dir yog/build --output-on-failure
 
-python yog/tests/conformance/run_conformance.py --yogc yog/build/yogc
+python yog/tests/conformance/run_conformance.py
 python yog/tests/property/property_conformance.py
-python yog/tests/differential/diff_vs_python.py --yogc yog/build/yogc
+python yog/tests/differential/diff_vs_python.py
 python -m pytest yog/tests -q
 ```
+
+The Python harnesses default to `yog/build/yogc` (`yogc.exe` on Windows) and
+accept `--yogc PATH` if the binary lives elsewhere.
 
 Sanitizers (GCC/Clang):
 

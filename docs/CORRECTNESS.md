@@ -53,7 +53,7 @@ independently of both implementations:
 Run it:
 
 ```sh
-python yog/tests/conformance/run_conformance.py --yogc yog/build/yogc
+python yog/tests/conformance/run_conformance.py
 ```
 
 The distinction between `query` and `check()` is deliberate and is asserted:
@@ -109,7 +109,7 @@ oracle to shared-variable conjunctions is tracked as future work.
 ## 5. Differential test against `yog.py`
 
 ```sh
-python yog/tests/differential/diff_vs_python.py --yogc yog/build/yogc
+python yog/tests/differential/diff_vs_python.py
 ```
 
 This runs every `query` and every ground arity-2 request in

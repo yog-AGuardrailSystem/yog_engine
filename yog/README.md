@@ -78,7 +78,7 @@ ctest --test-dir yog/build --output-on-failure
 ### Differential tests against the Python reference
 
 ```sh
-python yog/tests/differential/diff_vs_python.py --yogc yog/build/yogc
+python yog/tests/differential/diff_vs_python.py
 ```
 
 This runs every query and every ground decision request in `all_examples.yog`
@@ -88,7 +88,7 @@ also run by CI.
 ### Independent conformance and property tests
 
 ```sh
-python yog/tests/conformance/run_conformance.py --yogc yog/build/yogc
+python yog/tests/conformance/run_conformance.py
 python yog/tests/property/property_conformance.py
 ```
 
