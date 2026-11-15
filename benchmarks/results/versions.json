@@ -1,0 +1,14 @@
+{
+  "git_commit": "c4ce48e6bdd9fb2c88331a83c6f0d8b2f76aafb8",
+  "python": "3.14.7",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "yogc": "yog/build-release/yogc.exe",
+  "bench_yog": "yog/build-release/bench_yog.exe",
+  "engines": {
+    "yog": "source c4ce48e (release)",
+    "opa": "Version: 1.22.4",
+    "cedar": "cedar-policy-cli 4.14.1",
+    "casbin": "1.43.0"
+  },
+  "library_build": "release"
+}

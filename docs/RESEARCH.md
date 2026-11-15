@@ -31,19 +31,26 @@ of a YOG decision, and how do they scale with policy size and clause order?
 - H1.3: process-per-request deployment is dominated by startup, so a batch or
   embedded deployment is necessary for high request volume.
 
-**Current evidence** (local Debug build, see [`BENCHMARKS.md`](BENCHMARKS.md)):
+**Current evidence** (local builds, see [`BENCHMARKS.md`](BENCHMARKS.md)):
 
-- ~4.5 µs for the first matching allow clause, independent of corpus size;
-- ~15 µs → ~885 µs for default deny as clauses grow 132 → 8,260;
-- compile 0.67 ms → 224 ms over the same range;
-- `yogc batch` 30,800 → 535 req/s; one `yogc check` 32 → 264 ms.
+- Release library: ~1–2 µs for the first matching allow clause, independent of
+  corpus size;
+- ~8 µs → ~559 µs for default deny as clauses grow 132 → 8,260 (Release);
+- compile 0.27 ms → 122 ms over the same range (Release);
+- one `yogc check` 32 ms → 151 ms; `yogc batch` 30,800 → 535 req/s (Debug);
+- CLI-to-CLI on the same corpus and machine: `yogc check` ~32–151 ms,
+  `opa eval` ~97–115 ms, `cedar authorize` ~128 ms–4.46 s, including process
+  startup and policy/entity load.
 
 **Status:** H1.1 and H1.3 are supported locally; H1.2 is supported but the
-optimization has not been implemented. No comparison with another engine has
-been run.
+optimization has not been implemented. A first cross-engine study has been run
+at a stated CLI boundary, with all decisions matching. It is single-machine,
+Windows-only, and Casbin covers a documented subset, so no general superiority
+claim is made.
 
-**Next experiments:** release build; predicate/first-argument indexing; clause
-ordering; cold start; Linux repeat; controlled multi-engine study.
+**Next experiments:** Linux repeat; predicate/first-argument indexing; clause
+ordering; cold start; concurrent throughput; isolating Cedar's entity-load cost
+from its decision cost.
 
 ## 3. RQ2 — expressiveness
 
@@ -140,7 +147,8 @@ Design choices relevant to the research questions:
 - No policy signing, distribution or multi-tenant isolation inside one module.
 - Compile time and default-deny time grow with policy size; indexing is future
   work.
-- Benchmarks are local, Debug-build, single-machine and not yet comparative.
+- Benchmarks are local, single-machine, Windows-only; cross-engine numbers are
+  reported by boundary and are not a general comparison.
 - The property-based oracle covers a restricted policy shape.
 - Fuzzing is a smoke test in CI, not a long campaign.
 - The Python bindings and packaging are not part of this milestone.

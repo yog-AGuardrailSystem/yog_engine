@@ -6,8 +6,9 @@ it happens, and returns **ALLOW / DENY** with the reason.
 
 > **Status: experimental, not production-ready.** The lexer, parser, semantic
 > analyser, clause-table IR, evaluator, C API and CLI are implemented and
-> tested. The correctness, security and benchmark harnesses are in place. The
-> Python bindings and packaging are not part of this milestone.
+> tested. The correctness and security harnesses are in place, and a first
+> cross-engine benchmark comparison is committed. The Python bindings and
+> packaging are not part of this milestone.
 
 YOG's working identity is an **AI-agent guardrail** decision point: a small,
 deterministic, fail-closed engine called before a shell command, database
@@ -44,7 +45,7 @@ ALLOW|allow clause at line 3 matched
 | `yog/` | C implementation: lexer → parser → sema → IR → VM → API → CLI |
 | `yog/tests/` | C semantic/security tests, conformance, property, differential, fuzz |
 | `examples/ai_guardrails/` | four runnable guardrail policies + enforcement demo |
-| `benchmarks/` | corpus generator, C harness, orchestration, Cedar/OPA/Casbin adapters |
+| `benchmarks/` | corpus generator, C harness, cross-engine comparison, Cedar/OPA/Casbin adapters |
 | `docs/COMPILER.md` | frozen language and compiler contract |
 | `docs/ARCHITECTURE_CHEATSHEET.md` | plain-language architecture and file guide |
 | `docs/CORRECTNESS.md` | how correctness is validated |
