@@ -4,26 +4,31 @@
 Casbin's standard model has no numeric comparison, so the clearance clause is
 not translated.  The four benchmark requests do not depend on that clause for
 their outcome, but the adapter records `numeric_clause: false` so the coverage
-limit is explicit.  If the Python package is absent, translation files are
-written and the adapter reports `available: false`.
+limit is explicit.
+
+Measurement is **Python library in-process** (`Enforcer.enforce`), not a
+process boundary.  It is therefore reported separately from `yogc check` and
+the OPA/Cedar CLIs.
 
 Usage:
-    python benchmarks/adapters/casbin_adapter.py --size small [--iterations 50]
+    python benchmarks/adapters/casbin_adapter.py --size small [--iterations 200]
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
+import importlib.metadata
 import importlib.util
 import json
-import statistics
-import time
 from pathlib import Path
 
 from corpus import build_model, load_requests, parse_facts
+from stats import measure, require_decision
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 CORPUS = ROOT / "benchmarks" / "generated"
+BOUNDARY = "python-library"
 
 MODEL = """[request_definition]
 r = sub, obj, act
@@ -41,6 +46,10 @@ e = some(where (p.eft == allow))
 [matchers]
 m = (g(r.sub, p.sub) || r.sub == p.sub) && (p.obj == "*" || g2(r.obj, p.obj) || r.obj == p.obj) && r.act == p.act
 """
+
+
+def digest(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def write_translation(model: dict, target: Path) -> tuple[Path, Path]:
@@ -71,7 +80,9 @@ def write_translation(model: dict, target: Path) -> tuple[Path, Path]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--size", choices=["small", "medium", "large"], default="small")
-    parser.add_argument("--iterations", type=int, default=50)
+    parser.add_argument("--iterations", type=int, default=200)
+    parser.add_argument("--warmup", type=int, default=20)
+    parser.add_argument("--repetitions", type=int, default=3)
     args = parser.parse_args()
 
     corpus = CORPUS / f"{args.size}.yog"
@@ -87,9 +98,15 @@ def main() -> int:
     result = {
         "engine": "casbin",
         "size": args.size,
+        "boundary": BOUNDARY,
         "available": available,
         "numeric_clause": False,
-        "translation": {"model": str(model_path), "policy": str(policy_path)},
+        "translation": {
+            "model": str(model_path),
+            "policy": str(policy_path),
+            "model_sha256": digest(model_path),
+            "policy_sha256": digest(policy_path),
+        },
         "requests": [],
     }
     if not available:
@@ -99,22 +116,26 @@ def main() -> int:
 
     from casbin import Enforcer  # type: ignore
 
+    result["tool_version"] = importlib.metadata.version("casbin")
     enforcer = Enforcer(str(model_path), str(policy_path))
+
     for request in requests:
-        samples = []
-        decision = None
-        for _ in range(args.iterations):
-            before = time.perf_counter_ns()
+        def invoke() -> str:
             allowed = enforcer.enforce(request["actor"], request["resource"], "can_access")
-            after = time.perf_counter_ns()
-            decision = "ALLOW" if allowed else "DENY"
-            samples.append(after - before)
+            return "ALLOW" if allowed else "DENY"
+
+        measurement, decision = measure(invoke, args.iterations, args.warmup,
+                                        args.repetitions)
+        require_decision(request["label"], request["expected"], decision)
         result["requests"].append({
             "label": request["label"],
             "expected": request["expected"],
             "decision": decision,
-            "mean_us": statistics.fmean(samples) / 1000.0,
-            "p50_us": sorted(samples)[len(samples) // 2] / 1000.0,
+            **measurement["median"],
+            "iterations": measurement["iterations"],
+            "warmup": measurement["warmup"],
+            "repetitions": measurement["repetitions"],
+            "runs": measurement["runs"],
         })
 
     print(json.dumps(result, indent=2))

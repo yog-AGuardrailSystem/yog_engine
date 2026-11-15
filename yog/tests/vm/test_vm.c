@@ -261,11 +261,11 @@ static void test_evaluation_limits_are_configurable(void)
 
     TEST_CHECK(yog != NULL);
     if (yog == NULL) return;
-    /* The public facade does not expose limits yet; the symbols must exist so
-     * embedders using the VM layer can tune them.  This is a compile-time
-     * contract check rather than a runtime one. */
-    TEST_CHECK(YOG_VM_MAX_DEPTH > 0);
-    TEST_CHECK(YOG_VM_MAX_STEPS > 0);
+    /* The public facade exposes the effective limits; assert the defaults are
+     * positive rather than testing compile-time constants. */
+    YogLimits limits = yog_get_limits(yog);
+    TEST_CHECK(limits.max_depth > 0);
+    TEST_CHECK(limits.max_steps > 0);
     yog_free(yog);
 }
 
