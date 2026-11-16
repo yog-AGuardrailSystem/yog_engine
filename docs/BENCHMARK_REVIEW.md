@@ -79,15 +79,16 @@ quantified per request.
 | 10 runs | done | `--runs 10` in `compare.py` and `boundaries.py` |
 | 95% intervals | done | percentile bootstrap over run medians, 1,000 resamples, fixed seed |
 | CPU pinning | done | `adapters/pin.py`; driver pins itself and children (`--pin-cpu 0`) |
-| Linux data point | **not done in this run** | Windows 11 only; `bench.yml` is set up for Linux CI |
+| Linux data point | **not done in this run** | Windows 11 only; the CI `bindings` job passes on Linux, but full Linux benchmark numbers are pending `bench.yml` |
 
 Every Windows number in `BENCHMARKS.md` is from the pinned run. Intervals cover
 sampling noise only. They do not cover machine, OS, compiler or translation
 bias.
 
 **Residual limitation:** platform generality is not claimed. The Linux workflow
-is the mechanism for closing this, and its output must be reported even if it
-disagrees with the Windows numbers.
+is the mechanism for closing this: its build and binding jobs already pass in
+CI, but its measurement job has not yet produced numbers. Those numbers must be
+reported even if they disagree with the Windows results.
 
 ## 6. Preregistered hypotheses including expected losses
 

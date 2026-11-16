@@ -164,9 +164,9 @@ The study fails its own standard if any of the following happens:
 ## 6. Deviations and known gaps
 
 - The 2026-11-15 run is Windows-only. No Linux distribution is installed on the
-  authoring machine; the Linux rerun runs from `bench.yml` on GitHub Actions and
-  is not part of this report. Until it exists, platform generality is not
-  claimed.
+  authoring machine; the Linux build and binding jobs pass in CI, but the Linux
+  measurement job has not yet produced data. Until it does, platform generality
+  is not claimed.
 - The Go pairing is asymmetric (FFI on the YOG side). This is disclosed, not
   corrected, because no native Go implementation of YOG exists.
 - There is no external human reviewer. Independent evidence comes from the
