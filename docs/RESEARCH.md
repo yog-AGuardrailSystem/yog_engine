@@ -33,24 +33,30 @@ of a YOG decision, and how do they scale with policy size and clause order?
 
 **Current evidence** (local builds, see [`BENCHMARKS.md`](BENCHMARKS.md)):
 
-- Release library: ~1–2 µs for the first matching allow clause, independent of
-  corpus size;
-- ~8 µs → ~559 µs for default deny as clauses grow 132 → 8,260 (Release);
-- compile 0.27 ms → 122 ms over the same range (Release);
-- one `yogc check` 32 ms → 151 ms; `yogc batch` 30,800 → 535 req/s (Debug);
-- CLI-to-CLI on the same corpus and machine: `yogc check` ~32–151 ms,
-  `opa eval` ~97–115 ms, `cedar authorize` ~128 ms–4.46 s, including process
-  startup and policy/entity load.
+- Release library: ~1.3–1.4 µs for the first matching allow clause, independent
+  of corpus size;
+- ~5 µs → ~345 µs for default deny as the corpus grows small → large, both in
+  the C harness and through the Python, Rust and Go bindings;
+- compile 0.13 ms → ~55–65 ms over the same range (Release);
+- one `yogc check` 27.5 ms → 81.8 ms cold (guest-deny row); `yogc batch`
+  30,800 → 535 req/s (Debug);
+- same-runtime in-process wins against Casbin (all rows) and the OPA Go SDK (all
+  rows, with an FFI handicap on the YOG side);
+- same-runtime losses against the Cedar Rust SDK on large deny (~40×) and large
+  team join (~12×), and against OPA's prepared query on large compile (~34×).
 
-**Status:** H1.1 and H1.3 are supported locally; H1.2 is supported but the
-optimization has not been implemented. A first cross-engine study has been run
-at a stated CLI boundary, with all decisions matching. It is single-machine,
-Windows-only, and Casbin covers a documented subset, so no general superiority
-claim is made.
+**Status:** H1.1 and H1.3 are supported locally. H1.2 is supported and the
+measured Cedar comparison makes the indexing work the clearest next
+optimization. The cross-engine study now uses same-runtime in-process pairings,
+a feature-matched corpus, 300 requests per cell and an independent oracle; see
+[`PREREGISTRATION.md`](PREREGISTRATION.md) and
+[`BENCHMARK_REVIEW.md`](BENCHMARK_REVIEW.md). It is single-machine, Windows-only,
+and there is no external reviewer, so no general superiority claim is made.
 
 **Next experiments:** Linux repeat; predicate/first-argument indexing; clause
-ordering; cold start; concurrent throughput; isolating Cedar's entity-load cost
-from its decision cost.
+ordering; concurrent throughput; isolating Cedar's entity-load cost from its
+decision cost; a YOG service-mode boundary. Indexing is now motivated by a
+measured loss, not by speculation.
 
 ## 3. RQ2 — expressiveness
 
@@ -81,9 +87,15 @@ fidelity and the constructs that do not map. Casbin's standard model cannot
 express the numeric clause without a custom function; that is a finding about
 the comparison, not about YOG.
 
-**Status:** adapters generate translations; no engine results yet. The
-expressiveness comparison must report translation gaps explicitly, otherwise it
-is not a like-for-like comparison.
+**Status:** translations and equivalence checking are complete for both
+profiles and all three sizes. All engines agree with the independent oracle on
+the feature-matched `common` profile. On `full`, Casbin disagrees on 147 of 900
+requests, every one explained by the missing numeric clause; that number is the
+measured cost of the gap. Two independently written Cedar translations and the
+official validators (`yogc validate`, `opa check`, `cedar validate`) agree. The
+gap table is in [`BENCHMARKS.md`](BENCHMARKS.md) section 4. Remaining gap:
+deny-override, negation and context differences are documented but not
+quantified per request, and there is no external reviewer.
 
 ## 4. RQ3 — security and reliability
 
@@ -147,11 +159,16 @@ Design choices relevant to the research questions:
 - No policy signing, distribution or multi-tenant isolation inside one module.
 - Compile time and default-deny time grow with policy size; indexing is future
   work.
-- Benchmarks are local, single-machine, Windows-only; cross-engine numbers are
-  reported by boundary and are not a general comparison.
+- Benchmarks are local, single-machine, Windows-only; the Linux CI rerun is not
+  yet done. Cross-engine numbers are reported by boundary and are not a general
+  comparison.
+- The Go pairing is asymmetric: only YOG crosses an FFI boundary.
+- Casbin covers a subset of the corpus; its `full` mismatches are the measured
+  gap, not a defect.
 - The property-based oracle covers a restricted policy shape.
 - Fuzzing is a smoke test in CI, not a long campaign.
-- The Python bindings and packaging are not part of this milestone.
+- There is no external reviewer for the benchmark study; the mitigation is
+  documented in [`BENCHMARK_REVIEW.md`](BENCHMARK_REVIEW.md).
 
 ## 7. Presentation outline
 
@@ -174,7 +191,11 @@ Design choices relevant to the research questions:
 
 Until the experiments above are complete and reviewed:
 
-- do not say YOG is faster than Cedar, OPA or Casbin;
+- do not say YOG is faster than Cedar, OPA or Casbin in general; Cedar is
+  measurably faster on large deny and join workloads, and OPA prepares a large
+  policy faster than YOG compiles it;
+- a same-runtime in-process win may be stated only with the corpus, size,
+  hardware and boundary attached;
 - do not say YOG is safer or more secure in general;
 - do not say YOG is more expressive;
 - do say it is an experimental, fail-closed, C-based declarative engine with a
@@ -182,3 +203,4 @@ Until the experiments above are complete and reviewed:
   benchmark/correctness harness.
 
 Claims must name the workload, hardware, build type and measurement boundary.
+

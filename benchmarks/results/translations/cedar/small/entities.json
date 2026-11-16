@@ -465,14 +465,14 @@
       "id": "r0000"
     },
     "attrs": {
-      "classification": 2,
       "public": false,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "t000"
         }
-      }
+      },
+      "classification": 2
     },
     "parents": []
   },
@@ -482,14 +482,14 @@
       "id": "r0001"
     },
     "attrs": {
-      "classification": 4,
       "public": false,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "t001"
         }
-      }
+      },
+      "classification": 4
     },
     "parents": []
   },
@@ -499,14 +499,14 @@
       "id": "r0002"
     },
     "attrs": {
-      "classification": 2,
       "public": false,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "t002"
         }
-      }
+      },
+      "classification": 2
     },
     "parents": []
   },
@@ -516,14 +516,14 @@
       "id": "r0003"
     },
     "attrs": {
-      "classification": 2,
       "public": true,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "t003"
         }
-      }
+      },
+      "classification": 2
     },
     "parents": []
   },
@@ -533,14 +533,14 @@
       "id": "r0004"
     },
     "attrs": {
-      "classification": 2,
       "public": false,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "t004"
         }
-      }
+      },
+      "classification": 2
     },
     "parents": []
   },
@@ -550,14 +550,14 @@
       "id": "r0005"
     },
     "attrs": {
-      "classification": 2,
       "public": true,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "t000"
         }
-      }
+      },
+      "classification": 2
     },
     "parents": []
   },
@@ -567,14 +567,14 @@
       "id": "r0006"
     },
     "attrs": {
-      "classification": 4,
       "public": false,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "t001"
         }
-      }
+      },
+      "classification": 4
     },
     "parents": []
   },
@@ -584,14 +584,14 @@
       "id": "r0007"
     },
     "attrs": {
-      "classification": 1,
       "public": false,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "t002"
         }
-      }
+      },
+      "classification": 1
     },
     "parents": []
   },
@@ -601,14 +601,14 @@
       "id": "r0008"
     },
     "attrs": {
-      "classification": 5,
       "public": false,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "t003"
         }
-      }
+      },
+      "classification": 5
     },
     "parents": []
   },
@@ -618,14 +618,14 @@
       "id": "r0009"
     },
     "attrs": {
-      "classification": 3,
       "public": false,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "t004"
         }
-      }
+      },
+      "classification": 3
     },
     "parents": []
   },
@@ -635,14 +635,14 @@
       "id": "r0010"
     },
     "attrs": {
-      "classification": 5,
       "public": true,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "t000"
         }
-      }
+      },
+      "classification": 5
     },
     "parents": []
   },
@@ -652,14 +652,14 @@
       "id": "r0011"
     },
     "attrs": {
-      "classification": 5,
       "public": false,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "t001"
         }
-      }
+      },
+      "classification": 5
     },
     "parents": []
   },
@@ -669,14 +669,14 @@
       "id": "r0012"
     },
     "attrs": {
-      "classification": 1,
       "public": false,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "t002"
         }
-      }
+      },
+      "classification": 1
     },
     "parents": []
   },
@@ -686,14 +686,14 @@
       "id": "r0013"
     },
     "attrs": {
-      "classification": 1,
       "public": false,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "t003"
         }
-      }
+      },
+      "classification": 1
     },
     "parents": []
   },
@@ -703,14 +703,14 @@
       "id": "r0014"
     },
     "attrs": {
-      "classification": 1,
       "public": true,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "t004"
         }
-      }
+      },
+      "classification": 1
     },
     "parents": []
   },
@@ -720,14 +720,14 @@
       "id": "r0015"
     },
     "attrs": {
-      "classification": 4,
       "public": false,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "t000"
         }
-      }
+      },
+      "classification": 4
     },
     "parents": []
   },
@@ -737,14 +737,14 @@
       "id": "r0016"
     },
     "attrs": {
-      "classification": 1,
       "public": true,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "t001"
         }
-      }
+      },
+      "classification": 1
     },
     "parents": []
   },
@@ -754,14 +754,14 @@
       "id": "r0017"
     },
     "attrs": {
-      "classification": 3,
       "public": false,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "t002"
         }
-      }
+      },
+      "classification": 3
     },
     "parents": []
   },
@@ -771,14 +771,14 @@
       "id": "r0018"
     },
     "attrs": {
-      "classification": 1,
       "public": true,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "t003"
         }
-      }
+      },
+      "classification": 1
     },
     "parents": []
   },
@@ -788,14 +788,14 @@
       "id": "r0019"
     },
     "attrs": {
-      "classification": 5,
       "public": false,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "t004"
         }
-      }
+      },
+      "classification": 5
     },
     "parents": []
   },
@@ -805,14 +805,14 @@
       "id": "r0020"
     },
     "attrs": {
-      "classification": 1,
       "public": true,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "t000"
         }
-      }
+      },
+      "classification": 1
     },
     "parents": []
   },
@@ -822,14 +822,14 @@
       "id": "r0021"
     },
     "attrs": {
-      "classification": 3,
       "public": false,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "t001"
         }
-      }
+      },
+      "classification": 3
     },
     "parents": []
   },
@@ -839,14 +839,14 @@
       "id": "r0022"
     },
     "attrs": {
-      "classification": 3,
       "public": false,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "t002"
         }
-      }
+      },
+      "classification": 3
     },
     "parents": []
   },
@@ -856,14 +856,14 @@
       "id": "r0023"
     },
     "attrs": {
-      "classification": 3,
       "public": true,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "t003"
         }
-      }
+      },
+      "classification": 3
     },
     "parents": []
   },
@@ -873,14 +873,14 @@
       "id": "r0024"
     },
     "attrs": {
-      "classification": 3,
       "public": false,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "t004"
         }
-      }
+      },
+      "classification": 3
     },
     "parents": []
   },
@@ -890,14 +890,14 @@
       "id": "r0025"
     },
     "attrs": {
-      "classification": 2,
       "public": false,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "t000"
         }
-      }
+      },
+      "classification": 2
     },
     "parents": []
   },
@@ -907,14 +907,14 @@
       "id": "r0026"
     },
     "attrs": {
-      "classification": 2,
       "public": false,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "t001"
         }
-      }
+      },
+      "classification": 2
     },
     "parents": []
   },
@@ -924,14 +924,14 @@
       "id": "r0027"
     },
     "attrs": {
-      "classification": 1,
       "public": false,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "t002"
         }
-      }
+      },
+      "classification": 1
     },
     "parents": []
   },
@@ -941,14 +941,14 @@
       "id": "r0028"
     },
     "attrs": {
-      "classification": 4,
       "public": false,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "t003"
         }
-      }
+      },
+      "classification": 4
     },
     "parents": []
   },
@@ -958,14 +958,14 @@
       "id": "r0029"
     },
     "attrs": {
-      "classification": 4,
       "public": false,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "t004"
         }
-      }
+      },
+      "classification": 4
     },
     "parents": []
   },
@@ -975,14 +975,14 @@
       "id": "r_denied"
     },
     "attrs": {
-      "classification": 5,
       "public": false,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "public"
         }
-      }
+      },
+      "classification": 5
     },
     "parents": []
   },
@@ -992,14 +992,14 @@
       "id": "r_secret"
     },
     "attrs": {
-      "classification": 5,
       "public": false,
       "owner": {
         "__entity": {
           "type": "Team",
           "id": "public"
         }
-      }
+      },
+      "classification": 5
     },
     "parents": []
   }

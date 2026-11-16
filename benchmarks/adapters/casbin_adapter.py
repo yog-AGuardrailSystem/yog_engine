@@ -22,7 +22,8 @@ import importlib.util
 import json
 from pathlib import Path
 
-from corpus import build_model, load_requests, parse_facts
+from corpus import (build_model, corpus_file, load_requests, parse_facts,
+                    PROFILES)
 from stats import measure, require_decision
 
 HERE = Path(__file__).resolve().parent
@@ -80,27 +81,30 @@ def write_translation(model: dict, target: Path) -> tuple[Path, Path]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--size", choices=["small", "medium", "large"], default="small")
+    parser.add_argument("--profile", choices=PROFILES, default="full")
     parser.add_argument("--iterations", type=int, default=200)
     parser.add_argument("--warmup", type=int, default=20)
     parser.add_argument("--repetitions", type=int, default=3)
     args = parser.parse_args()
 
-    corpus = CORPUS / f"{args.size}.yog"
+    corpus = corpus_file(CORPUS, args.profile, args.size)
     if not corpus.exists():
         raise SystemExit(f"missing {corpus}; run benchmarks/gen_corpus.py first")
     model = build_model(parse_facts(corpus))
-    requests = load_requests(CORPUS, args.size)
+    requests = load_requests(CORPUS, args.size, args.profile)
     available = importlib.util.find_spec("casbin") is not None
 
-    target = ROOT / "benchmarks" / "results" / "translations" / "casbin" / args.size
+    folder = args.size if args.profile == "full" else f"common-{args.size}"
+    target = ROOT / "benchmarks" / "results" / "translations" / "casbin" / folder
     target.mkdir(parents=True, exist_ok=True)
     model_path, policy_path = write_translation(model, target)
     result = {
         "engine": "casbin",
         "size": args.size,
+        "profile": args.profile,
         "boundary": BOUNDARY,
         "available": available,
-        "numeric_clause": False,
+        "numeric_clause": args.profile != "full",
         "translation": {
             "model": str(model_path),
             "policy": str(policy_path),

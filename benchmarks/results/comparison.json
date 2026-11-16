@@ -1,2129 +1,1430 @@
 {
-  "generated_at": "2026-11-14T19:46:21.331491+00:00",
+  "generated_at": "2026-11-15T05:50:08.563141+00:00",
+  "profile": "common",
   "versions": {
-    "git_commit": "c4ce48e6bdd9fb2c88331a83c6f0d8b2f76aafb8",
+    "git_commit": "3b58cf95c62194ec5180916abfa0e77d665e8278",
     "python": "3.14.7",
     "platform": "Windows-11-10.0.26200-SP0",
-    "yogc": "yog/build-release/yogc.exe",
-    "bench_yog": "yog/build-release/bench_yog.exe",
+    "machine": "AMD64",
     "engines": {
-      "yog": "source c4ce48e (release)",
+      "yog": "source 3b58cf9 (shared library + bindings)",
+      "casbin": "casbin 1.43.0",
       "opa": "Version: 1.22.4",
-      "cedar": "cedar-policy-cli 4.14.1",
-      "casbin": "1.43.0"
-    },
-    "library_build": "release"
-  },
-  "sizes": [
-    "small",
-    "medium",
-    "large"
-  ],
-  "config": {
-    "cli_iterations": {
-      "small": 30,
-      "medium": 20,
-      "large": 10
-    },
-    "repetitions": 2,
-    "warmup": 1,
-    "casbin_iterations": {
-      "small": 200,
-      "medium": 100,
-      "large": 30
-    },
-    "yog_library_iterations": {
-      "small": 5000,
-      "medium": 2000,
-      "large": 500
+      "cedar": "cedar-policy 4.14.1 (Rust SDK)"
     }
   },
+  "config": {
+    "runs": 10,
+    "iterations": 500,
+    "warmup": 50,
+    "ci": "95% percentile bootstrap over run medians",
+    "cpu": "pinned to CPU 0 (mask 0x1); children inherit"
+  },
+  "requests": {
+    "small": [
+      "admin allow",
+      "team join allow",
+      "guest default deny",
+      "unmapped deny"
+    ],
+    "medium": [
+      "admin allow",
+      "team join allow",
+      "guest default deny",
+      "unmapped deny"
+    ],
+    "large": [
+      "admin allow",
+      "team join allow",
+      "guest default deny",
+      "unmapped deny"
+    ]
+  },
   "boundaries": {
-    "cli-process": {
-      "description": "Each sample spawns a process: policy compile/load, startup, decision and output are all included.",
+    "python-in-process": {
+      "description": "YOG-Python (ctypes) and Casbin both run in CPython. Native runtime: same.",
       "sizes": {
         "small": {
-          "yog": {
-            "engine": "yog",
-            "size": "small",
-            "boundary": "cli-process",
-            "available": true,
-            "executable": "yog/build-release/yogc.exe",
-            "requests": [
-              {
-                "label": "admin allow",
-                "expected": "ALLOW",
-                "decision": "ALLOW",
-                "mean_us": 32547.645,
-                "p50_us": 31864.75,
-                "p95_us": 35483.9,
-                "p99_us": 52628.850000000006,
-                "max_us": 52628.850000000006,
-                "throughput_per_s": 30.745024166950945,
-                "samples": 30,
-                "iterations": 30,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 30,
-                    "mean_us": 31700.36,
-                    "p50_us": 31338.4,
-                    "p95_us": 33862.5,
-                    "p99_us": 37459.4,
-                    "max_us": 37459.4,
-                    "throughput_per_s": 31.545383080823054
-                  },
-                  {
-                    "samples": 30,
-                    "mean_us": 33394.93,
-                    "p50_us": 32391.1,
-                    "p95_us": 37105.3,
-                    "p99_us": 67798.3,
-                    "max_us": 67798.3,
-                    "throughput_per_s": 29.944665253078835
-                  }
-                ]
+          "yog-python": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 10.727459999999999,
+                "p50_us": 8.7,
+                "p95_us": 18.0,
+                "p99_us": 26.2,
+                "max_us": 474.4,
+                "throughput_per_s": 93218.71160554315,
+                "runs": 10,
+                "ci_low_us": 8.7,
+                "ci_high_us": 8.7
               },
-              {
-                "label": "team join allow",
-                "expected": "ALLOW",
-                "decision": "ALLOW",
-                "mean_us": 33635.33333333333,
-                "p50_us": 33057.55,
-                "p95_us": 39622.55,
-                "p99_us": 41052.0,
-                "max_us": 41052.0,
-                "throughput_per_s": 29.73351220559097,
-                "samples": 30,
-                "iterations": 30,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 30,
-                    "mean_us": 33965.89333333333,
-                    "p50_us": 33217.5,
-                    "p95_us": 39913.6,
-                    "p99_us": 40585.0,
-                    "max_us": 40585.0,
-                    "throughput_per_s": 29.441298369109095
-                  },
-                  {
-                    "samples": 30,
-                    "mean_us": 33304.77333333333,
-                    "p50_us": 32897.6,
-                    "p95_us": 39331.5,
-                    "p99_us": 41519.0,
-                    "max_us": 41519.0,
-                    "throughput_per_s": 30.025726042072847
-                  }
-                ]
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 12.4354,
+                "p50_us": 10.5,
+                "p95_us": 20.7,
+                "p99_us": 26.3,
+                "max_us": 504.4,
+                "throughput_per_s": 80415.58775753091,
+                "runs": 10,
+                "ci_low_us": 10.4,
+                "ci_high_us": 10.5
               },
-              {
-                "label": "guest default deny",
-                "expected": "DENY",
-                "decision": "DENY",
-                "mean_us": 32644.168333333335,
-                "p50_us": 32428.7,
-                "p95_us": 36975.85,
-                "p99_us": 37826.5,
-                "max_us": 37826.5,
-                "throughput_per_s": 30.639463206637387,
-                "samples": 30,
-                "iterations": 30,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 30,
-                    "mean_us": 33105.543333333335,
-                    "p50_us": 32834.0,
-                    "p95_us": 38521.1,
-                    "p99_us": 39366.8,
-                    "max_us": 39366.8,
-                    "throughput_per_s": 30.206421623448158
-                  },
-                  {
-                    "samples": 30,
-                    "mean_us": 32182.79333333333,
-                    "p50_us": 32023.4,
-                    "p95_us": 35430.6,
-                    "p99_us": 36286.2,
-                    "max_us": 36286.2,
-                    "throughput_per_s": 31.072504789826613
-                  }
-                ]
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 17.22082,
+                "p50_us": 12.5,
+                "p95_us": 26.8,
+                "p99_us": 77.7,
+                "max_us": 2860.6,
+                "throughput_per_s": 58069.24408942199,
+                "runs": 10,
+                "ci_low_us": 12.5,
+                "ci_high_us": 12.6
               },
-              {
-                "label": "low clearance deny",
-                "expected": "DENY",
-                "decision": "DENY",
-                "mean_us": 32849.431666666664,
-                "p50_us": 32575.9,
-                "p95_us": 37040.0,
-                "p99_us": 39842.05,
-                "max_us": 39842.05,
-                "throughput_per_s": 30.442324742663715,
-                "samples": 30,
-                "iterations": 30,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 30,
-                    "mean_us": 32968.17333333333,
-                    "p50_us": 32595.2,
-                    "p95_us": 37351.7,
-                    "p99_us": 41559.2,
-                    "max_us": 41559.2,
-                    "throughput_per_s": 30.332284105923573
-                  },
-                  {
-                    "samples": 30,
-                    "mean_us": 32730.69,
-                    "p50_us": 32556.6,
-                    "p95_us": 36728.3,
-                    "p99_us": 38124.9,
-                    "max_us": 38124.9,
-                    "throughput_per_s": 30.552365379403856
-                  }
-                ]
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 14.63944,
+                "p50_us": 12.5,
+                "p95_us": 25.1,
+                "p99_us": 40.9,
+                "max_us": 376.0,
+                "throughput_per_s": 68308.62382714092,
+                "runs": 10,
+                "ci_low_us": 12.5,
+                "ci_high_us": 12.6
               }
-            ]
-          },
-          "opa": {
-            "engine": "opa",
-            "size": "small",
-            "boundary": "cli-process",
-            "available": true,
-            "executable": ".tools/opa.exe",
-            "translation": {
-              "data": "benchmarks/results/translations/opa/small/data.json",
-              "policy": "benchmarks/results/translations/opa/small/policy.rego",
-              "data_sha256": "990298eb9703179551b38a567ab4342eabcee26abb183e38cebae877bfc03677",
-              "policy_sha256": "452a026dc2b743b32f5c4a5dbf4bfbfed20b6e520a679b77c11eb216edb0fd18"
             },
-            "requests": [
-              {
-                "label": "admin allow",
-                "expected": "ALLOW",
-                "decision": "ALLOW",
-                "mean_us": 105033.87333333334,
-                "p50_us": 101697.5,
-                "p95_us": 138745.1,
-                "p99_us": 168791.15,
-                "max_us": 168791.15,
-                "throughput_per_s": 9.523614137948556,
-                "samples": 30,
-                "iterations": 30,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 30,
-                    "mean_us": 103208.61,
-                    "p50_us": 102344.8,
-                    "p95_us": 117879.7,
-                    "p99_us": 118229.4,
-                    "max_us": 118229.4,
-                    "throughput_per_s": 9.68911411557621
-                  },
-                  {
-                    "samples": 30,
-                    "mean_us": 106859.13666666667,
-                    "p50_us": 101050.2,
-                    "p95_us": 159610.5,
-                    "p99_us": 219352.9,
-                    "max_us": 219352.9,
-                    "throughput_per_s": 9.358114160320904
-                  }
-                ]
-              },
-              {
-                "label": "team join allow",
-                "expected": "ALLOW",
-                "decision": "ALLOW",
-                "mean_us": 106742.91666666666,
-                "p50_us": 100692.35,
-                "p95_us": 118794.85,
-                "p99_us": 237440.25,
-                "max_us": 237440.25,
-                "throughput_per_s": 9.39015832315954,
-                "samples": 30,
-                "iterations": 30,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 30,
-                    "mean_us": 101593.24,
-                    "p50_us": 100888.9,
-                    "p95_us": 112458.0,
-                    "p99_us": 121048.3,
-                    "max_us": 121048.3,
-                    "throughput_per_s": 9.843174604924501
-                  },
-                  {
-                    "samples": 30,
-                    "mean_us": 111892.59333333332,
-                    "p50_us": 100495.8,
-                    "p95_us": 125131.7,
-                    "p99_us": 353832.2,
-                    "max_us": 353832.2,
-                    "throughput_per_s": 8.937142041394578
-                  }
-                ]
-              },
-              {
-                "label": "guest default deny",
-                "expected": "DENY",
-                "decision": "DENY",
-                "mean_us": 115305.38666666666,
-                "p50_us": 112636.65,
-                "p95_us": 136427.45,
-                "p99_us": 158107.3,
-                "max_us": 158107.3,
-                "throughput_per_s": 8.675093829207329,
-                "samples": 30,
-                "iterations": 30,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 30,
-                    "mean_us": 117251.85333333333,
-                    "p50_us": 112359.8,
-                    "p95_us": 144953.5,
-                    "p99_us": 187983.2,
-                    "max_us": 187983.2,
-                    "throughput_per_s": 8.528649838541286
-                  },
-                  {
-                    "samples": 30,
-                    "mean_us": 113358.92,
-                    "p50_us": 112913.5,
-                    "p95_us": 127901.4,
-                    "p99_us": 128231.4,
-                    "max_us": 128231.4,
-                    "throughput_per_s": 8.821537819873372
-                  }
-                ]
-              },
-              {
-                "label": "low clearance deny",
-                "expected": "DENY",
-                "decision": "DENY",
-                "mean_us": 119550.93833333332,
-                "p50_us": 112956.79999999999,
-                "p95_us": 170336.25,
-                "p99_us": 231109.45,
-                "max_us": 231109.45,
-                "throughput_per_s": 8.381674408993703,
-                "samples": 30,
-                "iterations": 30,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 30,
-                    "mean_us": 114160.66333333333,
-                    "p50_us": 111936.2,
-                    "p95_us": 130594.7,
-                    "p99_us": 137545.9,
-                    "max_us": 137545.9,
-                    "throughput_per_s": 8.759584701081653
-                  },
-                  {
-                    "samples": 30,
-                    "mean_us": 124941.21333333333,
-                    "p50_us": 113977.4,
-                    "p95_us": 210077.8,
-                    "p99_us": 324673.0,
-                    "max_us": 324673.0,
-                    "throughput_per_s": 8.003764116905753
-                  }
-                ]
-              }
-            ],
-            "tool_version": "Version: 1.22.4"
+            "load": {
+              "samples": 100,
+              "mean_us": 158.288,
+              "p50_us": 138.275,
+              "p95_us": 265.1,
+              "p99_us": 407.5,
+              "max_us": 407.5,
+              "throughput_per_s": 6317.5983018295765,
+              "runs": 10,
+              "ci_low_us": 133.85,
+              "ci_high_us": 193.75
+            }
           },
-          "cedar": {
-            "engine": "cedar",
-            "size": "small",
-            "boundary": "cli-process",
-            "available": true,
-            "executable": "~/.cargo/bin/cedar.exe",
-            "translation": {
-              "policy": "benchmarks/results/translations/cedar/small/policy.cedar",
-              "entities": "benchmarks/results/translations/cedar/small/entities.json",
-              "policy_sha256": "91d549b234953a56e9c6ed515a00e82f9e5ab404723be2bb550931ce8f7bcbb9",
-              "entities_sha256": "34e2e89050893e3a20144d7797ef3c42f4ba35df3b72d415f7a03632bd498bdc"
-            },
-            "requests": [
-              {
-                "label": "admin allow",
-                "expected": "ALLOW",
-                "decision": "ALLOW",
-                "mean_us": 130216.45000000001,
-                "p50_us": 127715.4,
-                "p95_us": 148893.95,
-                "p99_us": 155665.5,
-                "max_us": 155665.5,
-                "throughput_per_s": 7.679901255888858,
-                "samples": 30,
-                "iterations": 30,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 30,
-                    "mean_us": 129300.52333333333,
-                    "p50_us": 127935.7,
-                    "p95_us": 140776.0,
-                    "p99_us": 147880.0,
-                    "max_us": 147880.0,
-                    "throughput_per_s": 7.733920746956502
-                  },
-                  {
-                    "samples": 30,
-                    "mean_us": 131132.37666666668,
-                    "p50_us": 127495.1,
-                    "p95_us": 157011.9,
-                    "p99_us": 163451.0,
-                    "max_us": 163451.0,
-                    "throughput_per_s": 7.625881764821212
-                  }
-                ]
+          "casbin": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 173.00906,
+                "p50_us": 132.7,
+                "p95_us": 384.8,
+                "p99_us": 594.6,
+                "max_us": 8080.2,
+                "throughput_per_s": 5780.044120232778,
+                "runs": 10,
+                "ci_low_us": 131.65,
+                "ci_high_us": 140.0
               },
-              {
-                "label": "team join allow",
-                "expected": "ALLOW",
-                "decision": "ALLOW",
-                "mean_us": 135973.21166666667,
-                "p50_us": 128958.55,
-                "p95_us": 179361.40000000002,
-                "p99_us": 260218.35,
-                "max_us": 260218.35,
-                "throughput_per_s": 7.362562687600919,
-                "samples": 30,
-                "iterations": 30,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 30,
-                    "mean_us": 131442.91333333333,
-                    "p50_us": 129321.0,
-                    "p95_us": 157092.1,
-                    "p99_us": 169607.5,
-                    "max_us": 169607.5,
-                    "throughput_per_s": 7.607865457638213
-                  },
-                  {
-                    "samples": 30,
-                    "mean_us": 140503.51,
-                    "p50_us": 128596.1,
-                    "p95_us": 201630.7,
-                    "p99_us": 350829.2,
-                    "max_us": 350829.2,
-                    "throughput_per_s": 7.117259917563625
-                  }
-                ]
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 183.47938,
+                "p50_us": 152.575,
+                "p95_us": 368.0,
+                "p99_us": 533.3,
+                "max_us": 4249.0,
+                "throughput_per_s": 5450.203723164968,
+                "runs": 10,
+                "ci_low_us": 150.7,
+                "ci_high_us": 158.85
               },
-              {
-                "label": "guest default deny",
-                "expected": "DENY",
-                "decision": "DENY",
-                "mean_us": 132022.95666666667,
-                "p50_us": 128238.0,
-                "p95_us": 143371.0,
-                "p99_us": 214747.75,
-                "max_us": 214747.75,
-                "throughput_per_s": 7.581861227558927,
-                "samples": 30,
-                "iterations": 30,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 30,
-                    "mean_us": 127892.56333333332,
-                    "p50_us": 126180.3,
-                    "p95_us": 139729.7,
-                    "p99_us": 142245.0,
-                    "max_us": 142245.0,
-                    "throughput_per_s": 7.819062922318992
-                  },
-                  {
-                    "samples": 30,
-                    "mean_us": 136153.35,
-                    "p50_us": 130295.7,
-                    "p95_us": 147012.3,
-                    "p99_us": 287250.5,
-                    "max_us": 287250.5,
-                    "throughput_per_s": 7.344659532798863
-                  }
-                ]
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 246.32742000000002,
+                "p50_us": 206.55,
+                "p95_us": 463.4,
+                "p99_us": 718.4,
+                "max_us": 4073.3,
+                "throughput_per_s": 4059.637372079812,
+                "runs": 10,
+                "ci_low_us": 196.8,
+                "ci_high_us": 216.6
               },
-              {
-                "label": "low clearance deny",
-                "expected": "DENY",
-                "decision": "DENY",
-                "mean_us": 134415.0783333333,
-                "p50_us": 129781.85,
-                "p95_us": 165810.40000000002,
-                "p99_us": 250096.8,
-                "max_us": 250096.8,
-                "throughput_per_s": 7.446580681874158,
-                "samples": 30,
-                "iterations": 30,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 30,
-                    "mean_us": 130311.88,
-                    "p50_us": 129117.6,
-                    "p95_us": 144265.6,
-                    "p99_us": 154205.4,
-                    "max_us": 154205.4,
-                    "throughput_per_s": 7.673897422092291
-                  },
-                  {
-                    "samples": 30,
-                    "mean_us": 138518.27666666664,
-                    "p50_us": 130446.1,
-                    "p95_us": 187355.2,
-                    "p99_us": 345988.2,
-                    "max_us": 345988.2,
-                    "throughput_per_s": 7.219263941656026
-                  }
-                ]
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 226.29592000000002,
+                "p50_us": 197.7,
+                "p95_us": 388.6,
+                "p99_us": 561.3,
+                "max_us": 12715.1,
+                "throughput_per_s": 4418.992618161211,
+                "runs": 10,
+                "ci_low_us": 196.35,
+                "ci_high_us": 201.1
               }
-            ],
-            "tool_version": "cedar-policy-cli 4.14.1"
+            },
+            "load": {
+              "samples": 100,
+              "mean_us": 2116.736,
+              "p50_us": 1967.975,
+              "p95_us": 2775.6,
+              "p99_us": 3843.9,
+              "max_us": 3843.9,
+              "throughput_per_s": 472.42547015782793,
+              "runs": 10,
+              "ci_low_us": 1947.0,
+              "ci_high_us": 2037.4
+            }
           }
         },
         "medium": {
-          "yog": {
-            "engine": "yog",
-            "size": "medium",
-            "boundary": "cli-process",
-            "available": true,
-            "executable": "yog/build-release/yogc.exe",
-            "requests": [
-              {
-                "label": "admin allow",
-                "expected": "ALLOW",
-                "decision": "ALLOW",
-                "mean_us": 40431.869999999995,
-                "p50_us": 39758.5,
-                "p95_us": 51346.75,
-                "p99_us": 51346.75,
-                "max_us": 51346.75,
-                "throughput_per_s": 24.735035675803566,
-                "samples": 20,
-                "iterations": 20,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 20,
-                    "mean_us": 40801.86,
-                    "p50_us": 39661.6,
-                    "p95_us": 52388.7,
-                    "p99_us": 52388.7,
-                    "max_us": 52388.7,
-                    "throughput_per_s": 24.508686613796527
-                  },
-                  {
-                    "samples": 20,
-                    "mean_us": 40061.88,
-                    "p50_us": 39855.4,
-                    "p95_us": 50304.8,
-                    "p99_us": 50304.8,
-                    "max_us": 50304.8,
-                    "throughput_per_s": 24.961384737810608
-                  }
-                ]
+          "yog-python": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 8.9581,
+                "p50_us": 8.7,
+                "p95_us": 9.0,
+                "p99_us": 17.3,
+                "max_us": 59.9,
+                "throughput_per_s": 111630.81457005393,
+                "runs": 10,
+                "ci_low_us": 8.7,
+                "ci_high_us": 8.7
               },
-              {
-                "label": "team join allow",
-                "expected": "ALLOW",
-                "decision": "ALLOW",
-                "mean_us": 42663.7225,
-                "p50_us": 41569.05,
-                "p95_us": 53952.649999999994,
-                "p99_us": 53952.649999999994,
-                "max_us": 53952.649999999994,
-                "throughput_per_s": 23.451063037491082,
-                "samples": 20,
-                "iterations": 20,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 20,
-                    "mean_us": 43626.625,
-                    "p50_us": 42436.0,
-                    "p95_us": 56530.7,
-                    "p99_us": 56530.7,
-                    "max_us": 56530.7,
-                    "throughput_per_s": 22.92178228318143
-                  },
-                  {
-                    "samples": 20,
-                    "mean_us": 41700.82,
-                    "p50_us": 40702.1,
-                    "p95_us": 51374.6,
-                    "p99_us": 51374.6,
-                    "max_us": 51374.6,
-                    "throughput_per_s": 23.98034379180074
-                  }
-                ]
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 21.71404,
+                "p50_us": 21.2,
+                "p95_us": 21.7,
+                "p99_us": 37.4,
+                "max_us": 235.0,
+                "throughput_per_s": 46053.152706728,
+                "runs": 10,
+                "ci_low_us": 21.2,
+                "ci_high_us": 21.2
               },
-              {
-                "label": "guest default deny",
-                "expected": "DENY",
-                "decision": "DENY",
-                "mean_us": 40554.91499999999,
-                "p50_us": 40422.25,
-                "p95_us": 51914.5,
-                "p99_us": 51914.5,
-                "max_us": 51914.5,
-                "throughput_per_s": 24.65962921943205,
-                "samples": 20,
-                "iterations": 20,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 20,
-                    "mean_us": 40217.645,
-                    "p50_us": 40322.4,
-                    "p95_us": 51229.8,
-                    "p99_us": 51229.8,
-                    "max_us": 51229.8,
-                    "throughput_per_s": 24.864708015598623
-                  },
-                  {
-                    "samples": 20,
-                    "mean_us": 40892.185,
-                    "p50_us": 40522.1,
-                    "p95_us": 52599.2,
-                    "p99_us": 52599.2,
-                    "max_us": 52599.2,
-                    "throughput_per_s": 24.454550423265474
-                  }
-                ]
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 43.036120000000004,
+                "p50_us": 41.65,
+                "p95_us": 48.4,
+                "p99_us": 76.1,
+                "max_us": 203.6,
+                "throughput_per_s": 23236.29546529752,
+                "runs": 10,
+                "ci_low_us": 41.6,
+                "ci_high_us": 41.7
               },
-              {
-                "label": "low clearance deny",
-                "expected": "DENY",
-                "decision": "DENY",
-                "mean_us": 41582.072499999995,
-                "p50_us": 40507.350000000006,
-                "p95_us": 55720.1,
-                "p99_us": 55720.1,
-                "max_us": 55720.1,
-                "throughput_per_s": 24.049942630397638,
-                "samples": 20,
-                "iterations": 20,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 20,
-                    "mean_us": 41865.49,
-                    "p50_us": 40093.9,
-                    "p95_us": 63050.5,
-                    "p99_us": 63050.5,
-                    "max_us": 63050.5,
-                    "throughput_per_s": 23.88602163739156
-                  },
-                  {
-                    "samples": 20,
-                    "mean_us": 41298.655,
-                    "p50_us": 40920.8,
-                    "p95_us": 48389.7,
-                    "p99_us": 48389.7,
-                    "max_us": 48389.7,
-                    "throughput_per_s": 24.213863623403714
-                  }
-                ]
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 42.497699999999995,
+                "p50_us": 41.7,
+                "p95_us": 43.3,
+                "p99_us": 61.3,
+                "max_us": 166.7,
+                "throughput_per_s": 23530.68519002205,
+                "runs": 10,
+                "ci_low_us": 41.7,
+                "ci_high_us": 41.8
               }
-            ]
-          },
-          "opa": {
-            "engine": "opa",
-            "size": "medium",
-            "boundary": "cli-process",
-            "available": true,
-            "executable": ".tools/opa.exe",
-            "translation": {
-              "data": "benchmarks/results/translations/opa/medium/data.json",
-              "policy": "benchmarks/results/translations/opa/medium/policy.rego",
-              "data_sha256": "3e676c3dc3c03ef0dba36d8f4dfb179ceb4f4f989d0199bdd0684c59ed46217d",
-              "policy_sha256": "452a026dc2b743b32f5c4a5dbf4bfbfed20b6e520a679b77c11eb216edb0fd18"
             },
-            "requests": [
-              {
-                "label": "admin allow",
-                "expected": "ALLOW",
-                "decision": "ALLOW",
-                "mean_us": 106914.67749999999,
-                "p50_us": 108348.9,
-                "p95_us": 135885.35,
-                "p99_us": 135885.35,
-                "max_us": 135885.35,
-                "throughput_per_s": 9.38287944378429,
-                "samples": 20,
-                "iterations": 20,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 20,
-                    "mean_us": 112922.415,
-                    "p50_us": 111759.3,
-                    "p95_us": 127522.5,
-                    "p99_us": 127522.5,
-                    "max_us": 127522.5,
-                    "throughput_per_s": 8.855637740301605
-                  },
-                  {
-                    "samples": 20,
-                    "mean_us": 100906.94,
-                    "p50_us": 104938.5,
-                    "p95_us": 144248.2,
-                    "p99_us": 144248.2,
-                    "max_us": 144248.2,
-                    "throughput_per_s": 9.910121147266977
-                  }
-                ]
-              },
-              {
-                "label": "team join allow",
-                "expected": "ALLOW",
-                "decision": "ALLOW",
-                "mean_us": 106246.7125,
-                "p50_us": 101988.15,
-                "p95_us": 187930.65000000002,
-                "p99_us": 187930.65000000002,
-                "max_us": 187930.65000000002,
-                "throughput_per_s": 9.534523174256044,
-                "samples": 20,
-                "iterations": 20,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 20,
-                    "mean_us": 94205.34,
-                    "p50_us": 86234.2,
-                    "p95_us": 210118.2,
-                    "p99_us": 210118.2,
-                    "max_us": 210118.2,
-                    "throughput_per_s": 10.615109504408137
-                  },
-                  {
-                    "samples": 20,
-                    "mean_us": 118288.085,
-                    "p50_us": 117742.1,
-                    "p95_us": 165743.1,
-                    "p99_us": 165743.1,
-                    "max_us": 165743.1,
-                    "throughput_per_s": 8.453936844103952
-                  }
-                ]
-              },
-              {
-                "label": "guest default deny",
-                "expected": "DENY",
-                "decision": "DENY",
-                "mean_us": 108405.955,
-                "p50_us": 108800.4,
-                "p95_us": 125060.34999999999,
-                "p99_us": 125060.34999999999,
-                "max_us": 125060.34999999999,
-                "throughput_per_s": 9.270306344648233,
-                "samples": 20,
-                "iterations": 20,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 20,
-                    "mean_us": 116019.085,
-                    "p50_us": 117543.6,
-                    "p95_us": 135996.8,
-                    "p99_us": 135996.8,
-                    "max_us": 135996.8,
-                    "throughput_per_s": 8.619271562088255
-                  },
-                  {
-                    "samples": 20,
-                    "mean_us": 100792.825,
-                    "p50_us": 100057.2,
-                    "p95_us": 114123.9,
-                    "p99_us": 114123.9,
-                    "max_us": 114123.9,
-                    "throughput_per_s": 9.921341127208212
-                  }
-                ]
-              },
-              {
-                "label": "low clearance deny",
-                "expected": "DENY",
-                "decision": "DENY",
-                "mean_us": 97030.64,
-                "p50_us": 96880.70000000001,
-                "p95_us": 116172.55,
-                "p99_us": 116172.55,
-                "max_us": 116172.55,
-                "throughput_per_s": 10.311277137032235,
-                "samples": 20,
-                "iterations": 20,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 20,
-                    "mean_us": 99220.955,
-                    "p50_us": 98160.1,
-                    "p95_us": 117889.3,
-                    "p99_us": 117889.3,
-                    "max_us": 117889.3,
-                    "throughput_per_s": 10.078516176346016
-                  },
-                  {
-                    "samples": 20,
-                    "mean_us": 94840.325,
-                    "p50_us": 95601.3,
-                    "p95_us": 114455.8,
-                    "p99_us": 114455.8,
-                    "max_us": 114455.8,
-                    "throughput_per_s": 10.544038097718454
-                  }
-                ]
-              }
-            ],
-            "tool_version": "Version: 1.22.4"
+            "load": {
+              "samples": 100,
+              "mean_us": 2174.449,
+              "p50_us": 1822.45,
+              "p95_us": 3213.7,
+              "p99_us": 3335.8,
+              "max_us": 3335.8,
+              "throughput_per_s": 459.88661955281543,
+              "runs": 10,
+              "ci_low_us": 1739.35,
+              "ci_high_us": 3079.6
+            }
           },
-          "cedar": {
-            "engine": "cedar",
-            "size": "medium",
-            "boundary": "cli-process",
-            "available": true,
-            "executable": "~/.cargo/bin/cedar.exe",
-            "translation": {
-              "policy": "benchmarks/results/translations/cedar/medium/policy.cedar",
-              "entities": "benchmarks/results/translations/cedar/medium/entities.json",
-              "policy_sha256": "91d549b234953a56e9c6ed515a00e82f9e5ab404723be2bb550931ce8f7bcbb9",
-              "entities_sha256": "aada3149683ab2bc9b2ecec6b45c693d447b6e9ad32a925d9cfadc5eee944380"
-            },
-            "requests": [
-              {
-                "label": "admin allow",
-                "expected": "ALLOW",
-                "decision": "ALLOW",
-                "mean_us": 611533.94,
-                "p50_us": 603186.4,
-                "p95_us": 734028.6,
-                "p99_us": 734028.6,
-                "max_us": 734028.6,
-                "throughput_per_s": 1.6352346899249355,
-                "samples": 20,
-                "iterations": 20,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 20,
-                    "mean_us": 612286.09,
-                    "p50_us": 603330.9,
-                    "p95_us": 751243.0,
-                    "p99_us": 751243.0,
-                    "max_us": 751243.0,
-                    "throughput_per_s": 1.633223449515242
-                  },
-                  {
-                    "samples": 20,
-                    "mean_us": 610781.79,
-                    "p50_us": 603041.9,
-                    "p95_us": 716814.2,
-                    "p99_us": 716814.2,
-                    "max_us": 716814.2,
-                    "throughput_per_s": 1.6372459303346292
-                  }
-                ]
+          "casbin": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 149.93598,
+                "p50_us": 129.7,
+                "p95_us": 233.5,
+                "p99_us": 431.2,
+                "max_us": 8346.6,
+                "throughput_per_s": 6669.5132149067895,
+                "runs": 10,
+                "ci_low_us": 129.4,
+                "ci_high_us": 130.0
               },
-              {
-                "label": "team join allow",
-                "expected": "ALLOW",
-                "decision": "ALLOW",
-                "mean_us": 571877.7925,
-                "p50_us": 594455.8,
-                "p95_us": 798045.8999999999,
-                "p99_us": 798045.8999999999,
-                "max_us": 798045.8999999999,
-                "throughput_per_s": 1.7910456998203061,
-                "samples": 20,
-                "iterations": 20,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 20,
-                    "mean_us": 659888.815,
-                    "p50_us": 659300.2,
-                    "p95_us": 913275.2,
-                    "p99_us": 913275.2,
-                    "max_us": 913275.2,
-                    "throughput_per_s": 1.515406803796182
-                  },
-                  {
-                    "samples": 20,
-                    "mean_us": 483866.77,
-                    "p50_us": 529611.4,
-                    "p95_us": 682816.6,
-                    "p99_us": 682816.6,
-                    "max_us": 682816.6,
-                    "throughput_per_s": 2.06668459584443
-                  }
-                ]
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 173.34508,
+                "p50_us": 151.325,
+                "p95_us": 285.7,
+                "p99_us": 471.2,
+                "max_us": 974.7,
+                "throughput_per_s": 5768.839819393778,
+                "runs": 10,
+                "ci_low_us": 151.2,
+                "ci_high_us": 152.85
               },
-              {
-                "label": "guest default deny",
-                "expected": "DENY",
-                "decision": "DENY",
-                "mean_us": 586831.2075,
-                "p50_us": 588101.55,
-                "p95_us": 641027.8999999999,
-                "p99_us": 641027.8999999999,
-                "max_us": 641027.8999999999,
-                "throughput_per_s": 1.7040760647809707,
-                "samples": 20,
-                "iterations": 20,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 20,
-                    "mean_us": 588145.335,
-                    "p50_us": 589159.9,
-                    "p95_us": 631219.6,
-                    "p99_us": 631219.6,
-                    "max_us": 631219.6,
-                    "throughput_per_s": 1.7002600216152355
-                  },
-                  {
-                    "samples": 20,
-                    "mean_us": 585517.08,
-                    "p50_us": 587043.2,
-                    "p95_us": 650836.2,
-                    "p99_us": 650836.2,
-                    "max_us": 650836.2,
-                    "throughput_per_s": 1.707892107946706
-                  }
-                ]
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 407.9893,
+                "p50_us": 378.35,
+                "p95_us": 630.6,
+                "p99_us": 783.3,
+                "max_us": 1811.3,
+                "throughput_per_s": 2451.0446720048785,
+                "runs": 10,
+                "ci_low_us": 377.0,
+                "ci_high_us": 385.6
               },
-              {
-                "label": "low clearance deny",
-                "expected": "DENY",
-                "decision": "DENY",
-                "mean_us": 603531.48,
-                "p50_us": 602436.7,
-                "p95_us": 660918.45,
-                "p99_us": 660918.45,
-                "max_us": 660918.45,
-                "throughput_per_s": 1.6574078705696893,
-                "samples": 20,
-                "iterations": 20,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 20,
-                    "mean_us": 593117.52,
-                    "p50_us": 593870.2,
-                    "p95_us": 640625.9,
-                    "p99_us": 640625.9,
-                    "max_us": 640625.9,
-                    "throughput_per_s": 1.6860065101432173
-                  },
-                  {
-                    "samples": 20,
-                    "mean_us": 613945.44,
-                    "p50_us": 611003.2,
-                    "p95_us": 681211.0,
-                    "p99_us": 681211.0,
-                    "max_us": 681211.0,
-                    "throughput_per_s": 1.6288092309961615
-                  }
-                ]
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 245.31189999999998,
+                "p50_us": 187.15,
+                "p95_us": 414.3,
+                "p99_us": 698.3,
+                "max_us": 8617.1,
+                "throughput_per_s": 4076.4430914276886,
+                "runs": 10,
+                "ci_low_us": 185.0,
+                "ci_high_us": 198.3
               }
-            ],
-            "tool_version": "cedar-policy-cli 4.14.1"
+            },
+            "load": {
+              "samples": 100,
+              "mean_us": 6875.626,
+              "p50_us": 4826.925,
+              "p95_us": 12812.4,
+              "p99_us": 20123.0,
+              "max_us": 20123.0,
+              "throughput_per_s": 145.44130236286847,
+              "runs": 10,
+              "ci_low_us": 4365.5,
+              "ci_high_us": 9731.9
+            }
           }
         },
         "large": {
-          "yog": {
-            "engine": "yog",
-            "size": "large",
-            "boundary": "cli-process",
-            "available": true,
-            "executable": "yog/build-release/yogc.exe",
-            "requests": [
-              {
-                "label": "admin allow",
-                "expected": "ALLOW",
-                "decision": "ALLOW",
-                "mean_us": 147419.04499999998,
-                "p50_us": 146710.0,
-                "p95_us": 181221.5,
-                "p99_us": 181221.5,
-                "max_us": 181221.5,
-                "throughput_per_s": 6.793800966932561,
-                "samples": 10,
-                "iterations": 10,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 10,
-                    "mean_us": 141646.51,
-                    "p50_us": 139375.5,
-                    "p95_us": 183702.0,
-                    "p99_us": 183702.0,
-                    "max_us": 183702.0,
-                    "throughput_per_s": 7.059828018353577
-                  },
-                  {
-                    "samples": 10,
-                    "mean_us": 153191.58,
-                    "p50_us": 154044.5,
-                    "p95_us": 178741.0,
-                    "p99_us": 178741.0,
-                    "max_us": 178741.0,
-                    "throughput_per_s": 6.527773915511545
-                  }
-                ]
+          "yog-python": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 9.09684,
+                "p50_us": 8.7,
+                "p95_us": 9.3,
+                "p99_us": 19.5,
+                "max_us": 85.4,
+                "throughput_per_s": 109928.2827883089,
+                "runs": 10,
+                "ci_low_us": 8.7,
+                "ci_high_us": 8.7
               },
-              {
-                "label": "team join allow",
-                "expected": "ALLOW",
-                "decision": "ALLOW",
-                "mean_us": 152587.81,
-                "p50_us": 149791.75,
-                "p95_us": 179861.9,
-                "p99_us": 179861.9,
-                "max_us": 179861.9,
-                "throughput_per_s": 6.582968185738448,
-                "samples": 10,
-                "iterations": 10,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 10,
-                    "mean_us": 162778.93,
-                    "p50_us": 157325.4,
-                    "p95_us": 199585.4,
-                    "p99_us": 199585.4,
-                    "max_us": 199585.4,
-                    "throughput_per_s": 6.143301224550376
-                  },
-                  {
-                    "samples": 10,
-                    "mean_us": 142396.69,
-                    "p50_us": 142258.1,
-                    "p95_us": 160138.4,
-                    "p99_us": 160138.4,
-                    "max_us": 160138.4,
-                    "throughput_per_s": 7.022635146926519
-                  }
-                ]
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 145.95668,
+                "p50_us": 133.625,
+                "p95_us": 205.5,
+                "p99_us": 275.9,
+                "max_us": 2828.3,
+                "throughput_per_s": 6851.347947897965,
+                "runs": 10,
+                "ci_low_us": 133.4,
+                "ci_high_us": 133.9
               },
-              {
-                "label": "guest default deny",
-                "expected": "DENY",
-                "decision": "DENY",
-                "mean_us": 147202.45500000002,
-                "p50_us": 151022.3,
-                "p95_us": 167376.25,
-                "p99_us": 167376.25,
-                "max_us": 167376.25,
-                "throughput_per_s": 6.795373371943037,
-                "samples": 10,
-                "iterations": 10,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 10,
-                    "mean_us": 149733.12,
-                    "p50_us": 154736.8,
-                    "p95_us": 170705.1,
-                    "p99_us": 170705.1,
-                    "max_us": 170705.1,
-                    "throughput_per_s": 6.678549141298865
-                  },
-                  {
-                    "samples": 10,
-                    "mean_us": 144671.79,
-                    "p50_us": 147307.8,
-                    "p95_us": 164047.4,
-                    "p99_us": 164047.4,
-                    "max_us": 164047.4,
-                    "throughput_per_s": 6.9121976025872085
-                  }
-                ]
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 416.96708,
+                "p50_us": 364.225,
+                "p95_us": 661.3,
+                "p99_us": 877.5,
+                "max_us": 2260.6,
+                "throughput_per_s": 2398.270865891859,
+                "runs": 10,
+                "ci_low_us": 360.7,
+                "ci_high_us": 370.9
               },
-              {
-                "label": "low clearance deny",
-                "expected": "DENY",
-                "decision": "DENY",
-                "mean_us": 147037.60499999998,
-                "p50_us": 146685.55,
-                "p95_us": 174876.0,
-                "p99_us": 174876.0,
-                "max_us": 174876.0,
-                "throughput_per_s": 6.8023137220278205,
-                "samples": 10,
-                "iterations": 10,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 10,
-                    "mean_us": 149095.5,
-                    "p50_us": 148409.6,
-                    "p95_us": 185825.0,
-                    "p99_us": 185825.0,
-                    "max_us": 185825.0,
-                    "throughput_per_s": 6.707110543242418
-                  },
-                  {
-                    "samples": 10,
-                    "mean_us": 144979.71,
-                    "p50_us": 144961.5,
-                    "p95_us": 163927.0,
-                    "p99_us": 163927.0,
-                    "max_us": 163927.0,
-                    "throughput_per_s": 6.8975169008132236
-                  }
-                ]
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 395.20962,
+                "p50_us": 358.925,
+                "p95_us": 551.8,
+                "p99_us": 773.5,
+                "max_us": 4590.8,
+                "throughput_per_s": 2530.3027795730277,
+                "runs": 10,
+                "ci_low_us": 357.4,
+                "ci_high_us": 366.5
               }
-            ]
-          },
-          "opa": {
-            "engine": "opa",
-            "size": "large",
-            "boundary": "cli-process",
-            "available": true,
-            "executable": ".tools/opa.exe",
-            "translation": {
-              "data": "benchmarks/results/translations/opa/large/data.json",
-              "policy": "benchmarks/results/translations/opa/large/policy.rego",
-              "data_sha256": "db71ba73242b9a8deeacde7dd1fbbda1abbe4a17b377e30c57528fa8809dc8bc",
-              "policy_sha256": "452a026dc2b743b32f5c4a5dbf4bfbfed20b6e520a679b77c11eb216edb0fd18"
             },
-            "requests": [
-              {
-                "label": "admin allow",
-                "expected": "ALLOW",
-                "decision": "ALLOW",
-                "mean_us": 113008.89499999999,
-                "p50_us": 114425.45,
-                "p95_us": 125014.25,
-                "p99_us": 125014.25,
-                "max_us": 125014.25,
-                "throughput_per_s": 8.850248784665474,
-                "samples": 10,
-                "iterations": 10,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 10,
-                    "mean_us": 111593.75,
-                    "p50_us": 113460.9,
-                    "p95_us": 124386.0,
-                    "p99_us": 124386.0,
-                    "max_us": 124386.0,
-                    "throughput_per_s": 8.961075329039485
-                  },
-                  {
-                    "samples": 10,
-                    "mean_us": 114424.04,
-                    "p50_us": 115390.0,
-                    "p95_us": 125642.5,
-                    "p99_us": 125642.5,
-                    "max_us": 125642.5,
-                    "throughput_per_s": 8.739422240291464
-                  }
-                ]
-              },
-              {
-                "label": "team join allow",
-                "expected": "ALLOW",
-                "decision": "ALLOW",
-                "mean_us": 110967.26000000001,
-                "p50_us": 110677.1,
-                "p95_us": 119691.45000000001,
-                "p99_us": 119691.45000000001,
-                "max_us": 119691.45000000001,
-                "throughput_per_s": 9.011920089431253,
-                "samples": 10,
-                "iterations": 10,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 10,
-                    "mean_us": 110379.25,
-                    "p50_us": 110449.4,
-                    "p95_us": 116856.1,
-                    "p99_us": 116856.1,
-                    "max_us": 116856.1,
-                    "throughput_per_s": 9.0596738064446
-                  },
-                  {
-                    "samples": 10,
-                    "mean_us": 111555.27,
-                    "p50_us": 110904.8,
-                    "p95_us": 122526.8,
-                    "p99_us": 122526.8,
-                    "max_us": 122526.8,
-                    "throughput_per_s": 8.964166372417905
-                  }
-                ]
-              },
-              {
-                "label": "guest default deny",
-                "expected": "DENY",
-                "decision": "DENY",
-                "mean_us": 108771.08499999999,
-                "p50_us": 107662.20000000001,
-                "p95_us": 118212.3,
-                "p99_us": 118212.3,
-                "max_us": 118212.3,
-                "throughput_per_s": 9.197189979139122,
-                "samples": 10,
-                "iterations": 10,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 10,
-                    "mean_us": 110914.13,
-                    "p50_us": 109680.8,
-                    "p95_us": 123034.8,
-                    "p99_us": 123034.8,
-                    "max_us": 123034.8,
-                    "throughput_per_s": 9.015983806571803
-                  },
-                  {
-                    "samples": 10,
-                    "mean_us": 106628.04,
-                    "p50_us": 105643.6,
-                    "p95_us": 113389.8,
-                    "p99_us": 113389.8,
-                    "max_us": 113389.8,
-                    "throughput_per_s": 9.378396151706438
-                  }
-                ]
-              },
-              {
-                "label": "low clearance deny",
-                "expected": "DENY",
-                "decision": "DENY",
-                "mean_us": 105359.54000000001,
-                "p50_us": 104215.6,
-                "p95_us": 113699.6,
-                "p99_us": 113699.6,
-                "max_us": 113699.6,
-                "throughput_per_s": 9.492952325776878,
-                "samples": 10,
-                "iterations": 10,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 10,
-                    "mean_us": 103973.51,
-                    "p50_us": 102933.2,
-                    "p95_us": 113357.4,
-                    "p99_us": 113357.4,
-                    "max_us": 113357.4,
-                    "throughput_per_s": 9.61783438877845
-                  },
-                  {
-                    "samples": 10,
-                    "mean_us": 106745.57,
-                    "p50_us": 105498.0,
-                    "p95_us": 114041.8,
-                    "p99_us": 114041.8,
-                    "max_us": 114041.8,
-                    "throughput_per_s": 9.368070262775307
-                  }
-                ]
-              }
-            ],
-            "tool_version": "Version: 1.22.4"
+            "load": {
+              "samples": 100,
+              "mean_us": 60708.636,
+              "p50_us": 59105.5,
+              "p95_us": 73310.2,
+              "p99_us": 82473.0,
+              "max_us": 82473.0,
+              "throughput_per_s": 16.47212103398271,
+              "runs": 10,
+              "ci_low_us": 58363.25,
+              "ci_high_us": 62128.05
+            }
           },
-          "cedar": {
-            "engine": "cedar",
-            "size": "large",
-            "boundary": "cli-process",
-            "available": true,
-            "executable": "~/.cargo/bin/cedar.exe",
-            "translation": {
-              "policy": "benchmarks/results/translations/cedar/large/policy.cedar",
-              "entities": "benchmarks/results/translations/cedar/large/entities.json",
-              "policy_sha256": "91d549b234953a56e9c6ed515a00e82f9e5ab404723be2bb550931ce8f7bcbb9",
-              "entities_sha256": "023e942ce901b50ca87c326c01d3ca57ea18a229a291717c16b64176cbb963f1"
-            },
-            "requests": [
-              {
-                "label": "admin allow",
-                "expected": "ALLOW",
-                "decision": "ALLOW",
-                "mean_us": 4418678.405,
-                "p50_us": 4350820.5,
-                "p95_us": 5214717.050000001,
-                "p99_us": 5214717.050000001,
-                "max_us": 5214717.050000001,
-                "throughput_per_s": 0.22638196310753575,
-                "samples": 10,
-                "iterations": 10,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 10,
-                    "mean_us": 4496351.2,
-                    "p50_us": 4386515.7,
-                    "p95_us": 5769894.9,
-                    "p99_us": 5769894.9,
-                    "max_us": 5769894.9,
-                    "throughput_per_s": 0.22240255609926554
-                  },
-                  {
-                    "samples": 10,
-                    "mean_us": 4341005.61,
-                    "p50_us": 4315125.3,
-                    "p95_us": 4659539.2,
-                    "p99_us": 4659539.2,
-                    "max_us": 4659539.2,
-                    "throughput_per_s": 0.23036137011580596
-                  }
-                ]
+          "casbin": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 171.05462,
+                "p50_us": 132.375,
+                "p95_us": 380.4,
+                "p99_us": 612.1,
+                "max_us": 11950.3,
+                "throughput_per_s": 5846.085887653897,
+                "runs": 10,
+                "ci_low_us": 130.7,
+                "ci_high_us": 135.75
               },
-              {
-                "label": "team join allow",
-                "expected": "ALLOW",
-                "decision": "ALLOW",
-                "mean_us": 4465861.41,
-                "p50_us": 4455915.4,
-                "p95_us": 4727852.4,
-                "p99_us": 4727852.4,
-                "max_us": 4727852.4,
-                "throughput_per_s": 0.22393446313557325,
-                "samples": 10,
-                "iterations": 10,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 10,
-                    "mean_us": 4500532.62,
-                    "p50_us": 4503402.4,
-                    "p95_us": 4699516.8,
-                    "p99_us": 4699516.8,
-                    "max_us": 4699516.8,
-                    "throughput_per_s": 0.2221959231127626
-                  },
-                  {
-                    "samples": 10,
-                    "mean_us": 4431190.2,
-                    "p50_us": 4408428.4,
-                    "p95_us": 4756188.0,
-                    "p99_us": 4756188.0,
-                    "max_us": 4756188.0,
-                    "throughput_per_s": 0.22567300315838393
-                  }
-                ]
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 174.2872,
+                "p50_us": 150.95,
+                "p95_us": 321.5,
+                "p99_us": 486.8,
+                "max_us": 987.0,
+                "throughput_per_s": 5737.656006866827,
+                "runs": 10,
+                "ci_low_us": 150.6,
+                "ci_high_us": 151.6
               },
-              {
-                "label": "guest default deny",
-                "expected": "DENY",
-                "decision": "DENY",
-                "mean_us": 4268232.405,
-                "p50_us": 4241233.7,
-                "p95_us": 4698914.1,
-                "p99_us": 4698914.1,
-                "max_us": 4698914.1,
-                "throughput_per_s": 0.23447064761302813,
-                "samples": 10,
-                "iterations": 10,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 10,
-                    "mean_us": 4149439.31,
-                    "p50_us": 4085550.2,
-                    "p95_us": 4649459.8,
-                    "p99_us": 4649459.8,
-                    "max_us": 4649459.8,
-                    "throughput_per_s": 0.24099641548920495
-                  },
-                  {
-                    "samples": 10,
-                    "mean_us": 4387025.5,
-                    "p50_us": 4396917.2,
-                    "p95_us": 4748368.4,
-                    "p99_us": 4748368.4,
-                    "max_us": 4748368.4,
-                    "throughput_per_s": 0.22794487973685132
-                  }
-                ]
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 1586.36746,
+                "p50_us": 1350.825,
+                "p95_us": 2544.2,
+                "p99_us": 3854.8,
+                "max_us": 25494.0,
+                "throughput_per_s": 630.370973443946,
+                "runs": 10,
+                "ci_low_us": 1316.5,
+                "ci_high_us": 1420.6
               },
-              {
-                "label": "low clearance deny",
-                "expected": "DENY",
-                "decision": "DENY",
-                "mean_us": 4405507.015000001,
-                "p50_us": 4392225.699999999,
-                "p95_us": 4695561.550000001,
-                "p99_us": 4695561.550000001,
-                "max_us": 4695561.550000001,
-                "throughput_per_s": 0.22700079093514042,
-                "samples": 10,
-                "iterations": 10,
-                "warmup": 1,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 10,
-                    "mean_us": 4437752.8,
-                    "p50_us": 4419898.8,
-                    "p95_us": 4705573.4,
-                    "p99_us": 4705573.4,
-                    "max_us": 4705573.4,
-                    "throughput_per_s": 0.22533927531970688
-                  },
-                  {
-                    "samples": 10,
-                    "mean_us": 4373261.23,
-                    "p50_us": 4364552.6,
-                    "p95_us": 4685549.7,
-                    "p99_us": 4685549.7,
-                    "max_us": 4685549.7,
-                    "throughput_per_s": 0.22866230655057393
-                  }
-                ]
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 1591.44926,
+                "p50_us": 1373.3,
+                "p95_us": 2487.6,
+                "p99_us": 4850.6,
+                "max_us": 25067.3,
+                "throughput_per_s": 628.3580791008064,
+                "runs": 10,
+                "ci_low_us": 1327.5,
+                "ci_high_us": 1471.6
               }
-            ],
-            "tool_version": "cedar-policy-cli 4.14.1"
+            },
+            "load": {
+              "samples": 100,
+              "mean_us": 80976.126,
+              "p50_us": 71049.775,
+              "p95_us": 159893.7,
+              "p99_us": 214860.0,
+              "max_us": 214860.0,
+              "throughput_per_s": 12.34931885973404,
+              "runs": 10,
+              "ci_low_us": 68688.1,
+              "ci_high_us": 75001.35
+            }
           }
         }
       }
     },
-    "library": {
-      "description": "In-process decisions. YOG is C and Casbin is Python, so this is a cross-language comparison and is not directly comparable with the CLI boundary.",
+    "rust-in-process": {
+      "description": "YOG-Rust (safe wrapper) and the Cedar Rust SDK both run in a Rust process. Native runtime: same.",
       "sizes": {
         "small": {
-          "yog": {
-            "engine": "yog",
-            "size": "small",
-            "boundary": "c-library",
-            "available": true,
-            "build": "release",
-            "executable": "yog/build-release/bench_yog.exe",
-            "compile": {
-              "mode": "compile",
-              "decision": "n/a",
-              "iterations": 20,
-              "mean_us": 272.86,
-              "p50_us": 268.4,
-              "p95_us": 353.0,
-              "p99_us": 353.0,
-              "max_us": 353.0,
-              "throughput_per_s": 3419.3,
-              "rss_before_kb": 3796,
-              "rss_after_kb": 4288
-            },
-            "requests": [
-              {
-                "label": "admin allow",
-                "expected": "ALLOW",
-                "decision": "ALLOW",
-                "mean_us": 1.163,
-                "p50_us": 1.0,
-                "p95_us": 1.4,
-                "p99_us": 1.5,
-                "max_us": 20.2,
-                "throughput_per_s": 798135.6,
-                "samples": 5000
+          "yog-rust": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 1.94002,
+                "p50_us": 1.8,
+                "p95_us": 1.9,
+                "p99_us": 4.1,
+                "max_us": 109.9,
+                "throughput_per_s": 515458.60351955134,
+                "runs": 10,
+                "ci_low_us": 1.8,
+                "ci_high_us": 1.8
               },
-              {
-                "label": "team join allow",
-                "expected": "ALLOW",
-                "decision": "ALLOW",
-                "mean_us": 2.862,
-                "p50_us": 2.7,
-                "p95_us": 3.1,
-                "p99_us": 3.2,
-                "max_us": 18.5,
-                "throughput_per_s": 338778.6,
-                "samples": 5000
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 3.57698,
+                "p50_us": 3.5,
+                "p95_us": 3.6,
+                "p99_us": 4.0,
+                "max_us": 151.7,
+                "throughput_per_s": 279565.443474663,
+                "runs": 10,
+                "ci_low_us": 3.5,
+                "ci_high_us": 3.5
               },
-              {
-                "label": "guest default deny",
-                "expected": "DENY",
-                "decision": "DENY",
-                "mean_us": 9.102,
-                "p50_us": 7.9,
-                "p95_us": 13.7,
-                "p99_us": 16.6,
-                "max_us": 1886.5,
-                "throughput_per_s": 97866.5,
-                "samples": 5000
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 5.46158,
+                "p50_us": 5.4,
+                "p95_us": 5.6,
+                "p99_us": 5.7,
+                "max_us": 15.7,
+                "throughput_per_s": 183097.19897905,
+                "runs": 10,
+                "ci_low_us": 5.4,
+                "ci_high_us": 5.5
               },
-              {
-                "label": "low clearance deny",
-                "expected": "DENY",
-                "decision": "DENY",
-                "mean_us": 8.837,
-                "p50_us": 8.1,
-                "p95_us": 13.9,
-                "p99_us": 20.2,
-                "max_us": 142.9,
-                "throughput_per_s": 111822.6,
-                "samples": 5000
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 5.558479999999999,
+                "p50_us": 5.4,
+                "p95_us": 5.7,
+                "p99_us": 9.9,
+                "max_us": 158.6,
+                "throughput_per_s": 179905.29785121113,
+                "runs": 10,
+                "ci_low_us": 5.4,
+                "ci_high_us": 5.4
               }
-            ],
-            "note": "in-process C engine, compiled once then timed with bench_yog"
+            },
+            "load": {
+              "samples": 10,
+              "mean_us": 233.54,
+              "p50_us": 229.55,
+              "p95_us": 264.2,
+              "p99_us": 264.2,
+              "max_us": 264.2,
+              "throughput_per_s": 4281.92172647084,
+              "runs": 10,
+              "ci_low_us": 225.5,
+              "ci_high_us": 243.6
+            }
           },
-          "casbin": {
-            "engine": "casbin",
-            "size": "small",
-            "boundary": "python-library",
-            "available": true,
-            "numeric_clause": false,
-            "translation": {
-              "model": "benchmarks/results/translations/casbin/small/model.conf",
-              "policy": "benchmarks/results/translations/casbin/small/policy.csv",
-              "model_sha256": "95f390989b72eb1d74529c7049bf8060015cdac51472c7cdd76e29a76109a600",
-              "policy_sha256": "e96ed15f640828c636edcc5b99065e63e637ecd33418f82fc05964e1e8828d2f"
-            },
-            "requests": [
-              {
-                "label": "admin allow",
-                "expected": "ALLOW",
-                "decision": "ALLOW",
-                "mean_us": 234.17325,
-                "p50_us": 163.8,
-                "p95_us": 404.0,
-                "p99_us": 3058.8,
-                "max_us": 3347.3500000000004,
-                "throughput_per_s": 4277.344788851839,
-                "samples": 200,
-                "iterations": 200,
-                "warmup": 10,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 200,
-                    "mean_us": 243.648,
-                    "p50_us": 161.9,
-                    "p95_us": 396.9,
-                    "p99_us": 4130.0,
-                    "max_us": 4179.6,
-                    "throughput_per_s": 4104.28158655109
-                  },
-                  {
-                    "samples": 200,
-                    "mean_us": 224.6985,
-                    "p50_us": 165.7,
-                    "p95_us": 411.1,
-                    "p99_us": 1987.6,
-                    "max_us": 2515.1,
-                    "throughput_per_s": 4450.407991152589
-                  }
-                ]
+          "cedar-rust": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 11.25976,
+                "p50_us": 10.9,
+                "p95_us": 11.2,
+                "p99_us": 21.3,
+                "max_us": 250.1,
+                "throughput_per_s": 88811.83968397195,
+                "runs": 10,
+                "ci_low_us": 10.5,
+                "ci_high_us": 11.1
               },
-              {
-                "label": "team join allow",
-                "expected": "ALLOW",
-                "decision": "ALLOW",
-                "mean_us": 240.7855,
-                "p50_us": 185.2,
-                "p95_us": 455.05,
-                "p99_us": 1605.85,
-                "max_us": 4088.1000000000004,
-                "throughput_per_s": 4156.41091470833,
-                "samples": 200,
-                "iterations": 200,
-                "warmup": 10,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 200,
-                    "mean_us": 233.963,
-                    "p50_us": 181.5,
-                    "p95_us": 450.6,
-                    "p99_us": 891.0,
-                    "max_us": 5605.8,
-                    "throughput_per_s": 4274.180105401281
-                  },
-                  {
-                    "samples": 200,
-                    "mean_us": 247.608,
-                    "p50_us": 188.9,
-                    "p95_us": 459.5,
-                    "p99_us": 2320.7,
-                    "max_us": 2570.4,
-                    "throughput_per_s": 4038.641724015379
-                  }
-                ]
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 10.3845,
+                "p50_us": 10.15,
+                "p95_us": 10.6,
+                "p99_us": 14.3,
+                "max_us": 201.0,
+                "throughput_per_s": 96297.36626703259,
+                "runs": 10,
+                "ci_low_us": 9.9,
+                "ci_high_us": 10.4
               },
-              {
-                "label": "guest default deny",
-                "expected": "DENY",
-                "decision": "DENY",
-                "mean_us": 322.55525,
-                "p50_us": 229.7,
-                "p95_us": 635.25,
-                "p99_us": 2995.3500000000004,
-                "max_us": 4372.55,
-                "throughput_per_s": 3178.015619971091,
-                "samples": 200,
-                "iterations": 200,
-                "warmup": 10,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 200,
-                    "mean_us": 373.014,
-                    "p50_us": 235.5,
-                    "p95_us": 818.8,
-                    "p99_us": 3765.3,
-                    "max_us": 5202.8,
-                    "throughput_per_s": 2680.864525192084
-                  },
-                  {
-                    "samples": 200,
-                    "mean_us": 272.0965,
-                    "p50_us": 223.9,
-                    "p95_us": 451.7,
-                    "p99_us": 2225.4,
-                    "max_us": 3542.3,
-                    "throughput_per_s": 3675.166714750098
-                  }
-                ]
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 9.29684,
+                "p50_us": 8.7,
+                "p95_us": 9.5,
+                "p99_us": 17.8,
+                "max_us": 248.9,
+                "throughput_per_s": 107563.43015476226,
+                "runs": 10,
+                "ci_low_us": 8.7,
+                "ci_high_us": 9.0
               },
-              {
-                "label": "low clearance deny",
-                "expected": "DENY",
-                "decision": "DENY",
-                "mean_us": 306.2445,
-                "p50_us": 234.25,
-                "p95_us": 581.55,
-                "p99_us": 2340.8999999999996,
-                "max_us": 2566.5,
-                "throughput_per_s": 3269.685861108095,
-                "samples": 200,
-                "iterations": 200,
-                "warmup": 10,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 200,
-                    "mean_us": 317.3775,
-                    "p50_us": 233.4,
-                    "p95_us": 567.5,
-                    "p99_us": 2320.6,
-                    "max_us": 2446.6,
-                    "throughput_per_s": 3150.821970681601
-                  },
-                  {
-                    "samples": 200,
-                    "mean_us": 295.1115,
-                    "p50_us": 235.1,
-                    "p95_us": 595.6,
-                    "p99_us": 2361.2,
-                    "max_us": 2686.4,
-                    "throughput_per_s": 3388.5497515345896
-                  }
-                ]
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 9.21008,
+                "p50_us": 8.7,
+                "p95_us": 9.3,
+                "p99_us": 19.0,
+                "max_us": 376.9,
+                "throughput_per_s": 108576.68988760142,
+                "runs": 10,
+                "ci_low_us": 8.7,
+                "ci_high_us": 8.8
               }
-            ],
-            "tool_version": "1.43.0"
+            },
+            "load": {
+              "samples": 10,
+              "mean_us": 5859.13,
+              "p50_us": 5139.9,
+              "p95_us": 9275.2,
+              "p99_us": 9275.2,
+              "max_us": 9275.2,
+              "throughput_per_s": 170.67380310728726,
+              "runs": 10,
+              "ci_low_us": 4988.1,
+              "ci_high_us": 8075.9
+            }
           }
         },
         "medium": {
-          "yog": {
-            "engine": "yog",
-            "size": "medium",
-            "boundary": "c-library",
-            "available": true,
-            "build": "release",
-            "executable": "yog/build-release/bench_yog.exe",
-            "compile": {
-              "mode": "compile",
-              "decision": "n/a",
-              "iterations": 10,
-              "mean_us": 4232.44,
-              "p50_us": 4297.5,
-              "p95_us": 6047.5,
-              "p99_us": 6047.5,
-              "max_us": 6047.5,
-              "throughput_per_s": 221.8,
-              "rss_before_kb": 3824,
-              "rss_after_kb": 4468
-            },
-            "requests": [
-              {
-                "label": "admin allow",
-                "expected": "ALLOW",
-                "decision": "ALLOW",
-                "mean_us": 1.46,
-                "p50_us": 1.3,
-                "p95_us": 1.6,
-                "p99_us": 2.5,
-                "max_us": 131.3,
-                "throughput_per_s": 647479.7,
-                "samples": 2000
+          "yog-rust": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 1.6770999999999998,
+                "p50_us": 1.6,
+                "p95_us": 1.7,
+                "p99_us": 3.0,
+                "max_us": 16.7,
+                "throughput_per_s": 596267.3662870431,
+                "runs": 10,
+                "ci_low_us": 1.6,
+                "ci_high_us": 1.7
               },
-              {
-                "label": "team join allow",
-                "expected": "ALLOW",
-                "decision": "ALLOW",
-                "mean_us": 14.799,
-                "p50_us": 13.9,
-                "p95_us": 22.2,
-                "p99_us": 30.4,
-                "max_us": 83.7,
-                "throughput_per_s": 67172.0,
-                "samples": 2000
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 14.196,
+                "p50_us": 13.8,
+                "p95_us": 14.5,
+                "p99_us": 24.7,
+                "max_us": 250.9,
+                "throughput_per_s": 70442.37813468583,
+                "runs": 10,
+                "ci_low_us": 13.7,
+                "ci_high_us": 13.8
               },
-              {
-                "label": "guest default deny",
-                "expected": "DENY",
-                "decision": "DENY",
-                "mean_us": 67.11,
-                "p50_us": 56.7,
-                "p95_us": 101.0,
-                "p99_us": 130.5,
-                "max_us": 362.6,
-                "throughput_per_s": 14879.9,
-                "samples": 2000
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 35.21364,
+                "p50_us": 34.2,
+                "p95_us": 41.3,
+                "p99_us": 56.8,
+                "max_us": 207.5,
+                "throughput_per_s": 28398.086650513833,
+                "runs": 10,
+                "ci_low_us": 33.9,
+                "ci_high_us": 34.2
               },
-              {
-                "label": "low clearance deny",
-                "expected": "DENY",
-                "decision": "DENY",
-                "mean_us": 70.588,
-                "p50_us": 57.2,
-                "p95_us": 96.7,
-                "p99_us": 125.4,
-                "max_us": 13847.8,
-                "throughput_per_s": 14147.2,
-                "samples": 2000
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 34.914739999999995,
+                "p50_us": 34.1,
+                "p95_us": 36.6,
+                "p99_us": 53.2,
+                "max_us": 332.6,
+                "throughput_per_s": 28641.19853105021,
+                "runs": 10,
+                "ci_low_us": 33.9,
+                "ci_high_us": 34.2
               }
-            ],
-            "note": "in-process C engine, compiled once then timed with bench_yog"
+            },
+            "load": {
+              "samples": 10,
+              "mean_us": 2125.92,
+              "p50_us": 2081.05,
+              "p95_us": 2324.4,
+              "p99_us": 2324.4,
+              "max_us": 2324.4,
+              "throughput_per_s": 470.38458643787163,
+              "runs": 10,
+              "ci_low_us": 2030.5,
+              "ci_high_us": 2303.6
+            }
           },
-          "casbin": {
-            "engine": "casbin",
-            "size": "medium",
-            "boundary": "python-library",
-            "available": true,
-            "numeric_clause": false,
-            "translation": {
-              "model": "benchmarks/results/translations/casbin/medium/model.conf",
-              "policy": "benchmarks/results/translations/casbin/medium/policy.csv",
-              "model_sha256": "95f390989b72eb1d74529c7049bf8060015cdac51472c7cdd76e29a76109a600",
-              "policy_sha256": "4286cf1c9bfbe8a2575fdf43931d0f277fc3cf4a07daa92e59ee1514abf3d58c"
-            },
-            "requests": [
-              {
-                "label": "admin allow",
-                "expected": "ALLOW",
-                "decision": "ALLOW",
-                "mean_us": 238.019,
-                "p50_us": 196.05,
-                "p95_us": 493.1,
-                "p99_us": 2370.7,
-                "max_us": 2370.7,
-                "throughput_per_s": 4281.791049130149,
-                "samples": 100,
-                "iterations": 100,
-                "warmup": 10,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 100,
-                    "mean_us": 205.394,
-                    "p50_us": 184.6,
-                    "p95_us": 400.6,
-                    "p99_us": 716.3,
-                    "max_us": 716.3,
-                    "throughput_per_s": 4868.691393127356
-                  },
-                  {
-                    "samples": 100,
-                    "mean_us": 270.644,
-                    "p50_us": 207.5,
-                    "p95_us": 585.6,
-                    "p99_us": 4025.1,
-                    "max_us": 4025.1,
-                    "throughput_per_s": 3694.8907051329425
-                  }
-                ]
+          "cedar-rust": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 12.50702,
+                "p50_us": 10.6,
+                "p95_us": 20.3,
+                "p99_us": 31.9,
+                "max_us": 406.8,
+                "throughput_per_s": 79955.09721740271,
+                "runs": 10,
+                "ci_low_us": 10.6,
+                "ci_high_us": 10.9
               },
-              {
-                "label": "team join allow",
-                "expected": "ALLOW",
-                "decision": "ALLOW",
-                "mean_us": 250.3555,
-                "p50_us": 225.2,
-                "p95_us": 415.4,
-                "p99_us": 1492.0500000000002,
-                "max_us": 1492.0500000000002,
-                "throughput_per_s": 4004.083485331457,
-                "samples": 100,
-                "iterations": 100,
-                "warmup": 10,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 100,
-                    "mean_us": 237.993,
-                    "p50_us": 202.5,
-                    "p95_us": 418.3,
-                    "p99_us": 2280.8,
-                    "max_us": 2280.8,
-                    "throughput_per_s": 4201.804254746989
-                  },
-                  {
-                    "samples": 100,
-                    "mean_us": 262.718,
-                    "p50_us": 247.9,
-                    "p95_us": 412.5,
-                    "p99_us": 703.3,
-                    "max_us": 703.3,
-                    "throughput_per_s": 3806.362715915925
-                  }
-                ]
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 11.8327,
+                "p50_us": 10.0,
+                "p95_us": 17.5,
+                "p99_us": 35.1,
+                "max_us": 872.1,
+                "throughput_per_s": 84511.56540772604,
+                "runs": 10,
+                "ci_low_us": 10.0,
+                "ci_high_us": 10.15
               },
-              {
-                "label": "guest default deny",
-                "expected": "DENY",
-                "decision": "DENY",
-                "mean_us": 602.847,
-                "p50_us": 587.1,
-                "p95_us": 964.85,
-                "p99_us": 1559.1999999999998,
-                "max_us": 1559.1999999999998,
-                "throughput_per_s": 1669.2816290852506,
-                "samples": 100,
-                "iterations": 100,
-                "warmup": 10,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 100,
-                    "mean_us": 555.067,
-                    "p50_us": 524.2,
-                    "p95_us": 818.8,
-                    "p99_us": 1126.1,
-                    "max_us": 1126.1,
-                    "throughput_per_s": 1801.5843132450677
-                  },
-                  {
-                    "samples": 100,
-                    "mean_us": 650.627,
-                    "p50_us": 650.0,
-                    "p95_us": 1110.9,
-                    "p99_us": 1992.3,
-                    "max_us": 1992.3,
-                    "throughput_per_s": 1536.9789449254336
-                  }
-                ]
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 9.75742,
+                "p50_us": 8.8,
+                "p95_us": 13.8,
+                "p99_us": 20.2,
+                "max_us": 414.0,
+                "throughput_per_s": 102486.10800805951,
+                "runs": 10,
+                "ci_low_us": 8.7,
+                "ci_high_us": 8.9
               },
-              {
-                "label": "low clearance deny",
-                "expected": "DENY",
-                "decision": "DENY",
-                "mean_us": 485.851,
-                "p50_us": 417.6,
-                "p95_us": 724.3499999999999,
-                "p99_us": 1277.1,
-                "max_us": 1277.1,
-                "throughput_per_s": 2061.99807656459,
-                "samples": 100,
-                "iterations": 100,
-                "warmup": 10,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 100,
-                    "mean_us": 465.121,
-                    "p50_us": 410.0,
-                    "p95_us": 721.9,
-                    "p99_us": 1306.6,
-                    "max_us": 1306.6,
-                    "throughput_per_s": 2149.978177721496
-                  },
-                  {
-                    "samples": 100,
-                    "mean_us": 506.581,
-                    "p50_us": 425.2,
-                    "p95_us": 726.8,
-                    "p99_us": 1247.6,
-                    "max_us": 1247.6,
-                    "throughput_per_s": 1974.0179754076842
-                  }
-                ]
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 9.6343,
+                "p50_us": 8.7,
+                "p95_us": 14.1,
+                "p99_us": 19.8,
+                "max_us": 334.1,
+                "throughput_per_s": 103795.81287690855,
+                "runs": 10,
+                "ci_low_us": 8.7,
+                "ci_high_us": 8.9
               }
-            ],
-            "tool_version": "1.43.0"
+            },
+            "load": {
+              "samples": 10,
+              "mean_us": 14691.82,
+              "p50_us": 14235.1,
+              "p95_us": 16165.4,
+              "p99_us": 16165.4,
+              "max_us": 16165.4,
+              "throughput_per_s": 68.06508655837058,
+              "runs": 10,
+              "ci_low_us": 14067.5,
+              "ci_high_us": 15779.9
+            }
           }
         },
         "large": {
-          "yog": {
-            "engine": "yog",
-            "size": "large",
-            "boundary": "c-library",
-            "available": true,
-            "build": "release",
-            "executable": "yog/build-release/bench_yog.exe",
-            "compile": {
-              "mode": "compile",
-              "decision": "n/a",
-              "iterations": 5,
-              "mean_us": 121598.66,
-              "p50_us": 117823.1,
-              "p95_us": 132970.0,
-              "p99_us": 132970.0,
-              "max_us": 132970.0,
-              "throughput_per_s": 8.1,
-              "rss_before_kb": 4008,
-              "rss_after_kb": 4668
-            },
-            "requests": [
-              {
-                "label": "admin allow",
-                "expected": "ALLOW",
-                "decision": "ALLOW",
-                "mean_us": 1.347,
-                "p50_us": 1.3,
-                "p95_us": 1.4,
-                "p99_us": 1.5,
-                "max_us": 1.5,
-                "throughput_per_s": 700182.0,
-                "samples": 500
+          "yog-rust": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 1.93066,
+                "p50_us": 1.8,
+                "p95_us": 1.9,
+                "p99_us": 3.5,
+                "max_us": 84.3,
+                "throughput_per_s": 517957.5896325609,
+                "runs": 10,
+                "ci_low_us": 1.8,
+                "ci_high_us": 1.9
               },
-              {
-                "label": "team join allow",
-                "expected": "ALLOW",
-                "decision": "ALLOW",
-                "mean_us": 184.205,
-                "p50_us": 140.5,
-                "p95_us": 280.4,
-                "p99_us": 313.4,
-                "max_us": 1746.8,
-                "throughput_per_s": 5425.4,
-                "samples": 500
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 130.01692,
+                "p50_us": 121.775,
+                "p95_us": 169.0,
+                "p99_us": 240.9,
+                "max_us": 1442.2,
+                "throughput_per_s": 7691.306639166656,
+                "runs": 10,
+                "ci_low_us": 121.4,
+                "ci_high_us": 123.5
               },
-              {
-                "label": "guest default deny",
-                "expected": "DENY",
-                "decision": "DENY",
-                "mean_us": 614.931,
-                "p50_us": 558.7,
-                "p95_us": 682.4,
-                "p99_us": 1823.4,
-                "max_us": 10438.9,
-                "throughput_per_s": 1625.9,
-                "samples": 500
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 359.59618,
+                "p50_us": 345.425,
+                "p95_us": 440.4,
+                "p99_us": 578.5,
+                "max_us": 1639.4,
+                "throughput_per_s": 2780.8971719332503,
+                "runs": 10,
+                "ci_low_us": 344.7,
+                "ci_high_us": 347.7
               },
-              {
-                "label": "low clearance deny",
-                "expected": "DENY",
-                "decision": "DENY",
-                "mean_us": 687.922,
-                "p50_us": 559.4,
-                "p95_us": 995.1,
-                "p99_us": 2489.3,
-                "max_us": 16793.8,
-                "throughput_per_s": 1453.4,
-                "samples": 500
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 362.65436,
+                "p50_us": 344.75,
+                "p95_us": 447.0,
+                "p99_us": 626.6,
+                "max_us": 2747.0,
+                "throughput_per_s": 2757.446511879796,
+                "runs": 10,
+                "ci_low_us": 343.1,
+                "ci_high_us": 348.9
               }
-            ],
-            "note": "in-process C engine, compiled once then timed with bench_yog"
+            },
+            "load": {
+              "samples": 10,
+              "mean_us": 55520.67,
+              "p50_us": 54917.7,
+              "p95_us": 57200.6,
+              "p99_us": 57200.6,
+              "max_us": 57200.6,
+              "throughput_per_s": 18.011310022015223,
+              "runs": 10,
+              "ci_low_us": 54748.9,
+              "ci_high_us": 56856.7
+            }
           },
-          "casbin": {
-            "engine": "casbin",
-            "size": "large",
-            "boundary": "python-library",
-            "available": true,
-            "numeric_clause": false,
-            "translation": {
-              "model": "benchmarks/results/translations/casbin/large/model.conf",
-              "policy": "benchmarks/results/translations/casbin/large/policy.csv",
-              "model_sha256": "95f390989b72eb1d74529c7049bf8060015cdac51472c7cdd76e29a76109a600",
-              "policy_sha256": "e7f96c67adfb5c3a35da73dfc8e6225cb8158b181418d8e6e9de06e834db748b"
-            },
-            "requests": [
-              {
-                "label": "admin allow",
-                "expected": "ALLOW",
-                "decision": "ALLOW",
-                "mean_us": 196.64666666666665,
-                "p50_us": 152.25,
-                "p95_us": 255.6,
-                "p99_us": 1306.25,
-                "max_us": 1306.25,
-                "throughput_per_s": 5085.323716446818,
-                "samples": 30,
-                "iterations": 30,
-                "warmup": 10,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 30,
-                    "mean_us": 195.96666666666667,
-                    "p50_us": 163.8,
-                    "p95_us": 337.9,
-                    "p99_us": 849.1,
-                    "max_us": 849.1,
-                    "throughput_per_s": 5102.908657935023
-                  },
-                  {
-                    "samples": 30,
-                    "mean_us": 197.32666666666665,
-                    "p50_us": 140.7,
-                    "p95_us": 173.3,
-                    "p99_us": 1763.4,
-                    "max_us": 1763.4,
-                    "throughput_per_s": 5067.738774958613
-                  }
-                ]
+          "cedar-rust": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 11.84484,
+                "p50_us": 10.5,
+                "p95_us": 11.7,
+                "p99_us": 31.6,
+                "max_us": 773.4,
+                "throughput_per_s": 84424.94790980715,
+                "runs": 10,
+                "ci_low_us": 10.4,
+                "ci_high_us": 11.1
               },
-              {
-                "label": "team join allow",
-                "expected": "ALLOW",
-                "decision": "ALLOW",
-                "mean_us": 179.39999999999998,
-                "p50_us": 161.85,
-                "p95_us": 302.55,
-                "p99_us": 407.35,
-                "max_us": 407.35,
-                "throughput_per_s": 5581.335710017671,
-                "samples": 30,
-                "iterations": 30,
-                "warmup": 10,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 30,
-                    "mean_us": 172.95666666666665,
-                    "p50_us": 162.5,
-                    "p95_us": 191.9,
-                    "p99_us": 394.6,
-                    "max_us": 394.6,
-                    "throughput_per_s": 5781.795054637963
-                  },
-                  {
-                    "samples": 30,
-                    "mean_us": 185.84333333333333,
-                    "p50_us": 161.2,
-                    "p95_us": 413.2,
-                    "p99_us": 420.1,
-                    "max_us": 420.1,
-                    "throughput_per_s": 5380.876365397377
-                  }
-                ]
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 11.12984,
+                "p50_us": 10.45,
+                "p95_us": 11.1,
+                "p99_us": 33.4,
+                "max_us": 218.5,
+                "throughput_per_s": 89848.55128195912,
+                "runs": 10,
+                "ci_low_us": 10.0,
+                "ci_high_us": 10.6
               },
-              {
-                "label": "guest default deny",
-                "expected": "DENY",
-                "decision": "DENY",
-                "mean_us": 1496.4383333333335,
-                "p50_us": 1397.5,
-                "p95_us": 1967.8000000000002,
-                "p99_us": 3099.05,
-                "max_us": 3099.05,
-                "throughput_per_s": 668.2957179480193,
-                "samples": 30,
-                "iterations": 30,
-                "warmup": 10,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 30,
-                    "mean_us": 1508.3466666666668,
-                    "p50_us": 1398.5,
-                    "p95_us": 1843.8,
-                    "p99_us": 3837.5,
-                    "max_us": 3837.5,
-                    "throughput_per_s": 662.9775648392058
-                  },
-                  {
-                    "samples": 30,
-                    "mean_us": 1484.53,
-                    "p50_us": 1396.5,
-                    "p95_us": 2091.8,
-                    "p99_us": 2360.6,
-                    "max_us": 2360.6,
-                    "throughput_per_s": 673.6138710568327
-                  }
-                ]
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 9.790479999999999,
+                "p50_us": 8.85,
+                "p95_us": 9.6,
+                "p99_us": 19.1,
+                "max_us": 527.0,
+                "throughput_per_s": 102140.0380778062,
+                "runs": 10,
+                "ci_low_us": 8.8,
+                "ci_high_us": 9.4
               },
-              {
-                "label": "low clearance deny",
-                "expected": "DENY",
-                "decision": "DENY",
-                "mean_us": 1628.871666666667,
-                "p50_us": 1411.2,
-                "p95_us": 2128.15,
-                "p99_us": 5901.2,
-                "max_us": 5901.2,
-                "throughput_per_s": 615.5489786348073,
-                "samples": 30,
-                "iterations": 30,
-                "warmup": 10,
-                "repetitions": 2,
-                "runs": [
-                  {
-                    "samples": 30,
-                    "mean_us": 1712.6166666666668,
-                    "p50_us": 1413.9,
-                    "p95_us": 2352.3,
-                    "p99_us": 8064.3,
-                    "max_us": 8064.3,
-                    "throughput_per_s": 583.9018266395476
-                  },
-                  {
-                    "samples": 30,
-                    "mean_us": 1545.1266666666668,
-                    "p50_us": 1408.5,
-                    "p95_us": 1904.0,
-                    "p99_us": 3738.1,
-                    "max_us": 3738.1,
-                    "throughput_per_s": 647.196130630067
-                  }
-                ]
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 9.78132,
+                "p50_us": 8.8,
+                "p95_us": 9.6,
+                "p99_us": 19.1,
+                "max_us": 732.9,
+                "throughput_per_s": 102235.69007046084,
+                "runs": 10,
+                "ci_low_us": 8.7,
+                "ci_high_us": 8.9
               }
-            ],
-            "tool_version": "1.43.0"
+            },
+            "load": {
+              "samples": 10,
+              "mean_us": 75923.5,
+              "p50_us": 73761.75,
+              "p95_us": 87461.0,
+              "p99_us": 87461.0,
+              "max_us": 87461.0,
+              "throughput_per_s": 13.171152541703162,
+              "runs": 10,
+              "ci_low_us": 71899.0,
+              "ci_high_us": 84171.9
+            }
+          }
+        }
+      }
+    },
+    "go-in-process": {
+      "description": "YOG-Go calls the C ABI via syscall/cgo; OPA is the Go SDK. Both run in a Go process, but only the YOG side pays an FFI boundary. Read the two as bounds, not as a pure engine comparison.",
+      "sizes": {
+        "small": {
+          "yog-go": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 2.58876,
+                "p50_us": 2.1,
+                "p95_us": 4.9,
+                "p99_us": 13.0,
+                "max_us": 147.8,
+                "throughput_per_s": 386285.32579304377,
+                "runs": 10,
+                "ci_low_us": 2.1,
+                "ci_high_us": 2.1
+              },
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 4.28874,
+                "p50_us": 3.7,
+                "p95_us": 8.2,
+                "p99_us": 12.6,
+                "max_us": 112.4,
+                "throughput_per_s": 233168.71621968225,
+                "runs": 10,
+                "ci_low_us": 3.7,
+                "ci_high_us": 3.8
+              },
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 6.18972,
+                "p50_us": 5.65,
+                "p95_us": 12.7,
+                "p99_us": 15.0,
+                "max_us": 145.1,
+                "throughput_per_s": 161558.1964935409,
+                "runs": 10,
+                "ci_low_us": 5.6,
+                "ci_high_us": 5.7
+              },
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 6.4324200000000005,
+                "p50_us": 5.6,
+                "p95_us": 12.8,
+                "p99_us": 17.1,
+                "max_us": 553.9,
+                "throughput_per_s": 155462.48534766075,
+                "runs": 10,
+                "ci_low_us": 5.6,
+                "ci_high_us": 5.6
+              }
+            },
+            "load": {
+              "samples": 10,
+              "mean_us": 250.51,
+              "p50_us": 242.9,
+              "p95_us": 301.5,
+              "p99_us": 301.5,
+              "max_us": 301.5,
+              "throughput_per_s": 3991.8566125104785,
+              "runs": 10,
+              "ci_low_us": 240.9,
+              "ci_high_us": 283.6
+            }
+          },
+          "opa-go": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 73.56418,
+                "p50_us": 57.95,
+                "p95_us": 159.7,
+                "p99_us": 323.8,
+                "max_us": 1086.3,
+                "throughput_per_s": 13593.572306522006,
+                "runs": 10,
+                "ci_low_us": 57.05,
+                "ci_high_us": 61.65
+              },
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 66.65310000000001,
+                "p50_us": 47.625,
+                "p95_us": 149.2,
+                "p99_us": 305.1,
+                "max_us": 1060.8,
+                "throughput_per_s": 15003.053121310188,
+                "runs": 10,
+                "ci_low_us": 46.9,
+                "ci_high_us": 52.25
+              },
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 64.51313999999999,
+                "p50_us": 46.15,
+                "p95_us": 154.9,
+                "p99_us": 297.7,
+                "max_us": 2302.1,
+                "throughput_per_s": 15500.71814827181,
+                "runs": 10,
+                "ci_low_us": 45.1,
+                "ci_high_us": 47.75
+              },
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 57.4848,
+                "p50_us": 40.05,
+                "p95_us": 133.4,
+                "p99_us": 277.6,
+                "max_us": 826.1,
+                "throughput_per_s": 17395.902916945,
+                "runs": 10,
+                "ci_low_us": 38.35,
+                "ci_high_us": 42.0
+              }
+            },
+            "load": {
+              "samples": 10,
+              "mean_us": 1966.81,
+              "p50_us": 1976.5,
+              "p95_us": 2078.4,
+              "p99_us": 2078.4,
+              "max_us": 2078.4,
+              "throughput_per_s": 508.4375206552742,
+              "runs": 10,
+              "ci_low_us": 1933.9,
+              "ci_high_us": 2053.7
+            }
+          }
+        },
+        "medium": {
+          "yog-go": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 2.3952,
+                "p50_us": 1.9,
+                "p95_us": 4.7,
+                "p99_us": 12.5,
+                "max_us": 45.4,
+                "throughput_per_s": 417501.67000668,
+                "runs": 10,
+                "ci_low_us": 1.9,
+                "ci_high_us": 1.9
+              },
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 15.11184,
+                "p50_us": 14.2,
+                "p95_us": 21.7,
+                "p99_us": 26.9,
+                "max_us": 417.0,
+                "throughput_per_s": 66173.27870067443,
+                "runs": 10,
+                "ci_low_us": 14.1,
+                "ci_high_us": 14.2
+              },
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 36.40132,
+                "p50_us": 34.45,
+                "p95_us": 43.6,
+                "p99_us": 65.7,
+                "max_us": 406.6,
+                "throughput_per_s": 27471.531252163386,
+                "runs": 10,
+                "ci_low_us": 34.4,
+                "ci_high_us": 34.6
+              },
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 36.717699999999994,
+                "p50_us": 34.5,
+                "p95_us": 46.5,
+                "p99_us": 72.0,
+                "max_us": 471.4,
+                "throughput_per_s": 27234.821353189334,
+                "runs": 10,
+                "ci_low_us": 34.3,
+                "ci_high_us": 34.6
+              }
+            },
+            "load": {
+              "samples": 10,
+              "mean_us": 2077.32,
+              "p50_us": 2046.6,
+              "p95_us": 2316.4,
+              "p99_us": 2316.4,
+              "max_us": 2316.4,
+              "throughput_per_s": 481.3894826025841,
+              "runs": 10,
+              "ci_low_us": 2022.1,
+              "ci_high_us": 2107.4
+            }
+          },
+          "opa-go": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 241.17512,
+                "p50_us": 177.325,
+                "p95_us": 531.5,
+                "p99_us": 742.6,
+                "max_us": 1986.2,
+                "throughput_per_s": 4146.36468305686,
+                "runs": 10,
+                "ci_low_us": 156.25,
+                "ci_high_us": 188.4
+              },
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 241.65688,
+                "p50_us": 164.6,
+                "p95_us": 506.8,
+                "p99_us": 669.2,
+                "max_us": 2255.1,
+                "throughput_per_s": 4138.0986132072885,
+                "runs": 10,
+                "ci_low_us": 162.6,
+                "ci_high_us": 178.4
+              },
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 227.96257999999997,
+                "p50_us": 154.75,
+                "p95_us": 476.9,
+                "p99_us": 672.6,
+                "max_us": 2024.6,
+                "throughput_per_s": 4386.684867314627,
+                "runs": 10,
+                "ci_low_us": 152.15,
+                "ci_high_us": 160.5
+              },
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 230.60410000000002,
+                "p50_us": 156.325,
+                "p95_us": 489.2,
+                "p99_us": 739.0,
+                "max_us": 1882.4,
+                "throughput_per_s": 4336.4363426322425,
+                "runs": 10,
+                "ci_low_us": 143.85,
+                "ci_high_us": 160.6
+              }
+            },
+            "load": {
+              "samples": 10,
+              "mean_us": 2160.73,
+              "p50_us": 2069.15,
+              "p95_us": 3222.8,
+              "p99_us": 3222.8,
+              "max_us": 3222.8,
+              "throughput_per_s": 462.8065514895429,
+              "runs": 10,
+              "ci_low_us": 1902.4,
+              "ci_high_us": 2231.4
+            }
+          }
+        },
+        "large": {
+          "yog-go": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 2.5749,
+                "p50_us": 2.0,
+                "p95_us": 4.1,
+                "p99_us": 14.6,
+                "max_us": 153.6,
+                "throughput_per_s": 388364.59668336634,
+                "runs": 10,
+                "ci_low_us": 2.0,
+                "ci_high_us": 2.0
+              },
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 134.3342,
+                "p50_us": 123.5,
+                "p95_us": 195.4,
+                "p99_us": 300.4,
+                "max_us": 822.1,
+                "throughput_per_s": 7444.120707906102,
+                "runs": 10,
+                "ci_low_us": 123.1,
+                "ci_high_us": 124.5
+              },
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 378.37804,
+                "p50_us": 347.225,
+                "p95_us": 536.4,
+                "p99_us": 751.1,
+                "max_us": 2659.2,
+                "throughput_per_s": 2642.8595063286443,
+                "runs": 10,
+                "ci_low_us": 346.45,
+                "ci_high_us": 348.8
+              },
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 387.34688,
+                "p50_us": 348.0,
+                "p95_us": 535.5,
+                "p99_us": 883.6,
+                "max_us": 13517.7,
+                "throughput_per_s": 2581.665302170499,
+                "runs": 10,
+                "ci_low_us": 346.9,
+                "ci_high_us": 353.0
+              }
+            },
+            "load": {
+              "samples": 10,
+              "mean_us": 55259.94,
+              "p50_us": 55061.95,
+              "p95_us": 57293.0,
+              "p99_us": 57293.0,
+              "max_us": 57293.0,
+              "throughput_per_s": 18.096291816458724,
+              "runs": 10,
+              "ci_low_us": 54438.3,
+              "ci_high_us": 55963.3
+            }
+          },
+          "opa-go": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 2070.49798,
+                "p50_us": 1467.65,
+                "p95_us": 3617.3,
+                "p99_us": 4207.9,
+                "max_us": 38798.3,
+                "throughput_per_s": 482.9755979766761,
+                "runs": 10,
+                "ci_low_us": 1449.55,
+                "ci_high_us": 1545.95
+              },
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 2039.29522,
+                "p50_us": 1472.45,
+                "p95_us": 3613.3,
+                "p99_us": 3957.1,
+                "max_us": 9517.0,
+                "throughput_per_s": 490.36549009319015,
+                "runs": 10,
+                "ci_low_us": 1450.45,
+                "ci_high_us": 1511.85
+              },
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 2032.00494,
+                "p50_us": 1464.1,
+                "p95_us": 3622.4,
+                "p99_us": 4170.5,
+                "max_us": 6246.9,
+                "throughput_per_s": 492.1247878462343,
+                "runs": 10,
+                "ci_low_us": 1448.15,
+                "ci_high_us": 1480.35
+              },
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 2052.1023600000003,
+                "p50_us": 1463.3,
+                "p95_us": 3804.1,
+                "p99_us": 4409.0,
+                "max_us": 4918.7,
+                "throughput_per_s": 487.3051264362856,
+                "runs": 10,
+                "ci_low_us": 1457.55,
+                "ci_high_us": 1474.9
+              }
+            },
+            "load": {
+              "samples": 10,
+              "mean_us": 1903.23,
+              "p50_us": 1894.3,
+              "p95_us": 2046.9,
+              "p99_us": 2046.9,
+              "max_us": 2046.9,
+              "throughput_per_s": 525.4225711028095,
+              "runs": 10,
+              "ci_low_us": 1851.8,
+              "ci_high_us": 1963.6
+            }
+          }
+        }
+      }
+    },
+    "c-reference": {
+      "description": "YOG's native C harness. This is the engine's best case and is cross-language against every other row; it is context, not fairness evidence.",
+      "sizes": {
+        "small": {
+          "yog-c": {
+            "requests": {
+              "admin allow": {
+                "samples": 10,
+                "mean_us": 1.4,
+                "p50_us": 1.4,
+                "p95_us": 1.4,
+                "p99_us": 1.4,
+                "max_us": 1.4,
+                "throughput_per_s": 714285.7142857143,
+                "runs": 10,
+                "ci_low_us": 1.4,
+                "ci_high_us": 1.4
+              },
+              "team join allow": {
+                "samples": 10,
+                "mean_us": 3.07,
+                "p50_us": 3.1,
+                "p95_us": 3.1,
+                "p99_us": 3.1,
+                "max_us": 3.1,
+                "throughput_per_s": 325732.8990228013,
+                "runs": 10,
+                "ci_low_us": 3.0,
+                "ci_high_us": 3.1
+              },
+              "guest default deny": {
+                "samples": 10,
+                "mean_us": 4.9,
+                "p50_us": 4.9,
+                "p95_us": 4.9,
+                "p99_us": 4.9,
+                "max_us": 4.9,
+                "throughput_per_s": 204081.63265306124,
+                "runs": 10,
+                "ci_low_us": 4.9,
+                "ci_high_us": 4.9
+              },
+              "unmapped deny": {
+                "samples": 10,
+                "mean_us": 4.92,
+                "p50_us": 4.9,
+                "p95_us": 5.0,
+                "p99_us": 5.0,
+                "max_us": 5.0,
+                "throughput_per_s": 203252.03252032519,
+                "runs": 10,
+                "ci_low_us": 4.9,
+                "ci_high_us": 5.0
+              }
+            },
+            "load": {
+              "samples": 10,
+              "mean_us": 125.02,
+              "p50_us": 124.85,
+              "p95_us": 127.2,
+              "p99_us": 127.2,
+              "max_us": 127.2,
+              "throughput_per_s": 7998.720204767238,
+              "runs": 10,
+              "ci_low_us": 124.5,
+              "ci_high_us": 126.3
+            }
+          }
+        },
+        "medium": {
+          "yog-c": {
+            "requests": {
+              "admin allow": {
+                "samples": 10,
+                "mean_us": 1.3,
+                "p50_us": 1.3,
+                "p95_us": 1.3,
+                "p99_us": 1.3,
+                "max_us": 1.3,
+                "throughput_per_s": 769230.7692307692,
+                "runs": 10,
+                "ci_low_us": 1.3,
+                "ci_high_us": 1.3
+              },
+              "team join allow": {
+                "samples": 10,
+                "mean_us": 13.29,
+                "p50_us": 13.3,
+                "p95_us": 13.4,
+                "p99_us": 13.4,
+                "max_us": 13.4,
+                "throughput_per_s": 75244.54477050413,
+                "runs": 10,
+                "ci_low_us": 13.2,
+                "ci_high_us": 13.4
+              },
+              "guest default deny": {
+                "samples": 10,
+                "mean_us": 33.64,
+                "p50_us": 33.7,
+                "p95_us": 34.0,
+                "p99_us": 34.0,
+                "max_us": 34.0,
+                "throughput_per_s": 29726.516052318668,
+                "runs": 10,
+                "ci_low_us": 33.4,
+                "ci_high_us": 33.7
+              },
+              "unmapped deny": {
+                "samples": 10,
+                "mean_us": 33.61,
+                "p50_us": 33.65,
+                "p95_us": 34.0,
+                "p99_us": 34.0,
+                "max_us": 34.0,
+                "throughput_per_s": 29753.04968759298,
+                "runs": 10,
+                "ci_low_us": 33.4,
+                "ci_high_us": 33.8
+              }
+            },
+            "load": {
+              "samples": 10,
+              "mean_us": 2452.19,
+              "p50_us": 2266.7,
+              "p95_us": 3329.3,
+              "p99_us": 3329.3,
+              "max_us": 3329.3,
+              "throughput_per_s": 407.79874316427356,
+              "runs": 10,
+              "ci_low_us": 2155.9,
+              "ci_high_us": 2868.4
+            }
+          }
+        },
+        "large": {
+          "yog-c": {
+            "requests": {
+              "admin allow": {
+                "samples": 10,
+                "mean_us": 1.29,
+                "p50_us": 1.3,
+                "p95_us": 1.3,
+                "p99_us": 1.3,
+                "max_us": 1.3,
+                "throughput_per_s": 775193.7984496123,
+                "runs": 10,
+                "ci_low_us": 1.3,
+                "ci_high_us": 1.3
+              },
+              "team join allow": {
+                "samples": 10,
+                "mean_us": 122.07,
+                "p50_us": 121.8,
+                "p95_us": 124.4,
+                "p99_us": 124.4,
+                "max_us": 124.4,
+                "throughput_per_s": 8192.020971573687,
+                "runs": 10,
+                "ci_low_us": 121.1,
+                "ci_high_us": 124.0
+              },
+              "guest default deny": {
+                "samples": 10,
+                "mean_us": 341.95,
+                "p50_us": 341.55,
+                "p95_us": 345.0,
+                "p99_us": 345.0,
+                "max_us": 345.0,
+                "throughput_per_s": 2924.4041526538967,
+                "runs": 10,
+                "ci_low_us": 340.8,
+                "ci_high_us": 344.9
+              },
+              "unmapped deny": {
+                "samples": 10,
+                "mean_us": 346.11,
+                "p50_us": 346.9,
+                "p95_us": 350.1,
+                "p99_us": 350.1,
+                "max_us": 350.1,
+                "throughput_per_s": 2889.254861171304,
+                "runs": 10,
+                "ci_low_us": 343.5,
+                "ci_high_us": 349.1
+              }
+            },
+            "load": {
+              "samples": 10,
+              "mean_us": 61231.85,
+              "p50_us": 61543.45,
+              "p95_us": 63157.0,
+              "p99_us": 63157.0,
+              "max_us": 63157.0,
+              "throughput_per_s": 16.33137003046617,
+              "runs": 10,
+              "ci_low_us": 59307.0,
+              "ci_high_us": 62990.6
+            }
           }
         }
       }

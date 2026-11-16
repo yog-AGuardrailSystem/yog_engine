@@ -24,7 +24,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from corpus import build_model, load_requests, parse_facts
+from corpus import (build_model, corpus_file, load_requests, parse_facts,
+                    PROFILES)
 from stats import measure, require_decision
 
 HERE = Path(__file__).resolve().parent
@@ -32,7 +33,7 @@ ROOT = HERE.parents[1]
 CORPUS = ROOT / "benchmarks" / "generated"
 BOUNDARY = "cli-process"
 
-POLICY = """// Generated from the YOG benchmark corpus.
+POLICY_HEAD = """// Generated from the YOG benchmark corpus.
 permit (
     principal,
     action == Action::"can_access",
@@ -53,7 +54,9 @@ permit (
     resource
 )
 when { principal in Role::"manager" && resource.public };
+"""
 
+POLICY_CLEARANCE = """
 permit (
     principal,
     action == Action::"can_access",
@@ -61,6 +64,35 @@ permit (
 )
 when { principal.clearance >= resource.classification };
 """
+
+POLICY_ALT_HEAD = """// Independently written translation used to check that the measured
+// behaviour is a property of the corpus, not of one translation style:
+// a single permit whose condition is a disjunction.
+permit (
+    principal,
+    action == Action::"can_access",
+    resource
+)
+when {
+    principal in Role::"admin" ||
+    principal in resource.owner ||
+    (principal in Role::"manager" && resource.public)
+"""
+
+POLICY_ALT_CLEARANCE = """    ||
+    principal.clearance >= resource.classification
+"""
+
+
+def policy_text(profile: str) -> str:
+    return POLICY_HEAD + (POLICY_CLEARANCE if profile == "full" else "")
+
+
+def policy_text_alt(profile: str) -> str:
+    body = POLICY_ALT_HEAD
+    if profile == "full":
+        body += POLICY_ALT_CLEARANCE
+    return body + "};\n"
 
 
 def find_cedar() -> str | None:
@@ -87,7 +119,7 @@ def entity_ref(entity_type: str, entity_id: str) -> dict:
     return {"__entity": {"type": entity_type, "id": entity_id}}
 
 
-def write_translation(model: dict, target: Path) -> tuple[Path, Path]:
+def write_translation(model: dict, target: Path, profile: str) -> tuple[Path, Path]:
     entities = [{"uid": {"type": "Action", "id": "can_access"},
                  "attrs": {}, "parents": []}]
 
@@ -103,26 +135,34 @@ def write_translation(model: dict, target: Path) -> tuple[Path, Path]:
         parents = [{"type": "Role", "id": role}]
         for team in sorted(model["member"].get(user, ())):
             parents.append({"type": "Team", "id": team})
+        attrs = {}
+        if profile == "full":
+            attrs["clearance"] = model["clearance"].get(user, 0)
         entities.append({
             "uid": {"type": "User", "id": user},
-            "attrs": {"clearance": model["clearance"].get(user, 0)},
+            "attrs": attrs,
             "parents": parents,
         })
 
-    resources = set(model["classification"]) | model["public"]
+    resources = set(model["classification"]) | model["public"] | {"r_denied", "r_secret"}
+    for owned in model["team_resource"].values():
+        resources |= owned
     for resource in sorted(resources):
         owner = model["owner"].get(resource, "public")
         attrs = {
-            "classification": model["classification"].get(resource, 5),
             "public": resource in model["public"],
             "owner": entity_ref("Team", owner),
         }
+        if profile == "full":
+            attrs["classification"] = model["classification"].get(resource, 5)
         entities.append({"uid": {"type": "Resource", "id": resource},
                          "attrs": attrs, "parents": []})
 
     policy_path = target / "policy.cedar"
+    policy_alt_path = target / "policy_alt.cedar"
     entities_path = target / "entities.json"
-    policy_path.write_text(POLICY, encoding="utf-8")
+    policy_path.write_text(policy_text(profile), encoding="utf-8")
+    policy_alt_path.write_text(policy_text_alt(profile), encoding="utf-8")
     entities_path.write_text(json.dumps(entities, indent=2) + "\n", encoding="utf-8")
     return policy_path, entities_path
 
@@ -144,31 +184,36 @@ def parse_decision(stdout: str) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--size", choices=["small", "medium", "large"], default="small")
+    parser.add_argument("--profile", choices=PROFILES, default="full")
     parser.add_argument("--iterations", type=int, default=10)
     parser.add_argument("--warmup", type=int, default=1)
     parser.add_argument("--repetitions", type=int, default=2)
     args = parser.parse_args()
 
-    corpus = CORPUS / f"{args.size}.yog"
+    corpus = corpus_file(CORPUS, args.profile, args.size)
     if not corpus.exists():
         raise SystemExit(f"missing {corpus}; run benchmarks/gen_corpus.py first")
     model = build_model(parse_facts(corpus))
-    requests = load_requests(CORPUS, args.size)
+    requests = load_requests(CORPUS, args.size, args.profile)
     cedar = find_cedar()
 
-    target = ROOT / "benchmarks" / "results" / "translations" / "cedar" / args.size
+    folder = args.size if args.profile == "full" else f"common-{args.size}"
+    target = ROOT / "benchmarks" / "results" / "translations" / "cedar" / folder
     target.mkdir(parents=True, exist_ok=True)
-    policy_path, entities_path = write_translation(model, target)
+    policy_path, entities_path = write_translation(model, target, args.profile)
     result = {
         "engine": "cedar",
         "size": args.size,
+        "profile": args.profile,
         "boundary": BOUNDARY,
         "available": cedar is not None,
         "executable": cedar,
         "translation": {
             "policy": str(policy_path),
+            "policy_alt": str(policy_path.parent / "policy_alt.cedar"),
             "entities": str(entities_path),
             "policy_sha256": digest(policy_path),
+            "policy_alt_sha256": digest(policy_path.parent / "policy_alt.cedar"),
             "entities_sha256": digest(entities_path),
         },
         "requests": [],

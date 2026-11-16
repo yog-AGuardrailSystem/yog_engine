@@ -21,7 +21,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from corpus import build_model, load_requests, parse_facts
+from corpus import (build_model, corpus_file, load_requests, parse_facts,
+                    PROFILES)
 from stats import measure, require_decision
 
 HERE = Path(__file__).resolve().parent
@@ -29,7 +30,7 @@ ROOT = HERE.parents[1]
 CORPUS = ROOT / "benchmarks" / "generated"
 BOUNDARY = "cli-process"
 
-REGO = """package yogbench
+REGO_HEAD = """package yogbench
 
 import future.keywords.in
 
@@ -46,13 +47,22 @@ allowed contains true if {
     data.role[input.actor] == "manager"
     input.resource in data.public
 }
+"""
 
+REGO_CLEARANCE = """
 allowed contains true if {
     object.get(data.clearance, input.actor, -1) >= object.get(data.classification, input.resource, 1000000)
 }
+"""
 
+REGO_TAIL = """
 decision := "ALLOW" if { count(allowed) > 0 } else := "DENY"
 """
+
+
+def policy_text(profile: str) -> str:
+    body = REGO_HEAD + (REGO_CLEARANCE if profile == "full" else "") + REGO_TAIL
+    return body
 
 
 def find_opa() -> str | None:
@@ -74,44 +84,48 @@ def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def write_translation(model: dict, target: Path) -> tuple[Path, Path]:
+def write_translation(model: dict, target: Path, profile: str) -> tuple[Path, Path]:
     data = {
         "role": model["role"],
-        "clearance": model["clearance"],
-        "classification": model["classification"],
         "public": sorted(model["public"]),
         "member": {user: sorted(teams) for user, teams in model["member"].items()},
         "team_resource": {team: sorted(resources)
                           for team, resources in model["team_resource"].items()},
     }
+    if profile == "full":
+        data["clearance"] = model["clearance"]
+        data["classification"] = model["classification"]
     data_path = target / "data.json"
     policy_path = target / "policy.rego"
     data_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-    policy_path.write_text(REGO, encoding="utf-8")
+    policy_path.write_text(policy_text(profile), encoding="utf-8")
     return data_path, policy_path
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--size", choices=["small", "medium", "large"], default="small")
+    parser.add_argument("--profile", choices=PROFILES, default="full")
     parser.add_argument("--iterations", type=int, default=25)
     parser.add_argument("--warmup", type=int, default=2)
     parser.add_argument("--repetitions", type=int, default=2)
     args = parser.parse_args()
 
-    corpus = CORPUS / f"{args.size}.yog"
+    corpus = corpus_file(CORPUS, args.profile, args.size)
     if not corpus.exists():
         raise SystemExit(f"missing {corpus}; run benchmarks/gen_corpus.py first")
     model = build_model(parse_facts(corpus))
-    requests = load_requests(CORPUS, args.size)
+    requests = load_requests(CORPUS, args.size, args.profile)
     opa = find_opa()
 
-    target = ROOT / "benchmarks" / "results" / "translations" / "opa" / args.size
+    folder = args.size if args.profile == "full" else f"common-{args.size}"
+    target = ROOT / "benchmarks" / "results" / "translations" / "opa" / folder
     target.mkdir(parents=True, exist_ok=True)
-    data_path, policy_path = write_translation(model, target)
+    data_path, policy_path = write_translation(model, target, args.profile)
     result = {
         "engine": "opa",
         "size": args.size,
+        "profile": args.profile,
         "boundary": BOUNDARY,
         "available": opa is not None,
         "executable": opa,

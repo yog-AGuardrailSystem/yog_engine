@@ -55,6 +55,35 @@ add_library(yog_api STATIC src/api/yog.c)
 target_include_directories(yog_api PUBLIC ${YOG_INCLUDE_DIR} ${YOG_SRC_DIR})
 target_link_libraries(yog_api PUBLIC yog_vm)
 
+# ---- shared library for language bindings (Python ctypes, Rust, Go, ...) ----
+# The same public ABI as yog_api, built as a DLL/shared object.  Sources are
+# compiled directly so the exported symbols are exactly those marked YOG_API.
+add_library(yog_shared SHARED
+  src/lexer/lexer.c
+  src/parser/ast.c
+  src/parser/parser.c
+  src/sema/symbol_table.c
+  src/sema/sema.c
+  src/ir/ir_build.c
+  src/ir/ir_dump.c
+  src/vm/unify.c
+  src/vm/engine.c
+  src/api/yog.c
+)
+target_include_directories(yog_shared PUBLIC ${YOG_INCLUDE_DIR} ${YOG_SRC_DIR})
+target_compile_definitions(yog_shared PRIVATE YOG_SHARED_EXPORTS)
+set_target_properties(yog_shared PROPERTIES
+  OUTPUT_NAME yog
+  POSITION_INDEPENDENT_CODE ON
+  C_VISIBILITY_PRESET hidden
+)
+if(WIN32)
+  # Keep the import library next to the DLL so Rust/Go linkers can find it.
+  set_target_properties(yog_shared PROPERTIES ARCHIVE_OUTPUT_DIRECTORY
+    ${CMAKE_BINARY_DIR})
+endif()
+
+
 # ---- tests ----
 enable_testing()
 find_package(Threads REQUIRED)
