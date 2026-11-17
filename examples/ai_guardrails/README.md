@@ -26,6 +26,15 @@ It builds 18 scenarios (including unknown actions and malformed context) and
 checks them through `yogc check`. A denied request exits `3`; an evaluation
 error is treated as `DENY` by the demo.
 
+For a shorter presenter version (14 scenarios, colour, optional scoreboard):
+
+```sh
+python examples/ai_guardrails/live_demo.py --step   # pause between acts
+python examples/ai_guardrails/live_demo.py --bench  # append measured results
+```
+
+The run of show is in [`../../docs/DEMO.md`](../../docs/DEMO.md).
+
 Validate the policies directly:
 
 ```sh
