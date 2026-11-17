@@ -223,3 +223,9 @@ __marimo__/
 yog/build*/
 benchmarks/generated/
 benchmarks/results/translations/
+.tools/
+
+# Benchmark build outputs and scratch files
+benchmarks/results/bin/
+benchmarks/results/tmp/
+

@@ -1,0 +1,9 @@
+[package]
+name = "cedar-bench"
+version = "0.1.0"
+edition = "2021"
+description = "In-process Cedar SDK harness for the YOG benchmark study"
+license = "Apache-2.0"
+
+[dependencies]
+cedar-policy = "=4.14.1"

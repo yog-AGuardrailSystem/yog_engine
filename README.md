@@ -6,8 +6,9 @@ it happens, and returns **ALLOW / DENY** with the reason.
 
 > **Status: experimental, not production-ready.** The lexer, parser, semantic
 > analyser, clause-table IR, evaluator, C API and CLI are implemented and
-> tested. The correctness, security and benchmark harnesses are in place. The
-> Python bindings and packaging are not part of this milestone.
+> tested. The correctness, security and cross-engine benchmark harnesses are in
+> place, and Python and Rust bindings exist over the public C ABI. Packaging and
+> release artifacts are not part of this milestone.
 
 YOG's working identity is an **AI-agent guardrail** decision point: a small,
 deterministic, fail-closed engine called before a shell command, database
@@ -44,12 +45,16 @@ ALLOW|allow clause at line 3 matched
 | `yog/` | C implementation: lexer → parser → sema → IR → VM → API → CLI |
 | `yog/tests/` | C semantic/security tests, conformance, property, differential, fuzz |
 | `examples/ai_guardrails/` | four runnable guardrail policies + enforcement demo |
-| `benchmarks/` | corpus generator, C harness, orchestration, Cedar/OPA/Casbin adapters |
+| `benchmarks/` | corpus generator, C/Rust/Go harnesses, same-runtime comparison, Cedar/OPA/Casbin adapters |
+| `bindings/python/` | ctypes binding over the public C ABI |
+| `bindings/rust/` | safe Rust wrapper over the public C ABI |
 | `docs/COMPILER.md` | frozen language and compiler contract |
 | `docs/ARCHITECTURE_CHEATSHEET.md` | plain-language architecture and file guide |
 | `docs/CORRECTNESS.md` | how correctness is validated |
 | `docs/SECURITY.md` | threat model, limits, context-isolation rules |
-| `docs/BENCHMARKS.md` | benchmark methodology and local results |
+| `docs/BENCHMARKS.md` | benchmark methodology, boundaries and results |
+| `docs/PREREGISTRATION.md` | hypotheses, expected losses and analysis rules |
+| `docs/BENCHMARK_REVIEW.md` | self-review checklist; external review not performed |
 | `docs/RESEARCH.md` | RQ1–RQ3, positioning, limitations, presentation outline |
 | `yog/README.md` | architecture, build, test and C API guide |
 
@@ -107,11 +112,14 @@ layer. See [`docs/SECURITY.md`](docs/SECURITY.md).
 
 ## Benchmarks
 
-The suite separates engine latency from end-to-end CLI cost and reports p50,
-p95, p99, throughput and approximate RSS. It also generates Cedar, OPA and
-Casbin translations. The first results are local Debug-build measurements and
-are **not** a comparison with other engines; see
-[`docs/BENCHMARKS.md`](docs/BENCHMARKS.md).
+The suite separates cold, load, warm and persistent-service boundaries, compares
+engines only inside the same language runtime, and checks every decision against
+an independent oracle. On the feature-matched corpus YOG is faster than Casbin
+and the OPA Go SDK in-process, but **Cedar is much faster on large deny and join
+workloads**, and OPA prepares a large policy faster than YOG compiles it. No
+general superiority is claimed. See [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md),
+[`docs/PREREGISTRATION.md`](docs/PREREGISTRATION.md) and
+[`docs/BENCHMARK_REVIEW.md`](docs/BENCHMARK_REVIEW.md).
 
 ## Contributing
 

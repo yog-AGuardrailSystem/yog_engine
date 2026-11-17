@@ -1,0 +1,1459 @@
+{
+  "generated_at": "2026-11-16T17:27:23.563045+00:00",
+  "oracle": "benchmarks/oracle.py (independent implementation)",
+  "harnesses": {
+    "yog-rust": "bindings\\rust\\target\\release\\yog_bench.exe",
+    "yog-go": "benchmarks\\results\\bin\\yog-go-bench.exe",
+    "cedar-rust": "benchmarks\\adapters\\cedar_rust\\target\\release\\cedar-bench.exe",
+    "opa-go": "benchmarks\\results\\bin\\opa-bench.exe"
+  },
+  "profiles": {
+    "common": {
+      "small": {
+        "yog-python": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "yog-rust": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "yog-go": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "casbin": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "opa-go": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "cedar-rust": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "cedar-rust-alt": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        }
+      },
+      "medium": {
+        "yog-python": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "yog-rust": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "yog-go": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "casbin": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "opa-go": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "cedar-rust": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "cedar-rust-alt": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        }
+      },
+      "large": {
+        "yog-python": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "yog-rust": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "yog-go": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "casbin": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "opa-go": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "cedar-rust": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "cedar-rust-alt": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        }
+      }
+    },
+    "full": {
+      "small": {
+        "yog-python": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "yog-rust": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "yog-go": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "casbin": {
+          "checked": 300,
+          "mismatches": [
+            {
+              "index": 204,
+              "label": "clearance boundary",
+              "actor": "u0012",
+              "resource": "r_denied",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 207,
+              "label": "clearance boundary",
+              "actor": "u0003",
+              "resource": "r0001",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 209,
+              "label": "clearance boundary",
+              "actor": "u0003",
+              "resource": "r0000",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 222,
+              "label": "clearance boundary",
+              "actor": "u0005",
+              "resource": "r0001",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 226,
+              "label": "clearance boundary",
+              "actor": "u0001",
+              "resource": "r0001",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 227,
+              "label": "clearance boundary",
+              "actor": "u0016",
+              "resource": "r0000",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 234,
+              "label": "clearance boundary",
+              "actor": "u0013",
+              "resource": "r0001",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 235,
+              "label": "clearance boundary",
+              "actor": "u0018",
+              "resource": "r0001",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 240,
+              "label": "clearance boundary",
+              "actor": "u0012",
+              "resource": "r0000",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 241,
+              "label": "clearance boundary",
+              "actor": "u0015",
+              "resource": "r_denied",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 242,
+              "label": "clearance boundary",
+              "actor": "u0003",
+              "resource": "r0001",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 244,
+              "label": "clearance boundary",
+              "actor": "u0018",
+              "resource": "r_secret",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 247,
+              "label": "clearance boundary",
+              "actor": "u0003",
+              "resource": "r0000",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 249,
+              "label": "clearance boundary",
+              "actor": "u0001",
+              "resource": "r0000",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 252,
+              "label": "random",
+              "actor": "u0005",
+              "resource": "r0024",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 253,
+              "label": "random",
+              "actor": "u0012",
+              "resource": "r0020",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 254,
+              "label": "random",
+              "actor": "u0003",
+              "resource": "r0026",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 255,
+              "label": "random",
+              "actor": "u0005",
+              "resource": "r0004",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 256,
+              "label": "random",
+              "actor": "u0014",
+              "resource": "r0025",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 257,
+              "label": "random",
+              "actor": "u0009",
+              "resource": "r0003",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 258,
+              "label": "random",
+              "actor": "u0012",
+              "resource": "r0001",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 259,
+              "label": "random",
+              "actor": "u0017",
+              "resource": "r0020",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 260,
+              "label": "random",
+              "actor": "u0016",
+              "resource": "r0012",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 261,
+              "label": "random",
+              "actor": "u0002",
+              "resource": "r0020",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 262,
+              "label": "random",
+              "actor": "u0017",
+              "resource": "r0016",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 263,
+              "label": "random",
+              "actor": "u0003",
+              "resource": "r0002",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 266,
+              "label": "random",
+              "actor": "u0003",
+              "resource": "r0015",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 268,
+              "label": "random",
+              "actor": "u0018",
+              "resource": "r0016",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 269,
+              "label": "random",
+              "actor": "u0014",
+              "resource": "r0020",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 270,
+              "label": "random",
+              "actor": "u0001",
+              "resource": "r0022",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 272,
+              "label": "random",
+              "actor": "u0018",
+              "resource": "r0000",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 274,
+              "label": "random",
+              "actor": "u0016",
+              "resource": "r0025",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 275,
+              "label": "random",
+              "actor": "u0007",
+              "resource": "r0023",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 278,
+              "label": "random",
+              "actor": "u0003",
+              "resource": "r0015",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 280,
+              "label": "random",
+              "actor": "u0008",
+              "resource": "r0007",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 282,
+              "label": "random",
+              "actor": "u0016",
+              "resource": "r0017",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 283,
+              "label": "random",
+              "actor": "u0001",
+              "resource": "r0028",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 288,
+              "label": "random",
+              "actor": "u0011",
+              "resource": "r0004",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 289,
+              "label": "random",
+              "actor": "u0007",
+              "resource": "r0024",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 290,
+              "label": "random",
+              "actor": "u0011",
+              "resource": "r0005",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 292,
+              "label": "random",
+              "actor": "u0005",
+              "resource": "r0003",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 293,
+              "label": "random",
+              "actor": "u0005",
+              "resource": "r0001",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 294,
+              "label": "random",
+              "actor": "u0015",
+              "resource": "r0027",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 295,
+              "label": "random",
+              "actor": "u0004",
+              "resource": "r0013",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 296,
+              "label": "random",
+              "actor": "u0013",
+              "resource": "r0000",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 297,
+              "label": "random",
+              "actor": "u0004",
+              "resource": "r0005",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            }
+          ],
+          "agreement": 0.8466666666666667,
+          "expected_gap": true
+        },
+        "opa-go": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "cedar-rust": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "cedar-rust-alt": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        }
+      },
+      "medium": {
+        "yog-python": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "yog-rust": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "yog-go": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "casbin": {
+          "checked": 300,
+          "mismatches": [
+            {
+              "index": 202,
+              "label": "clearance boundary",
+              "actor": "u0035",
+              "resource": "r0000",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 213,
+              "label": "clearance boundary",
+              "actor": "u0103",
+              "resource": "r0001",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 214,
+              "label": "clearance boundary",
+              "actor": "u0149",
+              "resource": "r0000",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 219,
+              "label": "clearance boundary",
+              "actor": "u0057",
+              "resource": "r0001",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 222,
+              "label": "clearance boundary",
+              "actor": "u0044",
+              "resource": "r_denied",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 225,
+              "label": "clearance boundary",
+              "actor": "u0006",
+              "resource": "r0000",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 226,
+              "label": "clearance boundary",
+              "actor": "u0116",
+              "resource": "r0001",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 234,
+              "label": "clearance boundary",
+              "actor": "u0137",
+              "resource": "r_secret",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 237,
+              "label": "clearance boundary",
+              "actor": "u0082",
+              "resource": "r0001",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 239,
+              "label": "clearance boundary",
+              "actor": "u0071",
+              "resource": "r_denied",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 241,
+              "label": "clearance boundary",
+              "actor": "u0183",
+              "resource": "r0001",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 242,
+              "label": "clearance boundary",
+              "actor": "u0028",
+              "resource": "r0001",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 247,
+              "label": "clearance boundary",
+              "actor": "u0066",
+              "resource": "r_denied",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 249,
+              "label": "clearance boundary",
+              "actor": "u0146",
+              "resource": "r0001",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 250,
+              "label": "random",
+              "actor": "u0169",
+              "resource": "r0060",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 251,
+              "label": "random",
+              "actor": "u0069",
+              "resource": "r0062",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 253,
+              "label": "random",
+              "actor": "u0029",
+              "resource": "r0102",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 256,
+              "label": "random",
+              "actor": "u0023",
+              "resource": "r0098",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 257,
+              "label": "random",
+              "actor": "u0198",
+              "resource": "r0022",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 258,
+              "label": "random",
+              "actor": "u0175",
+              "resource": "r0044",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 259,
+              "label": "random",
+              "actor": "u0052",
+              "resource": "r0108",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 261,
+              "label": "random",
+              "actor": "u0107",
+              "resource": "r0198",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 262,
+              "label": "random",
+              "actor": "u0061",
+              "resource": "r0026",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 263,
+              "label": "random",
+              "actor": "u0157",
+              "resource": "r0159",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 265,
+              "label": "random",
+              "actor": "u0030",
+              "resource": "r0102",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 266,
+              "label": "random",
+              "actor": "u0095",
+              "resource": "r0129",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 268,
+              "label": "random",
+              "actor": "u0161",
+              "resource": "r0113",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 269,
+              "label": "random",
+              "actor": "u0006",
+              "resource": "r0004",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 273,
+              "label": "random",
+              "actor": "u0134",
+              "resource": "r0131",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 276,
+              "label": "random",
+              "actor": "u0176",
+              "resource": "r0035",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 277,
+              "label": "random",
+              "actor": "u0077",
+              "resource": "r0018",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 279,
+              "label": "random",
+              "actor": "u0025",
+              "resource": "r0063",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 280,
+              "label": "random",
+              "actor": "u0168",
+              "resource": "r0173",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 281,
+              "label": "random",
+              "actor": "u0180",
+              "resource": "r0003",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 282,
+              "label": "random",
+              "actor": "u0097",
+              "resource": "r0048",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 290,
+              "label": "random",
+              "actor": "u0059",
+              "resource": "r0094",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 291,
+              "label": "random",
+              "actor": "u0004",
+              "resource": "r0047",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 292,
+              "label": "random",
+              "actor": "u0148",
+              "resource": "r0079",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 295,
+              "label": "random",
+              "actor": "u0121",
+              "resource": "r0060",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 296,
+              "label": "random",
+              "actor": "u0012",
+              "resource": "r0095",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 298,
+              "label": "random",
+              "actor": "u0057",
+              "resource": "r0027",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            }
+          ],
+          "agreement": 0.8633333333333333,
+          "expected_gap": true
+        },
+        "opa-go": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "cedar-rust": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "cedar-rust-alt": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        }
+      },
+      "large": {
+        "yog-python": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "yog-rust": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "yog-go": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "casbin": {
+          "checked": 300,
+          "mismatches": [
+            {
+              "index": 201,
+              "label": "clearance boundary",
+              "actor": "u0717",
+              "resource": "r0000",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 202,
+              "label": "clearance boundary",
+              "actor": "u1995",
+              "resource": "r_denied",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 203,
+              "label": "clearance boundary",
+              "actor": "u1778",
+              "resource": "r0000",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 206,
+              "label": "clearance boundary",
+              "actor": "u0480",
+              "resource": "r0001",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 208,
+              "label": "clearance boundary",
+              "actor": "u0695",
+              "resource": "r0001",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 213,
+              "label": "clearance boundary",
+              "actor": "u0614",
+              "resource": "r0001",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 216,
+              "label": "clearance boundary",
+              "actor": "u0087",
+              "resource": "r0000",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 222,
+              "label": "clearance boundary",
+              "actor": "u0058",
+              "resource": "r0000",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 223,
+              "label": "clearance boundary",
+              "actor": "u0395",
+              "resource": "r_secret",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 224,
+              "label": "clearance boundary",
+              "actor": "u0619",
+              "resource": "r_denied",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 226,
+              "label": "clearance boundary",
+              "actor": "u0552",
+              "resource": "r_denied",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 227,
+              "label": "clearance boundary",
+              "actor": "u1456",
+              "resource": "r0000",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 228,
+              "label": "clearance boundary",
+              "actor": "u0947",
+              "resource": "r_secret",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 229,
+              "label": "clearance boundary",
+              "actor": "u0136",
+              "resource": "r_denied",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 230,
+              "label": "clearance boundary",
+              "actor": "u0747",
+              "resource": "r_secret",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 231,
+              "label": "clearance boundary",
+              "actor": "u0410",
+              "resource": "r0000",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 233,
+              "label": "clearance boundary",
+              "actor": "u0852",
+              "resource": "r0000",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 234,
+              "label": "clearance boundary",
+              "actor": "u0961",
+              "resource": "r_secret",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 235,
+              "label": "clearance boundary",
+              "actor": "u0864",
+              "resource": "r_denied",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 236,
+              "label": "clearance boundary",
+              "actor": "u1144",
+              "resource": "r0001",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 237,
+              "label": "clearance boundary",
+              "actor": "u0902",
+              "resource": "r0001",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 238,
+              "label": "clearance boundary",
+              "actor": "u1022",
+              "resource": "r0000",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 241,
+              "label": "clearance boundary",
+              "actor": "u1521",
+              "resource": "r0000",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 243,
+              "label": "clearance boundary",
+              "actor": "u1783",
+              "resource": "r0001",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 244,
+              "label": "clearance boundary",
+              "actor": "u0521",
+              "resource": "r0001",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 246,
+              "label": "clearance boundary",
+              "actor": "u0819",
+              "resource": "r_secret",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 248,
+              "label": "clearance boundary",
+              "actor": "u0439",
+              "resource": "r_secret",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 249,
+              "label": "clearance boundary",
+              "actor": "u0572",
+              "resource": "r0001",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 251,
+              "label": "random",
+              "actor": "u1287",
+              "resource": "r0298",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 252,
+              "label": "random",
+              "actor": "u0969",
+              "resource": "r0123",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 253,
+              "label": "random",
+              "actor": "u0629",
+              "resource": "r0857",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 254,
+              "label": "random",
+              "actor": "u1274",
+              "resource": "r0187",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 255,
+              "label": "random",
+              "actor": "u1247",
+              "resource": "r0839",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 256,
+              "label": "random",
+              "actor": "u0381",
+              "resource": "r0777",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 259,
+              "label": "random",
+              "actor": "u0915",
+              "resource": "r0291",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 260,
+              "label": "random",
+              "actor": "u0351",
+              "resource": "r0548",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 261,
+              "label": "random",
+              "actor": "u0719",
+              "resource": "r0970",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 262,
+              "label": "random",
+              "actor": "u1839",
+              "resource": "r0666",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 263,
+              "label": "random",
+              "actor": "u1509",
+              "resource": "r0568",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 265,
+              "label": "random",
+              "actor": "u0700",
+              "resource": "r0656",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 266,
+              "label": "random",
+              "actor": "u0364",
+              "resource": "r0570",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 267,
+              "label": "random",
+              "actor": "u1186",
+              "resource": "r0313",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 268,
+              "label": "random",
+              "actor": "u1283",
+              "resource": "r0226",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 269,
+              "label": "random",
+              "actor": "u1695",
+              "resource": "r0115",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 270,
+              "label": "random",
+              "actor": "u0763",
+              "resource": "r0732",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 273,
+              "label": "random",
+              "actor": "u1114",
+              "resource": "r0998",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 276,
+              "label": "random",
+              "actor": "u0597",
+              "resource": "r0532",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 277,
+              "label": "random",
+              "actor": "u1877",
+              "resource": "r0652",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 280,
+              "label": "random",
+              "actor": "u1061",
+              "resource": "r0585",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 281,
+              "label": "random",
+              "actor": "u1289",
+              "resource": "r0584",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 282,
+              "label": "random",
+              "actor": "u0745",
+              "resource": "r0059",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 285,
+              "label": "random",
+              "actor": "u0067",
+              "resource": "r0913",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 286,
+              "label": "random",
+              "actor": "u0961",
+              "resource": "r0169",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 289,
+              "label": "random",
+              "actor": "u1484",
+              "resource": "r0587",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 290,
+              "label": "random",
+              "actor": "u1708",
+              "resource": "r0410",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 292,
+              "label": "random",
+              "actor": "u1354",
+              "resource": "r0083",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 293,
+              "label": "random",
+              "actor": "u1484",
+              "resource": "r0297",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 294,
+              "label": "random",
+              "actor": "u0045",
+              "resource": "r0737",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 295,
+              "label": "random",
+              "actor": "u1939",
+              "resource": "r0879",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            },
+            {
+              "index": 296,
+              "label": "random",
+              "actor": "u1805",
+              "resource": "r0722",
+              "expected": "ALLOW",
+              "actual": "DENY"
+            }
+          ],
+          "agreement": 0.8,
+          "expected_gap": true
+        },
+        "opa-go": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "cedar-rust": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        },
+        "cedar-rust-alt": {
+          "checked": 300,
+          "mismatches": [],
+          "agreement": 1.0,
+          "expected_gap": false
+        }
+      }
+    }
+  }
+}

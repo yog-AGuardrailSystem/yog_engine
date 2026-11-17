@@ -1,0 +1,146 @@
+{
+  "generated_at": "2026-11-16T17:30:04.444764+00:00",
+  "tools": {
+    "opa": "opa",
+    "cedar": "cedar",
+    "yogc": "yogc"
+  },
+  "results": {
+    "common": {
+      "small": {
+        "yog": {
+          "ok": true,
+          "output": "ok: benchmarks\\generated\\common-small.yog"
+        },
+        "opa": {
+          "ok": true,
+          "output": ""
+        },
+        "cedar": {
+          "ok": true,
+          "output": "\u261e policy set validation passed\n  \u2570\u2500\u25b6 no errors or warnings"
+        },
+        "cedar-alt": {
+          "ok": true,
+          "output": "\u261e policy set validation passed\n  \u2570\u2500\u25b6 no errors or warnings"
+        },
+        "casbin": {
+          "ok": null,
+          "output": "no official static validator; model is exercised by the semantic-equivalence workload"
+        }
+      },
+      "medium": {
+        "yog": {
+          "ok": true,
+          "output": "ok: benchmarks\\generated\\common-medium.yog"
+        },
+        "opa": {
+          "ok": true,
+          "output": ""
+        },
+        "cedar": {
+          "ok": true,
+          "output": "\u261e policy set validation passed\n  \u2570\u2500\u25b6 no errors or warnings"
+        },
+        "cedar-alt": {
+          "ok": true,
+          "output": "\u261e policy set validation passed\n  \u2570\u2500\u25b6 no errors or warnings"
+        },
+        "casbin": {
+          "ok": null,
+          "output": "no official static validator; model is exercised by the semantic-equivalence workload"
+        }
+      },
+      "large": {
+        "yog": {
+          "ok": true,
+          "output": "ok: benchmarks\\generated\\common-large.yog"
+        },
+        "opa": {
+          "ok": true,
+          "output": ""
+        },
+        "cedar": {
+          "ok": true,
+          "output": "\u261e policy set validation passed\n  \u2570\u2500\u25b6 no errors or warnings"
+        },
+        "cedar-alt": {
+          "ok": true,
+          "output": "\u261e policy set validation passed\n  \u2570\u2500\u25b6 no errors or warnings"
+        },
+        "casbin": {
+          "ok": null,
+          "output": "no official static validator; model is exercised by the semantic-equivalence workload"
+        }
+      }
+    },
+    "full": {
+      "small": {
+        "yog": {
+          "ok": true,
+          "output": "ok: benchmarks\\generated\\small.yog"
+        },
+        "opa": {
+          "ok": true,
+          "output": ""
+        },
+        "cedar": {
+          "ok": true,
+          "output": "\u261e policy set validation passed\n  \u2570\u2500\u25b6 no errors or warnings"
+        },
+        "cedar-alt": {
+          "ok": true,
+          "output": "\u261e policy set validation passed\n  \u2570\u2500\u25b6 no errors or warnings"
+        },
+        "casbin": {
+          "ok": null,
+          "output": "no official static validator; model is exercised by the semantic-equivalence workload"
+        }
+      },
+      "medium": {
+        "yog": {
+          "ok": true,
+          "output": "ok: benchmarks\\generated\\medium.yog"
+        },
+        "opa": {
+          "ok": true,
+          "output": ""
+        },
+        "cedar": {
+          "ok": true,
+          "output": "\u261e policy set validation passed\n  \u2570\u2500\u25b6 no errors or warnings"
+        },
+        "cedar-alt": {
+          "ok": true,
+          "output": "\u261e policy set validation passed\n  \u2570\u2500\u25b6 no errors or warnings"
+        },
+        "casbin": {
+          "ok": null,
+          "output": "no official static validator; model is exercised by the semantic-equivalence workload"
+        }
+      },
+      "large": {
+        "yog": {
+          "ok": true,
+          "output": "ok: benchmarks\\generated\\large.yog"
+        },
+        "opa": {
+          "ok": true,
+          "output": ""
+        },
+        "cedar": {
+          "ok": true,
+          "output": "\u261e policy set validation passed\n  \u2570\u2500\u25b6 no errors or warnings"
+        },
+        "cedar-alt": {
+          "ok": true,
+          "output": "\u261e policy set validation passed\n  \u2570\u2500\u25b6 no errors or warnings"
+        },
+        "casbin": {
+          "ok": null,
+          "output": "no official static validator; model is exercised by the semantic-equivalence workload"
+        }
+      }
+    }
+  }
+}

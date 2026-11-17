@@ -1,0 +1,118 @@
+name: benchmark-comparison
+
+# Timings are noisy and slow, so this is not a per-PR gate. Run it manually or
+# nightly and inspect the uploaded artifacts. It is the Linux data point the
+# Windows run cannot provide.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * *"
+
+permissions:
+  contents: read
+
+env:
+  YOG_LIB_DIR: ${{ github.workspace }}/yog/build-release
+  YOG_LIBRARY: ${{ github.workspace }}/yog/build-release/libyog.so
+  LD_LIBRARY_PATH: ${{ github.workspace }}/yog/build-release
+  CARGO_TERM_COLOR: always
+
+jobs:
+  compare:
+    name: Cross-engine comparison (Linux, Release)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "stable"
+          check-latest: true
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install OPA (pinned)
+        run: |
+          curl -fsSL -o /tmp/opa \
+            https://github.com/open-policy-agent/opa/releases/download/v1.22.4/opa_linux_amd64_static
+          echo "35e3b352e715e80624ead6c89930d8585f6f7d94cdc409eb2a9fe36620dcccba  /tmp/opa" \
+            | sha256sum -c -
+          sudo install -m 0755 /tmp/opa /usr/local/bin/opa
+          opa version
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin
+          key: cedar-cli-4.14.1-${{ runner.os }}
+
+      - name: Install Cedar CLI (pinned)
+        run: |
+          if ! command -v cedar >/dev/null; then
+            cargo install cedar-policy-cli --version 4.14.1 --locked
+          fi
+          cedar --version
+
+      - name: Install Casbin (pinned)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install casbin==1.43.0
+
+      - name: Build YOG (Release, shared library + CLI + harnesses)
+        run: |
+          cmake -S yog -B yog/build-release -DCMAKE_BUILD_TYPE=Release
+          cmake --build yog/build-release --parallel
+          ls -l yog/build-release/libyog.so yog/build-release/yogc yog/build-release/bench_yog
+
+      - name: Build Rust bindings and Cedar harness
+        run: |
+          cargo build --release --manifest-path bindings/rust/Cargo.toml
+          cargo build --release --manifest-path benchmarks/adapters/cedar_rust/Cargo.toml
+
+      - name: Build Go harnesses
+        run: |
+          mkdir -p benchmarks/results/bin
+          (cd benchmarks/adapters/opa_go && go build -o ../../results/bin/opa-bench .)
+          (cd benchmarks/adapters/yog_go && go build -o ../../results/bin/yog-go-bench .)
+
+      - name: Generate corpus and requests
+        run: |
+          python benchmarks/gen_corpus.py
+          python benchmarks/gen_requests.py
+
+      - name: Semantic equivalence against the independent oracle
+        run: python benchmarks/equivalence.py
+
+      - name: Official validators for every translation
+        run: python benchmarks/validate_translations.py
+
+      - name: Warm same-runtime comparison (10 runs, pinned)
+        run: python benchmarks/compare.py --pin-cpu 0
+
+      - name: Cold, load, warm and service boundaries (10 runs, pinned)
+        run: python benchmarks/boundaries.py --pin-cpu 0
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results-linux
+          path: |
+            benchmarks/results/comparison.json
+            benchmarks/results/comparison.md
+            benchmarks/results/boundaries.json
+            benchmarks/results/boundaries.md
+            benchmarks/results/equivalence.json
+            benchmarks/results/equivalence.md
+            benchmarks/results/validation.json
+            benchmarks/results/validation.md
+            benchmarks/results/versions.json
+            benchmarks/results/translations/
+          if-no-files-found: error

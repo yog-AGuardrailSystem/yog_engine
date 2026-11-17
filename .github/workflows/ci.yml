@@ -38,6 +38,53 @@ jobs:
           yog/build/bench_yog check benchmarks/generated/small.yog u0000 can_access r0000 --iterations 100
           yog/build/bench_yog compile benchmarks/generated/small.yog --iterations 10
 
+  bindings:
+    name: Bindings and in-process harnesses
+    runs-on: ubuntu-latest
+    env:
+      YOG_LIB_DIR: ${{ github.workspace }}/yog/build-release
+      YOG_LIBRARY: ${{ github.workspace }}/yog/build-release/libyog.so
+      LD_LIBRARY_PATH: ${{ github.workspace }}/yog/build-release
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "stable"
+          check-latest: true
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install pytest
+        run: python -m pip install --upgrade pip pytest
+
+      - name: Build YOG Release (shared library)
+        run: |
+          cmake -S yog -B yog/build-release -DCMAKE_BUILD_TYPE=Release
+          cmake --build yog/build-release --parallel
+
+      - name: Python ctypes binding tests
+        run: python -m pytest bindings/python/tests -q
+
+      - name: Rust wrapper tests
+        run: cargo test --release --manifest-path bindings/rust/Cargo.toml
+
+      - name: Build Go harnesses (cgo over the public ABI)
+        run: |
+          mkdir -p benchmarks/results/bin
+          (cd benchmarks/adapters/opa_go && go build -o ../../results/bin/opa-bench .)
+          (cd benchmarks/adapters/yog_go && go build -o ../../results/bin/yog-go-bench .)
+
+      - name: Go binding smoke test
+        run: |
+          python benchmarks/gen_corpus.py
+          ./benchmarks/results/bin/yog-go-bench --mode load \
+            --policy benchmarks/generated/common-small.yog
+
   python-tests:
     name: Python reference tests
     runs-on: ubuntu-latest

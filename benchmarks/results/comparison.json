@@ -1,0 +1,1433 @@
+{
+  "generated_at": "2026-11-15T05:50:08.563141+00:00",
+  "profile": "common",
+  "versions": {
+    "git_commit": "3b58cf95c62194ec5180916abfa0e77d665e8278",
+    "python": "3.14.7",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "machine": "AMD64",
+    "engines": {
+      "yog": "source 3b58cf9 (shared library + bindings)",
+      "casbin": "casbin 1.43.0",
+      "opa": "Version: 1.22.4",
+      "cedar": "cedar-policy 4.14.1 (Rust SDK)"
+    }
+  },
+  "config": {
+    "runs": 10,
+    "iterations": 500,
+    "warmup": 50,
+    "ci": "95% percentile bootstrap over run medians",
+    "cpu": "pinned to CPU 0 (mask 0x1); children inherit"
+  },
+  "requests": {
+    "small": [
+      "admin allow",
+      "team join allow",
+      "guest default deny",
+      "unmapped deny"
+    ],
+    "medium": [
+      "admin allow",
+      "team join allow",
+      "guest default deny",
+      "unmapped deny"
+    ],
+    "large": [
+      "admin allow",
+      "team join allow",
+      "guest default deny",
+      "unmapped deny"
+    ]
+  },
+  "boundaries": {
+    "python-in-process": {
+      "description": "YOG-Python (ctypes) and Casbin both run in CPython. Native runtime: same.",
+      "sizes": {
+        "small": {
+          "yog-python": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 10.727459999999999,
+                "p50_us": 8.7,
+                "p95_us": 18.0,
+                "p99_us": 26.2,
+                "max_us": 474.4,
+                "throughput_per_s": 93218.71160554315,
+                "runs": 10,
+                "ci_low_us": 8.7,
+                "ci_high_us": 8.7
+              },
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 12.4354,
+                "p50_us": 10.5,
+                "p95_us": 20.7,
+                "p99_us": 26.3,
+                "max_us": 504.4,
+                "throughput_per_s": 80415.58775753091,
+                "runs": 10,
+                "ci_low_us": 10.4,
+                "ci_high_us": 10.5
+              },
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 17.22082,
+                "p50_us": 12.5,
+                "p95_us": 26.8,
+                "p99_us": 77.7,
+                "max_us": 2860.6,
+                "throughput_per_s": 58069.24408942199,
+                "runs": 10,
+                "ci_low_us": 12.5,
+                "ci_high_us": 12.6
+              },
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 14.63944,
+                "p50_us": 12.5,
+                "p95_us": 25.1,
+                "p99_us": 40.9,
+                "max_us": 376.0,
+                "throughput_per_s": 68308.62382714092,
+                "runs": 10,
+                "ci_low_us": 12.5,
+                "ci_high_us": 12.6
+              }
+            },
+            "load": {
+              "samples": 100,
+              "mean_us": 158.288,
+              "p50_us": 138.275,
+              "p95_us": 265.1,
+              "p99_us": 407.5,
+              "max_us": 407.5,
+              "throughput_per_s": 6317.5983018295765,
+              "runs": 10,
+              "ci_low_us": 133.85,
+              "ci_high_us": 193.75
+            }
+          },
+          "casbin": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 173.00906,
+                "p50_us": 132.7,
+                "p95_us": 384.8,
+                "p99_us": 594.6,
+                "max_us": 8080.2,
+                "throughput_per_s": 5780.044120232778,
+                "runs": 10,
+                "ci_low_us": 131.65,
+                "ci_high_us": 140.0
+              },
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 183.47938,
+                "p50_us": 152.575,
+                "p95_us": 368.0,
+                "p99_us": 533.3,
+                "max_us": 4249.0,
+                "throughput_per_s": 5450.203723164968,
+                "runs": 10,
+                "ci_low_us": 150.7,
+                "ci_high_us": 158.85
+              },
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 246.32742000000002,
+                "p50_us": 206.55,
+                "p95_us": 463.4,
+                "p99_us": 718.4,
+                "max_us": 4073.3,
+                "throughput_per_s": 4059.637372079812,
+                "runs": 10,
+                "ci_low_us": 196.8,
+                "ci_high_us": 216.6
+              },
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 226.29592000000002,
+                "p50_us": 197.7,
+                "p95_us": 388.6,
+                "p99_us": 561.3,
+                "max_us": 12715.1,
+                "throughput_per_s": 4418.992618161211,
+                "runs": 10,
+                "ci_low_us": 196.35,
+                "ci_high_us": 201.1
+              }
+            },
+            "load": {
+              "samples": 100,
+              "mean_us": 2116.736,
+              "p50_us": 1967.975,
+              "p95_us": 2775.6,
+              "p99_us": 3843.9,
+              "max_us": 3843.9,
+              "throughput_per_s": 472.42547015782793,
+              "runs": 10,
+              "ci_low_us": 1947.0,
+              "ci_high_us": 2037.4
+            }
+          }
+        },
+        "medium": {
+          "yog-python": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 8.9581,
+                "p50_us": 8.7,
+                "p95_us": 9.0,
+                "p99_us": 17.3,
+                "max_us": 59.9,
+                "throughput_per_s": 111630.81457005393,
+                "runs": 10,
+                "ci_low_us": 8.7,
+                "ci_high_us": 8.7
+              },
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 21.71404,
+                "p50_us": 21.2,
+                "p95_us": 21.7,
+                "p99_us": 37.4,
+                "max_us": 235.0,
+                "throughput_per_s": 46053.152706728,
+                "runs": 10,
+                "ci_low_us": 21.2,
+                "ci_high_us": 21.2
+              },
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 43.036120000000004,
+                "p50_us": 41.65,
+                "p95_us": 48.4,
+                "p99_us": 76.1,
+                "max_us": 203.6,
+                "throughput_per_s": 23236.29546529752,
+                "runs": 10,
+                "ci_low_us": 41.6,
+                "ci_high_us": 41.7
+              },
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 42.497699999999995,
+                "p50_us": 41.7,
+                "p95_us": 43.3,
+                "p99_us": 61.3,
+                "max_us": 166.7,
+                "throughput_per_s": 23530.68519002205,
+                "runs": 10,
+                "ci_low_us": 41.7,
+                "ci_high_us": 41.8
+              }
+            },
+            "load": {
+              "samples": 100,
+              "mean_us": 2174.449,
+              "p50_us": 1822.45,
+              "p95_us": 3213.7,
+              "p99_us": 3335.8,
+              "max_us": 3335.8,
+              "throughput_per_s": 459.88661955281543,
+              "runs": 10,
+              "ci_low_us": 1739.35,
+              "ci_high_us": 3079.6
+            }
+          },
+          "casbin": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 149.93598,
+                "p50_us": 129.7,
+                "p95_us": 233.5,
+                "p99_us": 431.2,
+                "max_us": 8346.6,
+                "throughput_per_s": 6669.5132149067895,
+                "runs": 10,
+                "ci_low_us": 129.4,
+                "ci_high_us": 130.0
+              },
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 173.34508,
+                "p50_us": 151.325,
+                "p95_us": 285.7,
+                "p99_us": 471.2,
+                "max_us": 974.7,
+                "throughput_per_s": 5768.839819393778,
+                "runs": 10,
+                "ci_low_us": 151.2,
+                "ci_high_us": 152.85
+              },
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 407.9893,
+                "p50_us": 378.35,
+                "p95_us": 630.6,
+                "p99_us": 783.3,
+                "max_us": 1811.3,
+                "throughput_per_s": 2451.0446720048785,
+                "runs": 10,
+                "ci_low_us": 377.0,
+                "ci_high_us": 385.6
+              },
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 245.31189999999998,
+                "p50_us": 187.15,
+                "p95_us": 414.3,
+                "p99_us": 698.3,
+                "max_us": 8617.1,
+                "throughput_per_s": 4076.4430914276886,
+                "runs": 10,
+                "ci_low_us": 185.0,
+                "ci_high_us": 198.3
+              }
+            },
+            "load": {
+              "samples": 100,
+              "mean_us": 6875.626,
+              "p50_us": 4826.925,
+              "p95_us": 12812.4,
+              "p99_us": 20123.0,
+              "max_us": 20123.0,
+              "throughput_per_s": 145.44130236286847,
+              "runs": 10,
+              "ci_low_us": 4365.5,
+              "ci_high_us": 9731.9
+            }
+          }
+        },
+        "large": {
+          "yog-python": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 9.09684,
+                "p50_us": 8.7,
+                "p95_us": 9.3,
+                "p99_us": 19.5,
+                "max_us": 85.4,
+                "throughput_per_s": 109928.2827883089,
+                "runs": 10,
+                "ci_low_us": 8.7,
+                "ci_high_us": 8.7
+              },
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 145.95668,
+                "p50_us": 133.625,
+                "p95_us": 205.5,
+                "p99_us": 275.9,
+                "max_us": 2828.3,
+                "throughput_per_s": 6851.347947897965,
+                "runs": 10,
+                "ci_low_us": 133.4,
+                "ci_high_us": 133.9
+              },
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 416.96708,
+                "p50_us": 364.225,
+                "p95_us": 661.3,
+                "p99_us": 877.5,
+                "max_us": 2260.6,
+                "throughput_per_s": 2398.270865891859,
+                "runs": 10,
+                "ci_low_us": 360.7,
+                "ci_high_us": 370.9
+              },
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 395.20962,
+                "p50_us": 358.925,
+                "p95_us": 551.8,
+                "p99_us": 773.5,
+                "max_us": 4590.8,
+                "throughput_per_s": 2530.3027795730277,
+                "runs": 10,
+                "ci_low_us": 357.4,
+                "ci_high_us": 366.5
+              }
+            },
+            "load": {
+              "samples": 100,
+              "mean_us": 60708.636,
+              "p50_us": 59105.5,
+              "p95_us": 73310.2,
+              "p99_us": 82473.0,
+              "max_us": 82473.0,
+              "throughput_per_s": 16.47212103398271,
+              "runs": 10,
+              "ci_low_us": 58363.25,
+              "ci_high_us": 62128.05
+            }
+          },
+          "casbin": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 171.05462,
+                "p50_us": 132.375,
+                "p95_us": 380.4,
+                "p99_us": 612.1,
+                "max_us": 11950.3,
+                "throughput_per_s": 5846.085887653897,
+                "runs": 10,
+                "ci_low_us": 130.7,
+                "ci_high_us": 135.75
+              },
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 174.2872,
+                "p50_us": 150.95,
+                "p95_us": 321.5,
+                "p99_us": 486.8,
+                "max_us": 987.0,
+                "throughput_per_s": 5737.656006866827,
+                "runs": 10,
+                "ci_low_us": 150.6,
+                "ci_high_us": 151.6
+              },
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 1586.36746,
+                "p50_us": 1350.825,
+                "p95_us": 2544.2,
+                "p99_us": 3854.8,
+                "max_us": 25494.0,
+                "throughput_per_s": 630.370973443946,
+                "runs": 10,
+                "ci_low_us": 1316.5,
+                "ci_high_us": 1420.6
+              },
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 1591.44926,
+                "p50_us": 1373.3,
+                "p95_us": 2487.6,
+                "p99_us": 4850.6,
+                "max_us": 25067.3,
+                "throughput_per_s": 628.3580791008064,
+                "runs": 10,
+                "ci_low_us": 1327.5,
+                "ci_high_us": 1471.6
+              }
+            },
+            "load": {
+              "samples": 100,
+              "mean_us": 80976.126,
+              "p50_us": 71049.775,
+              "p95_us": 159893.7,
+              "p99_us": 214860.0,
+              "max_us": 214860.0,
+              "throughput_per_s": 12.34931885973404,
+              "runs": 10,
+              "ci_low_us": 68688.1,
+              "ci_high_us": 75001.35
+            }
+          }
+        }
+      }
+    },
+    "rust-in-process": {
+      "description": "YOG-Rust (safe wrapper) and the Cedar Rust SDK both run in a Rust process. Native runtime: same.",
+      "sizes": {
+        "small": {
+          "yog-rust": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 1.94002,
+                "p50_us": 1.8,
+                "p95_us": 1.9,
+                "p99_us": 4.1,
+                "max_us": 109.9,
+                "throughput_per_s": 515458.60351955134,
+                "runs": 10,
+                "ci_low_us": 1.8,
+                "ci_high_us": 1.8
+              },
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 3.57698,
+                "p50_us": 3.5,
+                "p95_us": 3.6,
+                "p99_us": 4.0,
+                "max_us": 151.7,
+                "throughput_per_s": 279565.443474663,
+                "runs": 10,
+                "ci_low_us": 3.5,
+                "ci_high_us": 3.5
+              },
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 5.46158,
+                "p50_us": 5.4,
+                "p95_us": 5.6,
+                "p99_us": 5.7,
+                "max_us": 15.7,
+                "throughput_per_s": 183097.19897905,
+                "runs": 10,
+                "ci_low_us": 5.4,
+                "ci_high_us": 5.5
+              },
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 5.558479999999999,
+                "p50_us": 5.4,
+                "p95_us": 5.7,
+                "p99_us": 9.9,
+                "max_us": 158.6,
+                "throughput_per_s": 179905.29785121113,
+                "runs": 10,
+                "ci_low_us": 5.4,
+                "ci_high_us": 5.4
+              }
+            },
+            "load": {
+              "samples": 10,
+              "mean_us": 233.54,
+              "p50_us": 229.55,
+              "p95_us": 264.2,
+              "p99_us": 264.2,
+              "max_us": 264.2,
+              "throughput_per_s": 4281.92172647084,
+              "runs": 10,
+              "ci_low_us": 225.5,
+              "ci_high_us": 243.6
+            }
+          },
+          "cedar-rust": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 11.25976,
+                "p50_us": 10.9,
+                "p95_us": 11.2,
+                "p99_us": 21.3,
+                "max_us": 250.1,
+                "throughput_per_s": 88811.83968397195,
+                "runs": 10,
+                "ci_low_us": 10.5,
+                "ci_high_us": 11.1
+              },
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 10.3845,
+                "p50_us": 10.15,
+                "p95_us": 10.6,
+                "p99_us": 14.3,
+                "max_us": 201.0,
+                "throughput_per_s": 96297.36626703259,
+                "runs": 10,
+                "ci_low_us": 9.9,
+                "ci_high_us": 10.4
+              },
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 9.29684,
+                "p50_us": 8.7,
+                "p95_us": 9.5,
+                "p99_us": 17.8,
+                "max_us": 248.9,
+                "throughput_per_s": 107563.43015476226,
+                "runs": 10,
+                "ci_low_us": 8.7,
+                "ci_high_us": 9.0
+              },
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 9.21008,
+                "p50_us": 8.7,
+                "p95_us": 9.3,
+                "p99_us": 19.0,
+                "max_us": 376.9,
+                "throughput_per_s": 108576.68988760142,
+                "runs": 10,
+                "ci_low_us": 8.7,
+                "ci_high_us": 8.8
+              }
+            },
+            "load": {
+              "samples": 10,
+              "mean_us": 5859.13,
+              "p50_us": 5139.9,
+              "p95_us": 9275.2,
+              "p99_us": 9275.2,
+              "max_us": 9275.2,
+              "throughput_per_s": 170.67380310728726,
+              "runs": 10,
+              "ci_low_us": 4988.1,
+              "ci_high_us": 8075.9
+            }
+          }
+        },
+        "medium": {
+          "yog-rust": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 1.6770999999999998,
+                "p50_us": 1.6,
+                "p95_us": 1.7,
+                "p99_us": 3.0,
+                "max_us": 16.7,
+                "throughput_per_s": 596267.3662870431,
+                "runs": 10,
+                "ci_low_us": 1.6,
+                "ci_high_us": 1.7
+              },
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 14.196,
+                "p50_us": 13.8,
+                "p95_us": 14.5,
+                "p99_us": 24.7,
+                "max_us": 250.9,
+                "throughput_per_s": 70442.37813468583,
+                "runs": 10,
+                "ci_low_us": 13.7,
+                "ci_high_us": 13.8
+              },
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 35.21364,
+                "p50_us": 34.2,
+                "p95_us": 41.3,
+                "p99_us": 56.8,
+                "max_us": 207.5,
+                "throughput_per_s": 28398.086650513833,
+                "runs": 10,
+                "ci_low_us": 33.9,
+                "ci_high_us": 34.2
+              },
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 34.914739999999995,
+                "p50_us": 34.1,
+                "p95_us": 36.6,
+                "p99_us": 53.2,
+                "max_us": 332.6,
+                "throughput_per_s": 28641.19853105021,
+                "runs": 10,
+                "ci_low_us": 33.9,
+                "ci_high_us": 34.2
+              }
+            },
+            "load": {
+              "samples": 10,
+              "mean_us": 2125.92,
+              "p50_us": 2081.05,
+              "p95_us": 2324.4,
+              "p99_us": 2324.4,
+              "max_us": 2324.4,
+              "throughput_per_s": 470.38458643787163,
+              "runs": 10,
+              "ci_low_us": 2030.5,
+              "ci_high_us": 2303.6
+            }
+          },
+          "cedar-rust": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 12.50702,
+                "p50_us": 10.6,
+                "p95_us": 20.3,
+                "p99_us": 31.9,
+                "max_us": 406.8,
+                "throughput_per_s": 79955.09721740271,
+                "runs": 10,
+                "ci_low_us": 10.6,
+                "ci_high_us": 10.9
+              },
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 11.8327,
+                "p50_us": 10.0,
+                "p95_us": 17.5,
+                "p99_us": 35.1,
+                "max_us": 872.1,
+                "throughput_per_s": 84511.56540772604,
+                "runs": 10,
+                "ci_low_us": 10.0,
+                "ci_high_us": 10.15
+              },
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 9.75742,
+                "p50_us": 8.8,
+                "p95_us": 13.8,
+                "p99_us": 20.2,
+                "max_us": 414.0,
+                "throughput_per_s": 102486.10800805951,
+                "runs": 10,
+                "ci_low_us": 8.7,
+                "ci_high_us": 8.9
+              },
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 9.6343,
+                "p50_us": 8.7,
+                "p95_us": 14.1,
+                "p99_us": 19.8,
+                "max_us": 334.1,
+                "throughput_per_s": 103795.81287690855,
+                "runs": 10,
+                "ci_low_us": 8.7,
+                "ci_high_us": 8.9
+              }
+            },
+            "load": {
+              "samples": 10,
+              "mean_us": 14691.82,
+              "p50_us": 14235.1,
+              "p95_us": 16165.4,
+              "p99_us": 16165.4,
+              "max_us": 16165.4,
+              "throughput_per_s": 68.06508655837058,
+              "runs": 10,
+              "ci_low_us": 14067.5,
+              "ci_high_us": 15779.9
+            }
+          }
+        },
+        "large": {
+          "yog-rust": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 1.93066,
+                "p50_us": 1.8,
+                "p95_us": 1.9,
+                "p99_us": 3.5,
+                "max_us": 84.3,
+                "throughput_per_s": 517957.5896325609,
+                "runs": 10,
+                "ci_low_us": 1.8,
+                "ci_high_us": 1.9
+              },
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 130.01692,
+                "p50_us": 121.775,
+                "p95_us": 169.0,
+                "p99_us": 240.9,
+                "max_us": 1442.2,
+                "throughput_per_s": 7691.306639166656,
+                "runs": 10,
+                "ci_low_us": 121.4,
+                "ci_high_us": 123.5
+              },
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 359.59618,
+                "p50_us": 345.425,
+                "p95_us": 440.4,
+                "p99_us": 578.5,
+                "max_us": 1639.4,
+                "throughput_per_s": 2780.8971719332503,
+                "runs": 10,
+                "ci_low_us": 344.7,
+                "ci_high_us": 347.7
+              },
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 362.65436,
+                "p50_us": 344.75,
+                "p95_us": 447.0,
+                "p99_us": 626.6,
+                "max_us": 2747.0,
+                "throughput_per_s": 2757.446511879796,
+                "runs": 10,
+                "ci_low_us": 343.1,
+                "ci_high_us": 348.9
+              }
+            },
+            "load": {
+              "samples": 10,
+              "mean_us": 55520.67,
+              "p50_us": 54917.7,
+              "p95_us": 57200.6,
+              "p99_us": 57200.6,
+              "max_us": 57200.6,
+              "throughput_per_s": 18.011310022015223,
+              "runs": 10,
+              "ci_low_us": 54748.9,
+              "ci_high_us": 56856.7
+            }
+          },
+          "cedar-rust": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 11.84484,
+                "p50_us": 10.5,
+                "p95_us": 11.7,
+                "p99_us": 31.6,
+                "max_us": 773.4,
+                "throughput_per_s": 84424.94790980715,
+                "runs": 10,
+                "ci_low_us": 10.4,
+                "ci_high_us": 11.1
+              },
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 11.12984,
+                "p50_us": 10.45,
+                "p95_us": 11.1,
+                "p99_us": 33.4,
+                "max_us": 218.5,
+                "throughput_per_s": 89848.55128195912,
+                "runs": 10,
+                "ci_low_us": 10.0,
+                "ci_high_us": 10.6
+              },
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 9.790479999999999,
+                "p50_us": 8.85,
+                "p95_us": 9.6,
+                "p99_us": 19.1,
+                "max_us": 527.0,
+                "throughput_per_s": 102140.0380778062,
+                "runs": 10,
+                "ci_low_us": 8.8,
+                "ci_high_us": 9.4
+              },
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 9.78132,
+                "p50_us": 8.8,
+                "p95_us": 9.6,
+                "p99_us": 19.1,
+                "max_us": 732.9,
+                "throughput_per_s": 102235.69007046084,
+                "runs": 10,
+                "ci_low_us": 8.7,
+                "ci_high_us": 8.9
+              }
+            },
+            "load": {
+              "samples": 10,
+              "mean_us": 75923.5,
+              "p50_us": 73761.75,
+              "p95_us": 87461.0,
+              "p99_us": 87461.0,
+              "max_us": 87461.0,
+              "throughput_per_s": 13.171152541703162,
+              "runs": 10,
+              "ci_low_us": 71899.0,
+              "ci_high_us": 84171.9
+            }
+          }
+        }
+      }
+    },
+    "go-in-process": {
+      "description": "YOG-Go calls the C ABI via syscall/cgo; OPA is the Go SDK. Both run in a Go process, but only the YOG side pays an FFI boundary. Read the two as bounds, not as a pure engine comparison.",
+      "sizes": {
+        "small": {
+          "yog-go": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 2.58876,
+                "p50_us": 2.1,
+                "p95_us": 4.9,
+                "p99_us": 13.0,
+                "max_us": 147.8,
+                "throughput_per_s": 386285.32579304377,
+                "runs": 10,
+                "ci_low_us": 2.1,
+                "ci_high_us": 2.1
+              },
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 4.28874,
+                "p50_us": 3.7,
+                "p95_us": 8.2,
+                "p99_us": 12.6,
+                "max_us": 112.4,
+                "throughput_per_s": 233168.71621968225,
+                "runs": 10,
+                "ci_low_us": 3.7,
+                "ci_high_us": 3.8
+              },
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 6.18972,
+                "p50_us": 5.65,
+                "p95_us": 12.7,
+                "p99_us": 15.0,
+                "max_us": 145.1,
+                "throughput_per_s": 161558.1964935409,
+                "runs": 10,
+                "ci_low_us": 5.6,
+                "ci_high_us": 5.7
+              },
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 6.4324200000000005,
+                "p50_us": 5.6,
+                "p95_us": 12.8,
+                "p99_us": 17.1,
+                "max_us": 553.9,
+                "throughput_per_s": 155462.48534766075,
+                "runs": 10,
+                "ci_low_us": 5.6,
+                "ci_high_us": 5.6
+              }
+            },
+            "load": {
+              "samples": 10,
+              "mean_us": 250.51,
+              "p50_us": 242.9,
+              "p95_us": 301.5,
+              "p99_us": 301.5,
+              "max_us": 301.5,
+              "throughput_per_s": 3991.8566125104785,
+              "runs": 10,
+              "ci_low_us": 240.9,
+              "ci_high_us": 283.6
+            }
+          },
+          "opa-go": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 73.56418,
+                "p50_us": 57.95,
+                "p95_us": 159.7,
+                "p99_us": 323.8,
+                "max_us": 1086.3,
+                "throughput_per_s": 13593.572306522006,
+                "runs": 10,
+                "ci_low_us": 57.05,
+                "ci_high_us": 61.65
+              },
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 66.65310000000001,
+                "p50_us": 47.625,
+                "p95_us": 149.2,
+                "p99_us": 305.1,
+                "max_us": 1060.8,
+                "throughput_per_s": 15003.053121310188,
+                "runs": 10,
+                "ci_low_us": 46.9,
+                "ci_high_us": 52.25
+              },
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 64.51313999999999,
+                "p50_us": 46.15,
+                "p95_us": 154.9,
+                "p99_us": 297.7,
+                "max_us": 2302.1,
+                "throughput_per_s": 15500.71814827181,
+                "runs": 10,
+                "ci_low_us": 45.1,
+                "ci_high_us": 47.75
+              },
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 57.4848,
+                "p50_us": 40.05,
+                "p95_us": 133.4,
+                "p99_us": 277.6,
+                "max_us": 826.1,
+                "throughput_per_s": 17395.902916945,
+                "runs": 10,
+                "ci_low_us": 38.35,
+                "ci_high_us": 42.0
+              }
+            },
+            "load": {
+              "samples": 10,
+              "mean_us": 1966.81,
+              "p50_us": 1976.5,
+              "p95_us": 2078.4,
+              "p99_us": 2078.4,
+              "max_us": 2078.4,
+              "throughput_per_s": 508.4375206552742,
+              "runs": 10,
+              "ci_low_us": 1933.9,
+              "ci_high_us": 2053.7
+            }
+          }
+        },
+        "medium": {
+          "yog-go": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 2.3952,
+                "p50_us": 1.9,
+                "p95_us": 4.7,
+                "p99_us": 12.5,
+                "max_us": 45.4,
+                "throughput_per_s": 417501.67000668,
+                "runs": 10,
+                "ci_low_us": 1.9,
+                "ci_high_us": 1.9
+              },
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 15.11184,
+                "p50_us": 14.2,
+                "p95_us": 21.7,
+                "p99_us": 26.9,
+                "max_us": 417.0,
+                "throughput_per_s": 66173.27870067443,
+                "runs": 10,
+                "ci_low_us": 14.1,
+                "ci_high_us": 14.2
+              },
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 36.40132,
+                "p50_us": 34.45,
+                "p95_us": 43.6,
+                "p99_us": 65.7,
+                "max_us": 406.6,
+                "throughput_per_s": 27471.531252163386,
+                "runs": 10,
+                "ci_low_us": 34.4,
+                "ci_high_us": 34.6
+              },
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 36.717699999999994,
+                "p50_us": 34.5,
+                "p95_us": 46.5,
+                "p99_us": 72.0,
+                "max_us": 471.4,
+                "throughput_per_s": 27234.821353189334,
+                "runs": 10,
+                "ci_low_us": 34.3,
+                "ci_high_us": 34.6
+              }
+            },
+            "load": {
+              "samples": 10,
+              "mean_us": 2077.32,
+              "p50_us": 2046.6,
+              "p95_us": 2316.4,
+              "p99_us": 2316.4,
+              "max_us": 2316.4,
+              "throughput_per_s": 481.3894826025841,
+              "runs": 10,
+              "ci_low_us": 2022.1,
+              "ci_high_us": 2107.4
+            }
+          },
+          "opa-go": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 241.17512,
+                "p50_us": 177.325,
+                "p95_us": 531.5,
+                "p99_us": 742.6,
+                "max_us": 1986.2,
+                "throughput_per_s": 4146.36468305686,
+                "runs": 10,
+                "ci_low_us": 156.25,
+                "ci_high_us": 188.4
+              },
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 241.65688,
+                "p50_us": 164.6,
+                "p95_us": 506.8,
+                "p99_us": 669.2,
+                "max_us": 2255.1,
+                "throughput_per_s": 4138.0986132072885,
+                "runs": 10,
+                "ci_low_us": 162.6,
+                "ci_high_us": 178.4
+              },
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 227.96257999999997,
+                "p50_us": 154.75,
+                "p95_us": 476.9,
+                "p99_us": 672.6,
+                "max_us": 2024.6,
+                "throughput_per_s": 4386.684867314627,
+                "runs": 10,
+                "ci_low_us": 152.15,
+                "ci_high_us": 160.5
+              },
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 230.60410000000002,
+                "p50_us": 156.325,
+                "p95_us": 489.2,
+                "p99_us": 739.0,
+                "max_us": 1882.4,
+                "throughput_per_s": 4336.4363426322425,
+                "runs": 10,
+                "ci_low_us": 143.85,
+                "ci_high_us": 160.6
+              }
+            },
+            "load": {
+              "samples": 10,
+              "mean_us": 2160.73,
+              "p50_us": 2069.15,
+              "p95_us": 3222.8,
+              "p99_us": 3222.8,
+              "max_us": 3222.8,
+              "throughput_per_s": 462.8065514895429,
+              "runs": 10,
+              "ci_low_us": 1902.4,
+              "ci_high_us": 2231.4
+            }
+          }
+        },
+        "large": {
+          "yog-go": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 2.5749,
+                "p50_us": 2.0,
+                "p95_us": 4.1,
+                "p99_us": 14.6,
+                "max_us": 153.6,
+                "throughput_per_s": 388364.59668336634,
+                "runs": 10,
+                "ci_low_us": 2.0,
+                "ci_high_us": 2.0
+              },
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 134.3342,
+                "p50_us": 123.5,
+                "p95_us": 195.4,
+                "p99_us": 300.4,
+                "max_us": 822.1,
+                "throughput_per_s": 7444.120707906102,
+                "runs": 10,
+                "ci_low_us": 123.1,
+                "ci_high_us": 124.5
+              },
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 378.37804,
+                "p50_us": 347.225,
+                "p95_us": 536.4,
+                "p99_us": 751.1,
+                "max_us": 2659.2,
+                "throughput_per_s": 2642.8595063286443,
+                "runs": 10,
+                "ci_low_us": 346.45,
+                "ci_high_us": 348.8
+              },
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 387.34688,
+                "p50_us": 348.0,
+                "p95_us": 535.5,
+                "p99_us": 883.6,
+                "max_us": 13517.7,
+                "throughput_per_s": 2581.665302170499,
+                "runs": 10,
+                "ci_low_us": 346.9,
+                "ci_high_us": 353.0
+              }
+            },
+            "load": {
+              "samples": 10,
+              "mean_us": 55259.94,
+              "p50_us": 55061.95,
+              "p95_us": 57293.0,
+              "p99_us": 57293.0,
+              "max_us": 57293.0,
+              "throughput_per_s": 18.096291816458724,
+              "runs": 10,
+              "ci_low_us": 54438.3,
+              "ci_high_us": 55963.3
+            }
+          },
+          "opa-go": {
+            "requests": {
+              "admin allow": {
+                "samples": 5000,
+                "mean_us": 2070.49798,
+                "p50_us": 1467.65,
+                "p95_us": 3617.3,
+                "p99_us": 4207.9,
+                "max_us": 38798.3,
+                "throughput_per_s": 482.9755979766761,
+                "runs": 10,
+                "ci_low_us": 1449.55,
+                "ci_high_us": 1545.95
+              },
+              "team join allow": {
+                "samples": 5000,
+                "mean_us": 2039.29522,
+                "p50_us": 1472.45,
+                "p95_us": 3613.3,
+                "p99_us": 3957.1,
+                "max_us": 9517.0,
+                "throughput_per_s": 490.36549009319015,
+                "runs": 10,
+                "ci_low_us": 1450.45,
+                "ci_high_us": 1511.85
+              },
+              "guest default deny": {
+                "samples": 5000,
+                "mean_us": 2032.00494,
+                "p50_us": 1464.1,
+                "p95_us": 3622.4,
+                "p99_us": 4170.5,
+                "max_us": 6246.9,
+                "throughput_per_s": 492.1247878462343,
+                "runs": 10,
+                "ci_low_us": 1448.15,
+                "ci_high_us": 1480.35
+              },
+              "unmapped deny": {
+                "samples": 5000,
+                "mean_us": 2052.1023600000003,
+                "p50_us": 1463.3,
+                "p95_us": 3804.1,
+                "p99_us": 4409.0,
+                "max_us": 4918.7,
+                "throughput_per_s": 487.3051264362856,
+                "runs": 10,
+                "ci_low_us": 1457.55,
+                "ci_high_us": 1474.9
+              }
+            },
+            "load": {
+              "samples": 10,
+              "mean_us": 1903.23,
+              "p50_us": 1894.3,
+              "p95_us": 2046.9,
+              "p99_us": 2046.9,
+              "max_us": 2046.9,
+              "throughput_per_s": 525.4225711028095,
+              "runs": 10,
+              "ci_low_us": 1851.8,
+              "ci_high_us": 1963.6
+            }
+          }
+        }
+      }
+    },
+    "c-reference": {
+      "description": "YOG's native C harness. This is the engine's best case and is cross-language against every other row; it is context, not fairness evidence.",
+      "sizes": {
+        "small": {
+          "yog-c": {
+            "requests": {
+              "admin allow": {
+                "samples": 10,
+                "mean_us": 1.4,
+                "p50_us": 1.4,
+                "p95_us": 1.4,
+                "p99_us": 1.4,
+                "max_us": 1.4,
+                "throughput_per_s": 714285.7142857143,
+                "runs": 10,
+                "ci_low_us": 1.4,
+                "ci_high_us": 1.4
+              },
+              "team join allow": {
+                "samples": 10,
+                "mean_us": 3.07,
+                "p50_us": 3.1,
+                "p95_us": 3.1,
+                "p99_us": 3.1,
+                "max_us": 3.1,
+                "throughput_per_s": 325732.8990228013,
+                "runs": 10,
+                "ci_low_us": 3.0,
+                "ci_high_us": 3.1
+              },
+              "guest default deny": {
+                "samples": 10,
+                "mean_us": 4.9,
+                "p50_us": 4.9,
+                "p95_us": 4.9,
+                "p99_us": 4.9,
+                "max_us": 4.9,
+                "throughput_per_s": 204081.63265306124,
+                "runs": 10,
+                "ci_low_us": 4.9,
+                "ci_high_us": 4.9
+              },
+              "unmapped deny": {
+                "samples": 10,
+                "mean_us": 4.92,
+                "p50_us": 4.9,
+                "p95_us": 5.0,
+                "p99_us": 5.0,
+                "max_us": 5.0,
+                "throughput_per_s": 203252.03252032519,
+                "runs": 10,
+                "ci_low_us": 4.9,
+                "ci_high_us": 5.0
+              }
+            },
+            "load": {
+              "samples": 10,
+              "mean_us": 125.02,
+              "p50_us": 124.85,
+              "p95_us": 127.2,
+              "p99_us": 127.2,
+              "max_us": 127.2,
+              "throughput_per_s": 7998.720204767238,
+              "runs": 10,
+              "ci_low_us": 124.5,
+              "ci_high_us": 126.3
+            }
+          }
+        },
+        "medium": {
+          "yog-c": {
+            "requests": {
+              "admin allow": {
+                "samples": 10,
+                "mean_us": 1.3,
+                "p50_us": 1.3,
+                "p95_us": 1.3,
+                "p99_us": 1.3,
+                "max_us": 1.3,
+                "throughput_per_s": 769230.7692307692,
+                "runs": 10,
+                "ci_low_us": 1.3,
+                "ci_high_us": 1.3
+              },
+              "team join allow": {
+                "samples": 10,
+                "mean_us": 13.29,
+                "p50_us": 13.3,
+                "p95_us": 13.4,
+                "p99_us": 13.4,
+                "max_us": 13.4,
+                "throughput_per_s": 75244.54477050413,
+                "runs": 10,
+                "ci_low_us": 13.2,
+                "ci_high_us": 13.4
+              },
+              "guest default deny": {
+                "samples": 10,
+                "mean_us": 33.64,
+                "p50_us": 33.7,
+                "p95_us": 34.0,
+                "p99_us": 34.0,
+                "max_us": 34.0,
+                "throughput_per_s": 29726.516052318668,
+                "runs": 10,
+                "ci_low_us": 33.4,
+                "ci_high_us": 33.7
+              },
+              "unmapped deny": {
+                "samples": 10,
+                "mean_us": 33.61,
+                "p50_us": 33.65,
+                "p95_us": 34.0,
+                "p99_us": 34.0,
+                "max_us": 34.0,
+                "throughput_per_s": 29753.04968759298,
+                "runs": 10,
+                "ci_low_us": 33.4,
+                "ci_high_us": 33.8
+              }
+            },
+            "load": {
+              "samples": 10,
+              "mean_us": 2452.19,
+              "p50_us": 2266.7,
+              "p95_us": 3329.3,
+              "p99_us": 3329.3,
+              "max_us": 3329.3,
+              "throughput_per_s": 407.79874316427356,
+              "runs": 10,
+              "ci_low_us": 2155.9,
+              "ci_high_us": 2868.4
+            }
+          }
+        },
+        "large": {
+          "yog-c": {
+            "requests": {
+              "admin allow": {
+                "samples": 10,
+                "mean_us": 1.29,
+                "p50_us": 1.3,
+                "p95_us": 1.3,
+                "p99_us": 1.3,
+                "max_us": 1.3,
+                "throughput_per_s": 775193.7984496123,
+                "runs": 10,
+                "ci_low_us": 1.3,
+                "ci_high_us": 1.3
+              },
+              "team join allow": {
+                "samples": 10,
+                "mean_us": 122.07,
+                "p50_us": 121.8,
+                "p95_us": 124.4,
+                "p99_us": 124.4,
+                "max_us": 124.4,
+                "throughput_per_s": 8192.020971573687,
+                "runs": 10,
+                "ci_low_us": 121.1,
+                "ci_high_us": 124.0
+              },
+              "guest default deny": {
+                "samples": 10,
+                "mean_us": 341.95,
+                "p50_us": 341.55,
+                "p95_us": 345.0,
+                "p99_us": 345.0,
+                "max_us": 345.0,
+                "throughput_per_s": 2924.4041526538967,
+                "runs": 10,
+                "ci_low_us": 340.8,
+                "ci_high_us": 344.9
+              },
+              "unmapped deny": {
+                "samples": 10,
+                "mean_us": 346.11,
+                "p50_us": 346.9,
+                "p95_us": 350.1,
+                "p99_us": 350.1,
+                "max_us": 350.1,
+                "throughput_per_s": 2889.254861171304,
+                "runs": 10,
+                "ci_low_us": 343.5,
+                "ci_high_us": 349.1
+              }
+            },
+            "load": {
+              "samples": 10,
+              "mean_us": 61231.85,
+              "p50_us": 61543.45,
+              "p95_us": 63157.0,
+              "p99_us": 63157.0,
+              "max_us": 63157.0,
+              "throughput_per_s": 16.33137003046617,
+              "runs": 10,
+              "ci_low_us": 59307.0,
+              "ci_high_us": 62990.6
+            }
+          }
+        }
+      }
+    }
+  }
+}

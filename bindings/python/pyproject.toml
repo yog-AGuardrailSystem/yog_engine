@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "yog-policy"
+version = "0.1.0a1"
+description = "Python binding for the experimental YOG policy engine"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Apache-2.0" }
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: C",
+  "Operating System :: OS Independent",
+]
+
+[tool.setuptools]
+packages = ["yog"]

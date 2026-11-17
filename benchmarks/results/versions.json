@@ -1,0 +1,12 @@
+{
+  "git_commit": "3b58cf95c62194ec5180916abfa0e77d665e8278",
+  "python": "3.14.7",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "machine": "AMD64",
+  "engines": {
+    "yog": "source 3b58cf9 (shared library + bindings)",
+    "casbin": "casbin 1.43.0",
+    "opa": "Version: 1.22.4",
+    "cedar": "cedar-policy 4.14.1 (Rust SDK)"
+  }
+}

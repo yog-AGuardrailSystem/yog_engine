@@ -1,0 +1,17 @@
+[package]
+name = "yog"
+version = "0.1.0-alpha.1"
+edition = "2021"
+description = "Safe Rust wrapper for the experimental YOG policy engine"
+license = "Apache-2.0"
+build = "build.rs"
+
+[lib]
+name = "yog"
+path = "src/lib.rs"
+
+[[bin]]
+name = "yog_bench"
+path = "src/bin/yog_bench.rs"
+
+[dependencies]

@@ -20,6 +20,26 @@
 #include <stddef.h>
 #include <stdio.h>
 
+/*
+ * Shared-library visibility.  A static build sees no decoration; the shared
+ * target defines YOG_SHARED_EXPORTS so Windows gets dllexport and consumers
+ * that define YOG_SHARED get dllimport.  On GCC/Clang the default visibility
+ * is used and YOG_SHARED_EXPORTS is only documentation.
+ */
+#if defined(_WIN32)
+#  if defined(YOG_SHARED_EXPORTS)
+#    define YOG_API __declspec(dllexport)
+#  elif defined(YOG_SHARED)
+#    define YOG_API __declspec(dllimport)
+#  else
+#    define YOG_API
+#  endif
+#elif defined(YOG_SHARED_EXPORTS)
+#  define YOG_API __attribute__((visibility("default")))
+#else
+#  define YOG_API
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -54,22 +74,22 @@ typedef struct {
 } YogLimits;
 
 /* Compile a policy.  Returns NULL on error and fills `error`. */
-Yog *yog_compile(const char *source, size_t length, YogError *error);
+YOG_API Yog *yog_compile(const char *source, size_t length, YogError *error);
 
-void yog_free(Yog *yog);
+YOG_API void yog_free(Yog *yog);
 
 /* Read-only view of the compiled module, for `yogc ir` and tooling. */
-const YogModule *yog_module(const Yog *yog);
+YOG_API const YogModule *yog_module(const Yog *yog);
 
 /*
  * Set the evaluation budgets used by subsequent checks.  Call this during
  * setup, before sharing the Yog across threads: mutating the limits while a
  * check is running is a data race.
  */
-void yog_set_limits(Yog *yog, YogLimits limits);
+YOG_API void yog_set_limits(Yog *yog, YogLimits limits);
 
 /* Read back the effective limits. */
-YogLimits yog_get_limits(const Yog *yog);
+YOG_API YogLimits yog_get_limits(const Yog *yog);
 
 /*
  * Apply the policy-combining contract to one request:
@@ -88,13 +108,13 @@ YogLimits yog_get_limits(const Yog *yog);
  * returns true with result->decision == YOG_DENY.  On false the decision is
  * fail-closed: callers must treat it as DENY.
  */
-bool yog_check(Yog *yog, const char *actor, const char *action, const char *resource,
-               const char *context, bool trace, YogResult *result, YogError *error);
+YOG_API bool yog_check(Yog *yog, const char *actor, const char *action, const char *resource,
+                       const char *context, bool trace, YogResult *result, YogError *error);
 
 /* Evaluate every `query` in the policy, printing in the reference format. */
-bool yog_run_queries(Yog *yog, FILE *out, bool trace);
+YOG_API bool yog_run_queries(Yog *yog, FILE *out, bool trace);
 
-void yog_result_free(YogResult *result);
+YOG_API void yog_result_free(YogResult *result);
 
 #ifdef __cplusplus
 }
