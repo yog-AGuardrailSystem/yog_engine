@@ -6,9 +6,9 @@ it happens, and returns **ALLOW / DENY** with the reason.
 
 > **Status: experimental, not production-ready.** The lexer, parser, semantic
 > analyser, clause-table IR, evaluator, C API and CLI are implemented and
-> tested. The correctness and security harnesses are in place, and a first
-> cross-engine benchmark comparison is committed. The Python bindings and
-> packaging are not part of this milestone.
+> tested. The correctness, security and cross-engine benchmark harnesses are in
+> place, and Python and Rust bindings exist over the public C ABI. Packaging and
+> release artifacts are not part of this milestone.
 
 YOG's working identity is an **AI-agent guardrail** decision point: a small,
 deterministic, fail-closed engine called before a shell command, database
