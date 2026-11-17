@@ -45,6 +45,7 @@ ALLOW|allow clause at line 3 matched
 | `yog/` | C implementation: lexer → parser → sema → IR → VM → API → CLI |
 | `yog/tests/` | C semantic/security tests, conformance, property, differential, fuzz |
 | `examples/ai_guardrails/` | four runnable guardrail policies + enforcement demo |
+| `presentation/` | benchmark deck, generator, previewer and talk outline |
 | `benchmarks/` | corpus generator, C/Rust/Go harnesses, same-runtime comparison, Cedar/OPA/Casbin adapters |
 | `bindings/python/` | ctypes binding over the public C ABI |
 | `bindings/rust/` | safe Rust wrapper over the public C ABI |
@@ -56,6 +57,7 @@ ALLOW|allow clause at line 3 matched
 | `docs/PREREGISTRATION.md` | hypotheses, expected losses and analysis rules |
 | `docs/BENCHMARK_REVIEW.md` | self-review checklist; external review not performed |
 | `docs/RESEARCH.md` | RQ1–RQ3, positioning, limitations, presentation outline |
+| `docs/DEMO.md` | five-minute live demo run-of-show and failure modes |
 | `yog/README.md` | architecture, build, test and C API guide |
 
 ## Build and test
@@ -96,6 +98,25 @@ The four policies cover shell commands, database writes, external API calls and
 financial transfers. The demo includes unknown actions and malformed context to
 show the fail-closed path. See
 [`examples/ai_guardrails/README.md`](examples/ai_guardrails/README.md).
+
+## Presentation and live demo
+
+`presentation/yog-benchmark-deck.pptx` is a 15-slide talk built from the
+committed benchmark results; `python presentation/build_deck.py` regenerates it
+and reads its numbers from `benchmarks/results/comparison.json`. The per-slide
+timing and speaker notes are in [`presentation/OUTLINE.md`](presentation/OUTLINE.md).
+
+The presenter demo runs the four guardrail policies through the compiled engine
+and prints each decision with its reason:
+
+```sh
+python examples/ai_guardrails/live_demo.py --step   # pause between acts
+python examples/ai_guardrails/live_demo.py --bench  # append the scoreboard
+```
+
+It is a demo, not a benchmark: every scenario states the decision it must
+produce, and an evaluation error is treated as `DENY`. The run of show and the
+fallback plan are in [`docs/DEMO.md`](docs/DEMO.md).
 
 ## Correctness and security
 

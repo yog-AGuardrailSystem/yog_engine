@@ -229,3 +229,6 @@ benchmarks/results/translations/
 benchmarks/results/bin/
 benchmarks/results/tmp/
 
+
+# Presentation preview renders (regenerate with presentation/preview_deck.py)
+presentation/preview/
