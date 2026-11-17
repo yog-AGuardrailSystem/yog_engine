@@ -1,0 +1,26 @@
+# AI guardrail: external API calls
+#
+# An agent's role determines which API scope it may reach.  The join across
+# role -> allowed_scope -> api_scope is what makes the rule expressive: one
+# clause covers every (role, scope, endpoint) combination without listing
+# endpoints twice.
+
+fact role(agent_research, research_agent)
+fact role(agent_admin, admin)
+fact allowed_scope(research_agent, public)
+fact allowed_scope(admin, internal)
+fact allowed_scope(admin, public)
+fact api_scope(api_search, public)
+fact api_scope(api_billing, internal)
+fact api_scope(api_status, public)
+
+allow can_call_api(User, Endpoint):
+    role(User, Role)
+    allowed_scope(Role, Scope)
+    api_scope(Endpoint, Scope)
+
+# Expected:
+#   agent_research api_search  -> ALLOW
+#   agent_research api_billing -> DENY  (internal scope not granted)
+#   agent_admin    api_billing -> ALLOW
+#   agent_unknown  api_status  -> DENY  (no role fact)

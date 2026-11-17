@@ -24,7 +24,10 @@ struct Yog {
     size_t       source_length;
     YogProgram  *program;
     YogModule   *module;
-    YogEngine   *engine;
+
+    /* Configuration only.  The evaluator is created per request so that the
+     * immutable module can be shared between threads without locking. */
+    YogLimits    limits;
 };
 
 static char *copy_text(const char *text, size_t length)
@@ -69,7 +72,6 @@ Yog *yog_compile(const char *source, size_t length, YogError *error)
     YogSemaError sema_error;
     YogIRError ir_error;
     YogSymbolTable symbols;
-    YogEvalError eval_error;
 
     if (error != NULL) {
         error->line = 0;
@@ -115,19 +117,14 @@ Yog *yog_compile(const char *source, size_t length, YogError *error)
     }
     yog_symbol_table_free(&symbols);
 
-    yog->engine = yog_engine_create(yog->module, &eval_error);
-    if (yog->engine == NULL) {
-        (void)fail(error, 0, 0, "%s", eval_error.message);
-        yog_free(yog);
-        return NULL;
-    }
+    yog->limits.max_steps = YOG_VM_MAX_STEPS;
+    yog->limits.max_depth = YOG_VM_MAX_DEPTH;
     return yog;
 }
 
 void yog_free(Yog *yog)
 {
     if (yog == NULL) return;
-    yog_engine_free(yog->engine);
     yog_ir_free(yog->module);
     yog_program_free(yog->program);
     free(yog->source);
@@ -137,6 +134,21 @@ void yog_free(Yog *yog)
 const YogModule *yog_module(const Yog *yog)
 {
     return yog == NULL ? NULL : yog->module;
+}
+
+void yog_set_limits(Yog *yog, YogLimits limits)
+{
+    if (yog == NULL) return;
+    yog->limits.max_steps = limits.max_steps == 0 ? YOG_VM_MAX_STEPS : limits.max_steps;
+    yog->limits.max_depth = limits.max_depth <= 0 ? YOG_VM_MAX_DEPTH : limits.max_depth;
+}
+
+YogLimits yog_get_limits(const Yog *yog)
+{
+    YogLimits defaults;
+    defaults.max_steps = YOG_VM_MAX_STEPS;
+    defaults.max_depth = YOG_VM_MAX_DEPTH;
+    return yog == NULL ? defaults : yog->limits;
 }
 
 /* Parse the optional per-request context ("fact a(b); fact c(d)"). */
@@ -160,6 +172,20 @@ static YogModule *compile_context(const char *text, char **owned_source, YogErro
     }
     for (i = 0; i < length; ++i)
         if (normalized[i] == ';') normalized[i] = '\n';
+
+    /* The first statement may arrive with leading whitespace (for example the
+     * space after a '|' in `yogc batch`).  Strip only that prefix: indentation
+     * inside the string is left intact so that a non-fact statement is still
+     * parsed and rejected by the fact-only check below. */
+    {
+        size_t start = 0;
+        while (start < length && (normalized[start] == ' ' || normalized[start] == '\t'))
+            start++;
+        if (start > 0) {
+            memmove(normalized, normalized + start, length - start + 1);
+            length -= start;
+        }
+    }
     *owned_source = normalized;
 
     if (!parse_source(normalized, length, &program, error)) return NULL;
@@ -194,6 +220,7 @@ bool yog_check(Yog *yog, const char *actor, const char *action, const char *reso
 {
     YogModule *context_module = NULL;
     char *context_source = NULL;
+    YogEngine *engine = NULL;
     YogEngineResult engine_result;
     YogEvalError eval_error;
     bool ok;
@@ -203,10 +230,14 @@ bool yog_check(Yog *yog, const char *actor, const char *action, const char *reso
         error->column = 0;
         error->message[0] = '\0';
     }
+    if (result != NULL) {
+        memset(result, 0, sizeof(*result));
+        /* Fail closed even if the caller ignores the false return value. */
+        result->decision = YOG_DENY;
+    }
     if (yog == NULL || result == NULL) {
         return fail(error, 0, 0, "yog_check() received a null argument", NULL);
     }
-    memset(result, 0, sizeof(*result));
 
     if (context != NULL && context[0] != '\0') {
         context_module = compile_context(context, &context_source, error);
@@ -217,13 +248,24 @@ bool yog_check(Yog *yog, const char *actor, const char *action, const char *reso
     }
 
     memset(&engine_result, 0, sizeof(engine_result));
-    ok = yog_engine_check(yog->engine, actor, action, resource, context_module,
+    engine = yog_engine_create(yog->module, &eval_error);
+    if (engine == NULL) {
+        yog_ir_free(context_module);
+        free(context_source);
+        (void)fail(error, 0, 0, "%s", eval_error.message);
+        return false;
+    }
+    yog_engine_set_limits(engine, yog->limits.max_steps, yog->limits.max_depth);
+
+    ok = yog_engine_check(engine, actor, action, resource, context_module,
                           trace, &engine_result, &eval_error);
+    yog_engine_free(engine);
     yog_ir_free(context_module);
     free(context_source);
 
     if (!ok) {
         (void)fail(error, eval_error.line, eval_error.column, "%s", eval_error.message);
+        yog_engine_result_free(&engine_result);
         return false;
     }
 
@@ -236,8 +278,16 @@ bool yog_check(Yog *yog, const char *actor, const char *action, const char *reso
 bool yog_run_queries(Yog *yog, FILE *out, bool trace)
 {
     YogEvalError eval_error;
+    YogEngine *engine;
+    bool ok;
+
     if (yog == NULL || out == NULL) return false;
-    return yog_engine_run_queries(yog->engine, NULL, out, trace, &eval_error);
+    engine = yog_engine_create(yog->module, &eval_error);
+    if (engine == NULL) return false;
+    yog_engine_set_limits(engine, yog->limits.max_steps, yog->limits.max_depth);
+    ok = yog_engine_run_queries(engine, NULL, out, trace, &eval_error);
+    yog_engine_free(engine);
+    return ok;
 }
 
 void yog_result_free(YogResult *result)

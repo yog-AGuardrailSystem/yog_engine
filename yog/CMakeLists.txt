@@ -57,6 +57,7 @@ target_link_libraries(yog_api PUBLIC yog_vm)
 
 # ---- tests ----
 enable_testing()
+find_package(Threads REQUIRED)
 
 function(yog_test name source library)
   add_executable(${name} ${source})
@@ -71,9 +72,36 @@ yog_test(test_ir     tests/ir/test_ir.c         yog_ir)
 yog_test(test_vm     tests/vm/test_vm.c         yog_api)
 yog_test(test_api    tests/api/test_api.c       yog_api)
 
+add_executable(test_security tests/security/test_security.c)
+target_link_libraries(test_security PRIVATE yog_api Threads::Threads)
+add_test(NAME test_security COMMAND test_security)
+
+yog_test(test_fuzz_smoke tests/fuzz/fuzz_smoke.c yog_api)
+
+# Coverage-guided fuzzing is opt-in: it needs Clang's -fsanitize=fuzzer.
+# Configure with -DYOG_FUZZ=ON -DYOG_SANITIZE=ON to get a runnable harness.
+option(YOG_FUZZ "Build the libFuzzer harness (Clang only)" OFF)
+if(YOG_FUZZ)
+  if(MSVC)
+    message(WARNING "YOG_FUZZ is ignored for MSVC; use Clang")
+  else()
+    add_executable(fuzz_compile tests/fuzz/fuzz_compile.c)
+    target_link_libraries(fuzz_compile PRIVATE yog_api)
+    target_compile_options(fuzz_compile PRIVATE -fsanitize=fuzzer)
+    target_link_options(fuzz_compile PRIVATE -fsanitize=fuzzer)
+  endif()
+endif()
+
 # ---- tools ----
 add_executable(lexdump tools/lexdump.c)
 target_link_libraries(lexdump PRIVATE yog_lexer)
 
 add_executable(yogc tools/yogc.c)
 target_link_libraries(yogc PRIVATE yog_api)
+
+# Benchmark harness (not part of ctest; driven by benchmarks/run_benchmarks.py).
+add_executable(bench_yog tests/bench/bench_yog.c)
+target_link_libraries(bench_yog PRIVATE yog_api)
+if(WIN32)
+  target_link_libraries(bench_yog PRIVATE psapi)
+endif()

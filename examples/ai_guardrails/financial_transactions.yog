@@ -1,0 +1,32 @@
+# AI guardrail: financial transactions
+#
+# The transfer amount is supplied per request through check(context=...).
+# YOG has no "declare only" statement, so amount/2 is a rule with a
+# deliberately false guard: it satisfies semantic rule C4 without creating a
+# sentinel fact that would grant a free transfer to any resource naming it.
+
+fact role(fin_agent, payments_agent)
+fact transfer_limit(fin_agent, 5000)
+fact account(acct_ops, active)
+fact blocked_account(acct_scam)
+fact reserved_schema(reserved_account, reserved_amount)
+
+rule amount(Account, Amount):
+    reserved_schema(Account, Amount)
+    0 == 1
+
+allow can_transfer(User, Account):
+    role(User, payments_agent)
+    transfer_limit(User, Limit)
+    account(Account, active)
+    amount(Account, Amount)
+    Amount <= Limit
+
+deny can_transfer(User, Account):
+    blocked_account(Account)
+
+# Expected (context in parentheses):
+#   fin_agent acct_ops (amount 4000)  -> ALLOW
+#   fin_agent acct_ops (amount 9000)  -> DENY  (over limit)
+#   fin_agent acct_ops (no amount)    -> DENY  (no proof of amount)
+#   fin_agent acct_scam (amount 1)    -> DENY  (deny clause)

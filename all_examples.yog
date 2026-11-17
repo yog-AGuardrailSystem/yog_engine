@@ -147,11 +147,17 @@ query can_create_user(h_agent, facilities)      # non_technical  -> ALLOW
 fact role(i_customer, customer)
 fact transfer_limit(i_customer, 10000)
 fact account(i_acct_999, active)
-fact amount(i_placeholder_acct, 0)         # placeholder so amount/2 is a known
-                                            # predicate -- MUST use a key that
-                                            # can never collide with a real
-                                            # account, or it silently satisfies
-                                            # any Amt <= Limit check for free
+# C4 requires every body predicate to be defined by a fact or a rule, but the
+# real amount arrives per request through check(context=...).  Declaring a
+# sentinel FACT would be unsafe: amount(sentinel, 0) would grant a free
+# transfer to any request whose resource happened to name that sentinel.
+# Instead, define amount/2 as a rule with a deliberately false guard.  The
+# rule satisfies C4, never produces a solution, and context facts (which the
+# engine tries before rules) remain the only source of amounts.
+fact reserved_schema(reserved_account, reserved_amount)
+rule amount(Account, Amount):
+    reserved_schema(Account, Amount)
+    0 == 1
 
 allow can_transfer(User, Account):
     role(User, finance_admin)
@@ -297,5 +303,82 @@ deny can_access(User, Doc):
     employee(User)
     confidential(Doc)
 
-query can_access(r_alice, normal_doc)     # employee, not confidential -> ALLOW
-query can_access(r_alice, payroll_doc)    # employee, but confidential -> DENY
+# `query` shows logical satisfiability of the allow/deny bodies.  The
+# policy-combining contract (deny > allow > default deny) is what check()
+# applies; the conformance suite asserts those outcomes separately.
+query can_access(r_alice, normal_doc)     # allow body satisfiable -> TRUE / check ALLOW
+query can_access(r_alice, payroll_doc)    # allow body satisfiable -> TRUE / check DENY
+
+
+# ================================================================
+# GROUP S — negation as a safety gate
+# The absence of a restriction is a positive condition.  `not` is
+# negation as failure: it succeeds only when the atom has no proof.
+# This is the AI-agent "deny by default, allow known-safe" shape.
+# ================================================================
+fact role(s_agent, analyst)
+fact restricted(s_dataset_restricted)
+
+allow can_export(User, Dataset):
+    role(User, analyst)
+    not restricted(Dataset)
+
+query can_export(s_agent, s_dataset_public)       # unrestricted -> ALLOW
+query can_export(s_agent, s_dataset_restricted)   # restricted   -> DENY
+
+
+# ================================================================
+# GROUP T — numeric comparisons across two facts
+# Clearance is a per-user ceiling; classification is a per-document
+# level.  The comparison is evaluated only after both are bound.
+# ================================================================
+fact role(t_agent, auditor)
+fact clearance(t_agent, 4)
+fact classification(t_report, 3)
+fact classification(t_secret, 5)
+
+allow can_read_doc(User, Doc):
+    role(User, auditor)
+    classification(Doc, Level)
+    clearance(User, MaxLevel)
+    Level <= MaxLevel
+
+query can_read_doc(t_agent, t_report)    # 3 <= 4 -> ALLOW
+query can_read_doc(t_agent, t_secret)    # 5 <= 4 -> FALSE (DENY)
+
+
+# ================================================================
+# GROUP U — multi-clause backtracking over users
+# Both users are engineers; one is on call.  The engine must find
+# the allow clause for alice and the negated guard for bob.
+# ================================================================
+fact group(u_alice, engineering)
+fact group(u_bob, engineering)
+fact on_call(u_bob)
+
+allow can_deploy(User, Service):
+    group(User, engineering)
+    not on_call(User)
+
+query can_deploy(u_alice, u_service)     # engineer, not on call -> ALLOW
+query can_deploy(u_bob, u_service)       # engineer, on call     -> DENY
+
+
+# ================================================================
+# GROUP V — deny overrides allow with a numeric threshold
+# The allow clause is broad; the deny clause caps the amount.  A
+# matching deny always wins, regardless of clause order.
+# ================================================================
+fact role(v_agent, operator)
+fact release_amount(v_small_release, 100)
+fact release_amount(v_large_release, 1000000)
+
+allow can_release(User, Release):
+    role(User, operator)
+
+deny can_release(User, Release):
+    release_amount(Release, Amt)
+    Amt > 10000
+
+query can_release(v_agent, v_small_release)    # allow body -> TRUE / check ALLOW
+query can_release(v_agent, v_large_release)    # allow body -> TRUE / check DENY

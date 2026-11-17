@@ -1,0 +1,83 @@
+g, u0000, admin
+g, u0001, guest
+g, u0002, engineer
+g, u0003, manager
+g, u0004, engineer
+g, u0005, engineer
+g, u0006, engineer
+g, u0007, engineer
+g, u0008, manager
+g, u0009, engineer
+g, u0010, engineer
+g, u0011, engineer
+g, u0012, guest
+g, u0013, guest
+g, u0014, engineer
+g, u0015, manager
+g, u0016, manager
+g, u0017, engineer
+g, u0018, engineer
+g, u0019, guest
+g, u0000, t000
+g, u0003, t003
+g, u0004, t004
+g, u0005, t000
+g, u0006, t001
+g, u0007, t002
+g, u0008, t003
+g, u0009, t004
+g, u0010, t000
+g, u0011, t001
+g, u0012, t002
+g, u0013, t003
+g, u0014, t004
+g, u0015, t000
+g, u0016, t001
+g, u0017, t002
+g, u0018, t003
+g, u0019, t004
+g2, r0000, t000
+g2, r0005, t000
+g2, r0010, t000
+g2, r0015, t000
+g2, r0020, t000
+g2, r0025, t000
+g2, r0001, t001
+g2, r0006, t001
+g2, r0011, t001
+g2, r0016, t001
+g2, r0021, t001
+g2, r0026, t001
+g2, r0002, t002
+g2, r0007, t002
+g2, r0012, t002
+g2, r0017, t002
+g2, r0022, t002
+g2, r0027, t002
+g2, r0003, t003
+g2, r0008, t003
+g2, r0013, t003
+g2, r0018, t003
+g2, r0023, t003
+g2, r0028, t003
+g2, r0004, t004
+g2, r0009, t004
+g2, r0014, t004
+g2, r0019, t004
+g2, r0024, t004
+g2, r0029, t004
+g2, r0003, public
+g2, r0005, public
+g2, r0010, public
+g2, r0014, public
+g2, r0016, public
+g2, r0018, public
+g2, r0020, public
+g2, r0023, public
+p, admin, *, can_access
+p, t000, t000, can_access
+p, t001, t001, can_access
+p, t002, t002, can_access
+p, t003, t003, can_access
+p, t004, t004, can_access
+p, manager, public, can_access

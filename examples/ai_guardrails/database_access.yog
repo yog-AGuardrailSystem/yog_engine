@@ -1,0 +1,27 @@
+# AI guardrail: database writes
+#
+# Writes are allowed for database administrators anywhere, and for the
+# application service in staging only.  A deny clause makes production writes
+# fail closed for everyone who is not a database administrator.
+
+fact role(svc_admin, database_admin)
+fact role(svc_app, app_service)
+fact environment(db_prod, production)
+fact environment(db_stage, staging)
+
+allow can_write(User, DB):
+    role(User, database_admin)
+
+allow can_write(User, DB):
+    role(User, app_service)
+    environment(DB, staging)
+
+deny can_write(User, DB):
+    environment(DB, production)
+    not role(User, database_admin)
+
+# Expected:
+#   svc_app   db_stage -> ALLOW
+#   svc_app   db_prod  -> DENY  (deny clause)
+#   svc_admin db_prod  -> ALLOW (deny clause does not apply)
+#   guest     db_stage -> DENY  (default deny: no allow clause)

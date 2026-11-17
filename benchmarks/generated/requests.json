@@ -1,0 +1,94 @@
+{
+  "by_size": {
+    "small": [
+      {
+        "label": "admin allow",
+        "actor": "u0000",
+        "action": "can_access",
+        "resource": "r0000",
+        "expected": "ALLOW"
+      },
+      {
+        "label": "team join allow",
+        "actor": "u0005",
+        "action": "can_access",
+        "resource": "r0000",
+        "expected": "ALLOW"
+      },
+      {
+        "label": "guest default deny",
+        "actor": "u0001",
+        "action": "can_access",
+        "resource": "r_denied",
+        "expected": "DENY"
+      },
+      {
+        "label": "low clearance deny",
+        "actor": "u0002",
+        "action": "can_access",
+        "resource": "r_secret",
+        "expected": "DENY"
+      }
+    ],
+    "medium": [
+      {
+        "label": "admin allow",
+        "actor": "u0000",
+        "action": "can_access",
+        "resource": "r0000",
+        "expected": "ALLOW"
+      },
+      {
+        "label": "team join allow",
+        "actor": "u0020",
+        "action": "can_access",
+        "resource": "r0000",
+        "expected": "ALLOW"
+      },
+      {
+        "label": "guest default deny",
+        "actor": "u0001",
+        "action": "can_access",
+        "resource": "r_denied",
+        "expected": "DENY"
+      },
+      {
+        "label": "low clearance deny",
+        "actor": "u0002",
+        "action": "can_access",
+        "resource": "r_secret",
+        "expected": "DENY"
+      }
+    ],
+    "large": [
+      {
+        "label": "admin allow",
+        "actor": "u0000",
+        "action": "can_access",
+        "resource": "r0000",
+        "expected": "ALLOW"
+      },
+      {
+        "label": "team join allow",
+        "actor": "u0100",
+        "action": "can_access",
+        "resource": "r0000",
+        "expected": "ALLOW"
+      },
+      {
+        "label": "guest default deny",
+        "actor": "u0001",
+        "action": "can_access",
+        "resource": "r_denied",
+        "expected": "DENY"
+      },
+      {
+        "label": "low clearance deny",
+        "actor": "u0002",
+        "action": "can_access",
+        "resource": "r_secret",
+        "expected": "DENY"
+      }
+    ]
+  }
+}

@@ -1,11 +1,16 @@
 /*
  * yogc -- command-line front end of the YOG compiler.
  *
- *   yogc run   policy.yog [--trace]                 run every `query` in the file
- *   yogc check policy.yog ACTOR ACTION RESOURCE [--context "fact a(b); fact c(d)"] [--trace]
- *   yogc batch policy.yog [--trace]                 requests on stdin:
+ *   yogc run      policy.yog [--trace]              run every `query` in the file
+ *   yogc check    policy.yog ACTOR ACTION RESOURCE [--context "fact a(b); fact c(d)"] [--trace]
+ *   yogc batch    policy.yog [--trace]              requests on stdin:
  *                                                   "actor action resource [| context]"
- *   yogc ir    policy.yog                           dump the compiled IR
+ *   yogc ir       policy.yog                        dump the compiled IR
+ *   yogc validate policy.yog                        compile only and report
+ *   yogc explain  policy.yog [ACTOR ACTION RESOURCE]
+ *                                                   without a request: summarise the
+ *                                                   compiled decisions; with one:
+ *                                                   show the decision and its trace
  *
  * Exit status: 0 ok / allowed, 1 compile error, 2 usage or I/O error, 3 denied.
  */
@@ -84,6 +89,69 @@ static char *next_word(char **cursor)
     return start;
 }
 
+/* Print a read-only summary of what the policy can decide.  This is the
+ * no-request form of `explain`: it answers "what does this policy allow?". */
+static void explain_module(const Yog *yog)
+{
+    const YogModule *module = yog_module(yog);
+    YogLimits limits = yog_get_limits(yog);
+    size_t i;
+
+    if (module == NULL) return;
+    printf("policy: %zu predicates, %zu clauses, %zu queries\n",
+           module->predicate_count, module->clause_count, module->query_count);
+    printf("limits: max_steps=%zu max_depth=%d\n",
+           limits.max_steps, limits.max_depth);
+
+    for (i = 0; i < module->predicate_count; ++i) {
+        const YogIRPredicate *predicate = &module->predicates[i];
+        size_t d;
+        size_t allows = 0;
+        size_t denies = 0;
+        if (predicate->role != YOG_ROLE_DECISION) continue;
+        for (d = 0; d < predicate->decision_count; ++d) {
+            const YogIRClause *clause = &module->clauses[predicate->decisions[d]];
+            if (clause->kind == YOG_CLAUSE_ALLOW) allows++;
+            else if (clause->kind == YOG_CLAUSE_DENY) denies++;
+        }
+        printf("action %.*s/%zu: %zu allow clause(s), %zu deny clause(s) at line",
+               (int)predicate->name.length, predicate->name.text,
+               predicate->arity, allows, denies);
+        for (d = 0; d < predicate->decision_count; ++d) {
+            const YogIRClause *clause = &module->clauses[predicate->decisions[d]];
+            printf("%s %d", d == 0 ? "" : ",", clause->line);
+        }
+        putchar('\n');
+    }
+    puts("precedence: deny > allow > default deny (fail-closed)");
+}
+
+static int cmd_explain(Yog *yog, const char *context, const char *const *pos, int npos)
+{
+    if (npos == 0) {
+        explain_module(yog);
+        return 0;
+    }
+    if (npos != 3) {
+        fputs("explain needs either no request or ACTOR ACTION RESOURCE\n", stderr);
+        return 2;
+    }
+    {
+        YogResult result;
+        YogError err;
+        int rc;
+        if (!yog_check(yog, pos[0], pos[1], pos[2], context, true, &result, &err)) {
+            fprintf(stderr, "error: %s\n", err.message);
+            return 2;
+        }
+        print_result(&result, true);
+        if (result.trace == NULL) puts("> (no clauses were entered)");
+        rc = result.decision == YOG_ALLOW ? 0 : 3;
+        yog_result_free(&result);
+        return rc;
+    }
+}
+
 static int cmd_batch(Yog *yog, bool trace)
 {
     char line[4096];
@@ -97,7 +165,10 @@ static int cmd_batch(Yog *yog, bool trace)
         YogError err;
 
         line[strcspn(line, "\r\n")] = '\0';
-        if (context) *context++ = '\0';
+        if (context) {
+            *context++ = '\0';
+            while (*context == ' ' || *context == '\t') context++;
+        }
         cursor = line;
         actor = next_word(&cursor);
         action = next_word(&cursor);
@@ -151,6 +222,10 @@ int main(int argc, char **argv)
         yog_ir_dump(yog_module(yog), stdout);
     } else if (strcmp(cmd, "batch") == 0) {
         rc = cmd_batch(yog, trace);
+    } else if (strcmp(cmd, "validate") == 0) {
+        printf("ok: %s\n", path);
+    } else if (strcmp(cmd, "explain") == 0) {
+        rc = cmd_explain(yog, context, pos, npos);
     } else if (strcmp(cmd, "check") == 0 && npos == 3) {
         YogResult result;
         YogError err;
@@ -170,7 +245,8 @@ int main(int argc, char **argv)
     return rc;
 
 usage:
-    fputs("usage: yogc run|ir|batch POLICY [--trace]\n"
-          "       yogc check POLICY ACTOR ACTION RESOURCE [--context \"fact a(b); ...\"] [--trace]\n", stderr);
+    fputs("usage: yogc run|ir|batch|validate POLICY [--trace]\n"
+          "       yogc check POLICY ACTOR ACTION RESOURCE [--context \"fact a(b); ...\"] [--trace]\n"
+          "       yogc explain POLICY [ACTOR ACTION RESOURCE] [--context \"fact a(b); ...\"]\n", stderr);
     return 2;
 }

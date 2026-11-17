@@ -218,3 +218,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# YOG build trees and generated benchmark artifacts
+yog/build*/
+benchmarks/generated/
+benchmarks/results/translations/
