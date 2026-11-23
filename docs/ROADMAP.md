@@ -199,3 +199,8 @@ items can only be verified by CI or on another machine.
 | P1-6 (JSON) | done | `reference/yog_ref.py` mirrors the C JSON loader (`request_to_facts`, `check_json`) |
 | P3-8 | partial | Python tooling (`python -m yog_platform`): formatter (idempotent, meaning-preserving), static analysis (A001-A008), `.yogtest` runner with clause coverage, policy diff, bundle keygen/build/verify, `serve`. Not done: REPL, LSP, VS Code extension, a C-level `yogc fmt/analyze` |
 | P2-1 | partial | structured trace converter (`yog_platform/trace.py`); the engine still emits text traces |
+
+| P3-10 | partial | Claude Code `PreToolUse` hook (`yog_platform/claude_hook.py`, `examples/claude_code/guard.yog`); shell extractor now exposes `arg` words so `cat .env` is caught. Not done: LangChain/OpenAI/Rust adapters |
+| P4-2 | unverified | `deploy/Dockerfile`, `deploy/kubernetes/sidecar.yaml` written without a container runtime |
+| P4-4/P4-5 | partial | state contract and failure behaviour documented in `docs/OPERATIONS.md`; metrics endpoint exists, no OpenTelemetry |
+| P0-10 | partial | `CONTRIBUTING.md` added; no repo triage report |

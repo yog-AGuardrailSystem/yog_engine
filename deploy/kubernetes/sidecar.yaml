@@ -1,0 +1,33 @@
+# UNVERIFIED: not applied to a cluster. Stateless replicas: they share only the signed bundle and public key.
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: yog-sidecar}
+spec:
+  replicas: 3
+  selector: {matchLabels: {app: yog-sidecar}}
+  template:
+    metadata: {labels: {app: yog-sidecar}}
+    spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 10001}
+      containers:
+        - name: yog
+          image: yog-sidecar:latest
+          ports: [{containerPort: 8787}]
+          securityContext: {readOnlyRootFilesystem: true, allowPrivilegeEscalation: false}
+          readinessProbe: {httpGet: {path: /healthz, port: 8787}}
+          livenessProbe: {httpGet: {path: /healthz, port: 8787}}
+          volumeMounts:
+            - {name: policy, mountPath: /policy, readOnly: true}
+            - {name: keys, mountPath: /keys, readOnly: true}
+            - {name: audit, mountPath: /audit}
+      volumes:
+        - {name: policy, configMap: {name: yog-bundle}}
+        - {name: keys, configMap: {name: yog-public-keys}}
+        - {name: audit, emptyDir: {}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: yog-sidecar}
+spec:
+  selector: {app: yog-sidecar}
+  ports: [{port: 8787, targetPort: 8787}]
