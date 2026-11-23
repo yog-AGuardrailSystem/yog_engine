@@ -194,3 +194,6 @@ items can only be verified by CI or on another machine.
 | P4-1 | done | `Syncer` pulls signed bundles from a directory or HTTP registry; refuses downgrade, tampering and corrupt registries and keeps serving |
 | P4-3 | done | fail-closed on engine crash/hang/timeout, missing policy, unwritable audit log; tested with a scripted fake `yogc` |
 | P3-5 | done | SQL, shell, HTTP and Kubernetes (JSON) extractors with golden tests in `tests/golden/extractors/` (87 cases) and hostile-input tests. They report `parsed: false` instead of guessing |
+| P3-6 | done (Python) | `yog_platform/gateway.py`: request building that keeps agent input apart from facts the gateway knows, approvals, obligations (audit, rate_limit, max_output_bytes), context taint, fail-closed; `mcp_proxy.py` stdio proxy; 49 end-to-end tests with the real extractors and policy (reference interpreter as PDP) |
+| P3-7 | done | approval flow wired through the gateway and the proxy (`_meta.yog_approval_token` is stripped before forwarding) |
+| P1-6 (JSON) | done | `reference/yog_ref.py` mirrors the C JSON loader (`request_to_facts`, `check_json`) |

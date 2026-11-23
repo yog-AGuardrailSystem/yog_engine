@@ -29,6 +29,8 @@ built-ins, like the C engine.
 """
 from __future__ import annotations
 
+import json
+import re
 import re as _re
 import sys
 from dataclasses import dataclass, field
@@ -945,6 +947,155 @@ class Engine:
         finally:
             for f in added:
                 self.facts[f.key].remove(f)
+
+
+# ============================================================ 6b. JSON REQUESTS
+# A mirror of the C loader (yog/src/api/request.c, docs/INTERFACES.md section 1): the same strictness and the
+# same flattening into typed facts, so the two can be compared.
+
+INT64_MIN, INT64_MAX = -(2 ** 63), 2 ** 63 - 1
+_REQUEST_FIELDS = {"actor", "action", "resource", "args", "env", "state", "now", "facts", "request_id"}
+_IDENT = re.compile(r"[a-z][A-Za-z0-9_]*\Z")
+
+
+def _strict_loads(text) -> Any:
+    def pairs(items):
+        out = {}
+        for key, value in items:
+            if key in out:
+                raise YogError("json: duplicate object key")
+            out[key] = value
+        return out
+
+    def reject(name):
+        raise YogError(f"json: {name} is not supported")
+
+    try:
+        value = json.loads(text, object_pairs_hook=pairs, parse_constant=reject)
+    except json.JSONDecodeError as exc:
+        raise YogError(f"json: {exc.msg}") from exc
+    return value
+
+
+def _scalar(value: Any, where: str):
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int):
+        if not INT64_MIN <= value <= INT64_MAX:
+            raise YogError("json: integer is out of range")
+        return value
+    if isinstance(value, str):
+        if "\x00" in value:
+            raise YogError("json: NUL character in string")
+        try:
+            value.encode("utf-8")
+        except UnicodeEncodeError as exc:
+            raise YogError("json: lone surrogate") from exc
+        return value
+    if isinstance(value, float):
+        raise YogError(f"{where}: numbers with a fraction or exponent are not supported")
+    if value is None:
+        raise YogError(f"{where}: null is not supported")
+    raise YogError(f"{where}: expected a string, integer or boolean")
+
+
+def _flatten(predicate: str, obj: dict, prefix: str, depth: int, where: str, out: list) -> None:
+    if depth > 8:
+        raise YogError(f"{where}: objects are nested too deeply")
+    for key, value in obj.items():
+        path = f"{prefix}.{key}" if prefix else key
+        if isinstance(value, dict):
+            _flatten(predicate, value, path, depth + 1, where, out)
+        elif isinstance(value, list):
+            for item in value:
+                if isinstance(item, (list, dict)):
+                    raise YogError(f"{where}: arrays may only contain strings, integers or booleans")
+                out.append(Atom(predicate, [Const(path), Const(_scalar(item, where))]))
+        else:
+            out.append(Atom(predicate, [Const(path), Const(_scalar(value, where))]))
+
+
+def request_to_facts(request) -> tuple:
+    """Returns ``(actor, action, resource, [Atom])`` for a JSON request (dict, str or bytes)."""
+    if isinstance(request, (str, bytes)):
+        request = _strict_loads(request)
+    if not isinstance(request, dict):
+        raise YogError("request must be a JSON object")
+    for key in request:
+        if key not in _REQUEST_FIELDS:
+            raise YogError(f'unknown request field "{key}"')
+    strings = []
+    for name in ("actor", "action", "resource"):
+        value = request.get(name)
+        if not isinstance(value, str):
+            raise YogError(f'request needs a string field "{name}"')
+        strings.append(_scalar(value, name))
+    atoms: list = []
+    for field, predicate in (("args", "arg"), ("env", "env")):
+        if field in request:
+            if not isinstance(request[field], dict):
+                raise YogError(f'"{field}" must be an object')
+            _flatten(predicate, request[field], "", 0, field, atoms)
+    state = request.get("state")
+    if "state" in request:
+        if not isinstance(state, dict):
+            raise YogError('"state" must be an object')
+        for key in state:
+            if key not in ("version", "values"):
+                raise YogError(f'unknown field "{key}" in state')
+        if "version" in state:
+            if isinstance(state["version"], bool) or not isinstance(state["version"], int):
+                raise YogError("state.version must be an integer")
+            atoms.append(Atom("state_version", [Const(_scalar(state["version"], "state.version"))]))
+        if "values" in state:
+            if not isinstance(state["values"], dict):
+                raise YogError('"state.values" must be an object')
+            _flatten("state", state["values"], "", 0, "state.values", atoms)
+    if "now" in request:
+        if isinstance(request["now"], bool) or not isinstance(request["now"], int):
+            raise YogError('"now" must be an integer')
+        atoms.append(Atom("now", [Const(_scalar(request["now"], "now"))]))
+    if "facts" in request:
+        if not isinstance(request["facts"], list):
+            raise YogError('"facts" must be an array')
+        for entry in request["facts"]:
+            if (not isinstance(entry, dict) or not isinstance(entry.get("predicate"), str)
+                    or not isinstance(entry.get("args"), list)):
+                raise YogError('each fact needs a "predicate" string and an "args" array')
+            if set(entry) - {"predicate", "args"}:
+                raise YogError("unknown field in a fact")
+            if not _IDENT.match(entry["predicate"]) or len(entry["predicate"]) > 64:
+                raise YogError(f'invalid predicate name "{entry["predicate"]}"')
+            if not 1 <= len(entry["args"]) <= 16:
+                raise YogError("a fact needs between 1 and 16 arguments")
+            if is_builtin((entry["predicate"], len(entry["args"]))):
+                raise YogError(f'{entry["predicate"]}/{len(entry["args"])} is a built-in predicate and cannot be redefined')
+            atoms.append(Atom(entry["predicate"], [Const(_scalar(a, "facts")) for a in entry["args"]]))
+    if "request_id" in request and not isinstance(request["request_id"], str):
+        raise YogError('"request_id" must be a string')
+    if len(atoms) > 4096:
+        raise YogError("request has more than 4096 facts")
+    return strings[0], strings[1], strings[2], atoms
+
+
+def check_json(engine: "Engine", request) -> dict:
+    """Checks a JSON request the way ``yogc check-json`` does and returns the result dict.
+
+    A request or evaluation error is returned as ``{"error": {...}}`` (callers must treat it as DENY).
+    """
+    try:
+        actor, action, resource, atoms = request_to_facts(request)
+        result = engine.check(actor, action, resource, atoms)
+    except YogError as exc:
+        return {"error": {"message": str(exc), "line": 0, "column": 0}}
+    return {"decision": result["decision"], "reason": result["reason"],
+            "matched_line": _line_of(result["reason"]), "policy_version": engine.version,
+            "obligations": result["obligations"]}
+
+
+def _line_of(reason: str) -> int:
+    match = re.search(r"at line (\d+) matched", reason)
+    return int(match.group(1)) if match else 0
 
 
 def load_policy(path: str) -> Engine:
