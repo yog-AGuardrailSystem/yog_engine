@@ -123,6 +123,25 @@ def cmd_compare(args) -> int:
     return 0
 
 
+def cmd_import_cedar(args) -> int:
+    from .cedar_import import ConversionError, convert
+    with open(args.file, encoding="utf-8") as handle:
+        text = handle.read()
+    try:
+        source, mapping = convert(text, all_actions=args.actions.split(",") if args.actions else None)
+    except ConversionError as exc:
+        print(f"{args.file}: {exc}", file=sys.stderr)
+        return 1
+    if args.out:
+        with open(args.out, "w", encoding="utf-8", newline="
+") as handle:
+            handle.write(source)
+        print(f"wrote {args.out}: {len(mapping)} clause(s) from {len({m['cedar_line'] for m in mapping})} Cedar polic(ies)", file=sys.stderr)
+    else:
+        print(source, end="")
+    return 0
+
+
 # ------------------------------------------------------------------ bundles
 
 def _read_hex(path: str) -> bytes:
@@ -254,6 +273,10 @@ def main(argv=None) -> int:
     p.add_argument("--smt", action="store_true", help="also run the symbolic comparison (needs z3-solver)")
     p.add_argument("--fail-on-broader", action="store_true"); p.add_argument("--require-proof", action="store_true")
     p.set_defaults(run=cmd_compare)
+    p = sub.add_parser("import-cedar", help="convert a subset of Cedar policies to YOG v2")
+    p.add_argument("file"); p.add_argument("-o", "--out")
+    p.add_argument("--actions", help="comma-separated action names, for policies whose action is unconstrained")
+    p.set_defaults(run=cmd_import_cedar)
 
     p = sub.add_parser("bundle"); p.set_defaults(run=cmd_bundle)
     bsub = p.add_subparsers(dest="action", required=True)
