@@ -1,0 +1,29 @@
+version 2
+
+# Delegation: a sub-agent may use a tool only if every agent above it holds the tool's scope, and only while
+# acting for a user.  The gateway supplies the facts below (yog_platform/delegation.py); an agent cannot.
+
+input arg(text, any)
+input env(text, any)
+input acting_for(text, text)
+input delegated(text, text)
+input has_scope(text, text)
+input chain_depth(int)
+
+fact needs_scope("read_file", "files:read")
+fact needs_scope("write_file", "files:write")
+fact needs_scope("send_email", "mail:send")
+
+deny run_tool(Agent, Tool):
+    chain_depth(D)
+    D > 3
+
+require_approval run_tool(Agent, Tool):
+    delegated(Agent, Parent)
+    needs_scope(Tool, "mail:send")
+    has_scope(Agent, "mail:send")
+
+allow run_tool(Agent, Tool):
+    needs_scope(Tool, Scope)
+    has_scope(Agent, Scope)
+    acting_for(Agent, User)

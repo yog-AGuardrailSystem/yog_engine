@@ -204,3 +204,4 @@ items can only be verified by CI or on another machine.
 | P4-2 | unverified | `deploy/Dockerfile`, `deploy/kubernetes/sidecar.yaml` written without a container runtime |
 | P4-4/P4-5 | partial | state contract and failure behaviour documented in `docs/OPERATIONS.md`; metrics endpoint exists, no OpenTelemetry |
 | P0-10 | partial | `CONTRIBUTING.md` added; no repo triage report |
+| F4 | done | delegation chains: gateway builds `acting_for`/`delegated`/`has_scope`/`chain_depth` facts from a trusted `Principal`; scopes only narrow (`yog_platform/delegation.py`, `examples/ai_guardrails/delegation.yog`) |
