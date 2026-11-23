@@ -39,8 +39,15 @@ but an explicit ALLOW as a refusal. A partition between gateway and sidecar mean
 logged read-only allowlist (not provided by default).
 
 ## Observability
-`GET /metrics` (decision counts, errors, cache hits), `GET /healthz`, hash-chained audit log (verify with the audit
-verifier). OpenTelemetry export is not implemented.
+- `GET /metrics`: Prometheus text: decision counts by outcome, errors, cache hits and a `yog_decision_seconds`
+  latency histogram. `GET /healthz`.
+- `serve --decision-log FILE`: one OPA-shaped JSON line per decision (`decision_id`, `path`, `input_hash`, `result`,
+  `bundles.policy.revision`, `metrics.timer_decision_ns`). Requests are not logged unless you add
+  `--decision-log-input` (values redacted; `--decision-log-raw` keeps them). A decision-log write failure is counted
+  (`decision_log_failures`) and never changes a decision; the hash-chained audit log is the tamper-evident record.
+- `serve --otlp-endpoint http://collector:4318`: exports the counters and the latency histogram as OTLP/HTTP JSON metrics
+  every `--otlp-interval` seconds on a background thread; export failures are swallowed and counted. Trace export
+  is not implemented.
 
 ## Known gaps
 No supervised soak test, no external security review, no published packages. See `docs/ROADMAP.md`.

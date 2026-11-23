@@ -180,6 +180,14 @@ def cmd_bundle(args) -> int:
     return 2
 
 
+def _decision_log(args):
+    if not args.decision_log:
+        return None
+    from .decision_log import DecisionLog, redact_values
+    return DecisionLog(args.decision_log, include_input=args.decision_log_input,
+                       redact=None if args.decision_log_raw else redact_values)
+
+
 def cmd_serve(args) -> int:
     from .audit import AuditLog
     from .cache import DecisionCache
@@ -199,7 +207,11 @@ def cmd_serve(args) -> int:
             manager.load_bundle(json.load(handle))
     audit = AuditLog(args.audit) if args.audit else None
     sidecar = Sidecar(manager, audit=audit, cache=DecisionCache(ttl=args.cache_ttl) if args.cache_ttl > 0 else None,
-                      trusted_bundle_dir=args.bundle_dir, shadow=args.shadow)
+                      trusted_bundle_dir=args.bundle_dir, shadow=args.shadow,
+                      decision_log=_decision_log(args))
+    if args.otlp_endpoint:
+        from .telemetry import OtlpExporter
+        OtlpExporter(args.otlp_endpoint, sidecar.metrics_snapshot, interval=args.otlp_interval).start()
     if args.registry:
         syncer = Syncer(manager, args.registry, args.channel)
         stop = threading.Event()
@@ -257,6 +269,11 @@ def main(argv=None) -> int:
     p.add_argument("--yogc"); p.add_argument("--engine", choices=["yogc", "library"], default="yogc")
     p.add_argument("--audit"); p.add_argument("--host", default="127.0.0.1"); p.add_argument("--port", type=int, default=8787)
     p.add_argument("--cache-ttl", type=float, default=30.0); p.add_argument("--bundle-dir")
+    p.add_argument("--decision-log", help="write OPA-shaped decision log lines to this file")
+    p.add_argument("--decision-log-input", action="store_true", help="include the request (values redacted)")
+    p.add_argument("--decision-log-raw", action="store_true", help="with --decision-log-input: do not redact values")
+    p.add_argument("--otlp-endpoint", help="send metrics to an OpenTelemetry collector (http://host:4318)")
+    p.add_argument("--otlp-interval", type=float, default=30.0)
     p.add_argument("--shadow", action="store_true", help="log-only: record decisions, answer ALLOW (see docs/OPERATIONS.md)")
     p.add_argument("--registry"); p.add_argument("--channel", default="stable"); p.add_argument("--sync-interval", type=float, default=30.0)
 
