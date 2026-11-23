@@ -9,7 +9,7 @@ version = "0.1.0"
 description = "A lightweight deterministic policy engine for AI-agent tool calls"
 readme = "README.md"
 requires-python = ">=3.10"
-license = "MIT"
+license = "Apache-2.0"
 dependencies = []
 
 [tool.setuptools]

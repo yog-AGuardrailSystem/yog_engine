@@ -129,4 +129,4 @@ general superiority is claimed. See [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md),
 
 ## License
 
-MIT, see [LICENSE](LICENSE).
+Apache-2.0, see [LICENSE](LICENSE) and [NOTICE](NOTICE). Code contributed before the change was released under MIT; its original notice is kept in `NOTICE`.
