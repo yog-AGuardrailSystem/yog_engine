@@ -35,6 +35,15 @@ instances can be shared between threads after `limits` is set. Evaluation
 errors raise `YogEvaluationError`; callers that need fail-closed semantics must
 catch it and deny.
 
+`policy.limits` reads and sets `(max_steps, max_depth)`. `policy.resource_limits`
+exposes every budget as a dict (`max_steps`, `max_depth`, `max_solutions`,
+`max_millis`, `max_memory`); assigning a partial dict changes only those keys,
+and `0` restores a default:
+
+```python
+policy.resource_limits = {"max_millis": 50, "max_memory": 8 * 1024 * 1024}
+```
+
 ## Test
 
 ```sh

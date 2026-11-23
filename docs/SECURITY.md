@@ -111,6 +111,9 @@ Policies are untrusted input. The default caps are:
 | --- | --- | --- |
 | evaluation steps per check | 1,000,000 | `YOG_VM_MAX_STEPS` |
 | evaluation depth per check | 256 | `YOG_VM_MAX_DEPTH` |
+| solutions enumerated per query | 100,000 | `YOG_VM_MAX_SOLUTIONS` |
+| wall-clock time per check | 10,000 ms | `YOG_VM_MAX_MILLIS` |
+| evaluator memory per check | 64 MiB | `YOG_VM_MAX_MEMORY` |
 | constants per module | 65,536 | `YOG_IR_MAX_VALUES` |
 | predicates per module | 4,096 | `YOG_IR_MAX_PREDICATES` |
 | clauses per module | 65,536 | `YOG_IR_MAX_CLAUSES` |
@@ -119,20 +122,28 @@ Policies are untrusted input. The default caps are:
 | goals per clause | 256 | `YOG_IR_MAX_GOALS` |
 | lexer nesting | 64 | `YOG_LEXER_MAX_INDENT` |
 
-Steps and depth can be lowered per deployment:
+The five per-check budgets (steps, depth, solutions, time, memory) can be
+lowered per deployment:
 
 ```c
-YogLimits limits = { .max_steps = 50000, .max_depth = 64 };
+YogLimits limits = {0};            /* zero fields keep their defaults */
+limits.max_steps  = 50000;
+limits.max_depth  = 64;
+limits.max_millis = 50;             /* wall-clock backstop */
 yog_set_limits(yog, limits);
 ```
 
 Exceeding a limit is an evaluation error (`false`), never a partial or allowed
-result. `test_security` forces both limits and asserts the error text and the
-fail-closed decision.
+result. `test_security` forces every per-check limit and asserts the error
+text and the fail-closed decision.
 
-Limits are a mitigation, not a hard real-time guarantee: a single clause can
-still touch many facts before the step counter trips. Size policies and set
-limits for the workload.
+Limits are a mitigation, not a hard real-time guarantee. The step budget is
+the primary, deterministic bound. The wall-clock limit is read every 1,024
+steps, so it is a backstop rather than an exact deadline, and because it
+depends on machine speed a request near the limit can succeed on one host and
+fail on another. The memory limit counts the evaluator's own buffers
+(substitutions, trail, context matches and trace), not the whole process.
+Size policies and set limits for the workload.
 
 ## 7. Concurrency contract
 
@@ -153,8 +164,9 @@ until `yog_free()`. Do not free the `Yog` while another thread is using it.
   artifacts, review, immutable deployment).
 - **No per-tenant isolation inside one module.** Compile one module per tenant
   if tenants must not share predicates.
-- **No time/memory quota per request.** Step and depth caps bound CPU work, but
-  the process RSS is not capped by the engine.
+- **Per-request time and memory limits are approximate.** The wall-clock check
+  runs every 1,024 steps and the memory limit covers the evaluator's buffers,
+  not the compiled module or the process RSS.
 - **No recursion or aggregation.** This is a language limitation, not a safety
   guarantee; it also means some policies cannot be expressed and must be
   precomputed.

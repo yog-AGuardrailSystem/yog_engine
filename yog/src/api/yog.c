@@ -30,6 +30,8 @@ struct Yog {
     YogLimits    limits;
 };
 
+static YogLimits default_limits(void);
+
 static char *copy_text(const char *text, size_t length)
 {
     char *copy = malloc(length + 1);
@@ -117,8 +119,7 @@ Yog *yog_compile(const char *source, size_t length, YogError *error)
     }
     yog_symbol_table_free(&symbols);
 
-    yog->limits.max_steps = YOG_VM_MAX_STEPS;
-    yog->limits.max_depth = YOG_VM_MAX_DEPTH;
+    yog->limits = default_limits();
     return yog;
 }
 
@@ -136,19 +137,42 @@ const YogModule *yog_module(const Yog *yog)
     return yog == NULL ? NULL : yog->module;
 }
 
+static YogLimits default_limits(void)
+{
+    YogLimits limits;
+    limits.max_steps = YOG_VM_MAX_STEPS;
+    limits.max_depth = YOG_VM_MAX_DEPTH;
+    limits.max_solutions = YOG_VM_MAX_SOLUTIONS;
+    limits.max_millis = YOG_VM_MAX_MILLIS;
+    limits.max_memory = YOG_VM_MAX_MEMORY;
+    return limits;
+}
+
 void yog_set_limits(Yog *yog, YogLimits limits)
 {
+    YogLimits defaults = default_limits();
     if (yog == NULL) return;
-    yog->limits.max_steps = limits.max_steps == 0 ? YOG_VM_MAX_STEPS : limits.max_steps;
-    yog->limits.max_depth = limits.max_depth <= 0 ? YOG_VM_MAX_DEPTH : limits.max_depth;
+    yog->limits.max_steps = limits.max_steps == 0 ? defaults.max_steps : limits.max_steps;
+    yog->limits.max_depth = limits.max_depth <= 0 ? defaults.max_depth : limits.max_depth;
+    yog->limits.max_solutions = limits.max_solutions == 0 ? defaults.max_solutions : limits.max_solutions;
+    yog->limits.max_millis = limits.max_millis == 0 ? defaults.max_millis : limits.max_millis;
+    yog->limits.max_memory = limits.max_memory == 0 ? defaults.max_memory : limits.max_memory;
 }
 
 YogLimits yog_get_limits(const Yog *yog)
 {
-    YogLimits defaults;
-    defaults.max_steps = YOG_VM_MAX_STEPS;
-    defaults.max_depth = YOG_VM_MAX_DEPTH;
-    return yog == NULL ? defaults : yog->limits;
+    return yog == NULL ? default_limits() : yog->limits;
+}
+
+static void apply_limits(YogEngine *engine, const YogLimits *limits)
+{
+    YogEngineLimits engine_limits;
+    engine_limits.max_steps = limits->max_steps;
+    engine_limits.max_depth = limits->max_depth;
+    engine_limits.max_solutions = limits->max_solutions;
+    engine_limits.max_millis = limits->max_millis;
+    engine_limits.max_memory = limits->max_memory;
+    yog_engine_set_limits(engine, engine_limits);
 }
 
 /* Parse the optional per-request context ("fact a(b); fact c(d)"). */
@@ -255,7 +279,7 @@ bool yog_check(Yog *yog, const char *actor, const char *action, const char *reso
         (void)fail(error, 0, 0, "%s", eval_error.message);
         return false;
     }
-    yog_engine_set_limits(engine, yog->limits.max_steps, yog->limits.max_depth);
+    apply_limits(engine, &yog->limits);
 
     ok = yog_engine_check(engine, actor, action, resource, context_module,
                           trace, &engine_result, &eval_error);
@@ -284,7 +308,7 @@ bool yog_run_queries(Yog *yog, FILE *out, bool trace)
     if (yog == NULL || out == NULL) return false;
     engine = yog_engine_create(yog->module, &eval_error);
     if (engine == NULL) return false;
-    yog_engine_set_limits(engine, yog->limits.max_steps, yog->limits.max_depth);
+    apply_limits(engine, &yog->limits);
     ok = yog_engine_run_queries(engine, NULL, out, trace, &eval_error);
     yog_engine_free(engine);
     return ok;

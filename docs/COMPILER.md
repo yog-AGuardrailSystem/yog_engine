@@ -217,6 +217,9 @@ addition to the acyclic-rule restriction:
 | --- | --- | --- |
 | maximum evaluation depth | 256 | `YOG_VM_MAX_DEPTH` |
 | maximum evaluation steps | 1,000,000 | `YOG_VM_MAX_STEPS` |
+| maximum solutions per query | 100,000 | `YOG_VM_MAX_SOLUTIONS` |
+| wall-clock time per check | 10,000 ms | `YOG_VM_MAX_MILLIS` |
+| evaluator memory per check | 64 MiB | `YOG_VM_MAX_MEMORY` |
 | maximum constants | 65,536 | `YOG_IR_MAX_VALUES` |
 | maximum predicates | 4,096 | `YOG_IR_MAX_PREDICATES` |
 | maximum clauses | 65,536 | `YOG_IR_MAX_CLAUSES` |
@@ -227,10 +230,13 @@ addition to the acyclic-rule restriction:
 
 Exceeding a limit is an error (fail-closed), never a partial result.
 
-The two per-check budgets are configurable through the public API:
+The five per-check budgets are configurable through the public API:
 
 ```c
-YogLimits limits = { .max_steps = 50000, .max_depth = 64 };
+YogLimits limits = {0};            /* zero fields keep their defaults */
+limits.max_steps  = 50000;
+limits.max_depth  = 64;
+limits.max_millis = 50;             /* wall-clock backstop */
 yog_set_limits(yog, limits);
 ```
 

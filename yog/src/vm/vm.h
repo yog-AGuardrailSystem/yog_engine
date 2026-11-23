@@ -19,6 +19,21 @@
 #define YOG_VM_MAX_DEPTH     256
 #define YOG_VM_MAX_STEPS     1000000u
 #define YOG_VM_MAX_SOLUTIONS 100000u
+/* Wall-clock backstop for one check or one query run.  The step budget is the
+ * primary, deterministic bound; this only catches pathological slowness. */
+#define YOG_VM_MAX_MILLIS    10000u
+/* Bytes the evaluator may hold for substitutions, the trail, context matches
+ * and the trace buffer during one check. */
+#define YOG_VM_MAX_MEMORY    ((size_t)64u * 1024u * 1024u)
+
+/* Every field: zero (or, for max_depth, non-positive) keeps the default. */
+typedef struct {
+    size_t max_steps;
+    int    max_depth;
+    size_t max_solutions;
+    size_t max_millis;
+    size_t max_memory;
+} YogEngineLimits;
 
 /* ------------------------------------------------------------ value space */
 
@@ -77,7 +92,7 @@ typedef struct YogEngine YogEngine;
 
 YogEngine *yog_engine_create(const YogModule *module, YogEvalError *error);
 void       yog_engine_free(YogEngine *engine);
-void       yog_engine_set_limits(YogEngine *engine, size_t max_steps, int max_depth);
+void       yog_engine_set_limits(YogEngine *engine, YogEngineLimits limits);
 
 /* Runs the deny/allow precedence contract.  `context` is an optional module
  * containing ground facts injected for this one request.

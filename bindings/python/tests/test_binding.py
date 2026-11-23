@@ -84,6 +84,26 @@ def test_limits_round_trip_and_are_enforced() -> None:
         policy.check("carol", "can_access", "db")
 
 
+def test_resource_limits_round_trip_and_keep_unset_fields() -> None:
+    policy = yog.Yog(POLICY)
+    defaults = policy.resource_limits
+    assert defaults["max_solutions"] == 100000
+    assert defaults["max_millis"] == 10000
+    assert defaults["max_memory"] == 64 * 1024 * 1024
+    policy.resource_limits = {"max_memory": 1}
+    assert policy.resource_limits["max_memory"] == 1
+    assert policy.resource_limits["max_steps"] == defaults["max_steps"]
+    with pytest.raises(yog.YogEvaluationError):
+        policy.check("bob", "can_access", "db")
+    # Setting the old (steps, depth) pair must not reset the other budgets.
+    policy.limits = (1000000, 8)
+    assert policy.resource_limits["max_memory"] == 1
+    policy.resource_limits = {"max_memory": 0}
+    assert policy.resource_limits["max_memory"] == defaults["max_memory"]
+    with pytest.raises(ValueError):
+        policy.resource_limits = {"max_bananas": 1}
+
+
 def test_shared_policy_is_thread_safe() -> None:
     policy = yog.Yog(POLICY)
     requests = [("alice", "db")] * 200 + [("bob", "db")] * 200 + [("nobody", "db")] * 200

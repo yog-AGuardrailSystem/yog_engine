@@ -18,6 +18,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 typedef bool (*YogYield)(void *user, YogEngine *engine);
 
@@ -33,7 +34,13 @@ struct YogEngine {
 
     size_t               max_steps;
     int                  max_depth;
+    size_t               max_solutions;
+    size_t               max_millis;
+    size_t               max_memory;
     size_t               steps;
+    size_t               solutions;
+    struct timespec      started;
+    bool                 clock_ok;
 
     bool                 failed;
     YogEvalError         error;
@@ -87,6 +94,47 @@ static void tracef(YogEngine *engine, const char *fmt, ...)
     if (written < 0) return;
     engine->trace_length += (size_t)written;
     if (engine->trace_length >= engine->trace_capacity) engine->trace_length = engine->trace_capacity - 1;
+}
+
+/* --------------------------------------------------------------- budgets */
+
+/* Steps between wall-clock reads; reading the clock on every step would cost
+ * more than the work it guards. */
+#define YOG_CLOCK_INTERVAL 1024u
+
+static size_t elapsed_millis(const YogEngine *engine)
+{
+    struct timespec now;
+    long long ms;
+    if (!engine->clock_ok || timespec_get(&now, TIME_UTC) != TIME_UTC) return 0;
+    ms = (long long)(now.tv_sec - engine->started.tv_sec) * 1000LL +
+         (long long)(now.tv_nsec - engine->started.tv_nsec) / 1000000LL;
+    return ms < 0 ? 0 : (size_t)ms;
+}
+
+/* Bytes currently held by the evaluator for one request. */
+static size_t engine_memory(const YogEngine *engine)
+{
+    return engine->store.cell_capacity * sizeof(YogIRTerm) +
+           engine->store.trail_capacity * sizeof(size_t) +
+           engine->match_capacity * sizeof(ContextMatch) +
+           engine->trace_capacity;
+}
+
+/* Called once per clause attempt.  Every limit fails closed: the caller sees an
+ * evaluation error, never a partial answer. */
+static bool within_budget(YogEngine *engine, int line, int column)
+{
+    engine->steps++;
+    if (engine->steps > engine->max_steps)
+        return fail(engine, line, column, "evaluation step limit exceeded");
+    if (engine_memory(engine) > engine->max_memory)
+        return fail(engine, line, column, "evaluation memory limit exceeded (%zu bytes)",
+                    engine->max_memory);
+    if (engine->steps % YOG_CLOCK_INTERVAL == 0 && elapsed_millis(engine) > engine->max_millis)
+        return fail(engine, line, column, "evaluation time limit exceeded (%zu ms)",
+                    engine->max_millis);
+    return true;
 }
 
 /* ------------------------------------------------------------------ values */
@@ -198,9 +246,7 @@ static bool try_clause(YogEngine *engine, const YogIRClause *clause,
     size_t frame = engine->store.cell_count;
     bool keep_searching = true;
 
-    engine->steps++;
-    if (engine->steps > engine->max_steps)
-        return fail(engine, clause->line, clause->column, "evaluation step limit exceeded");
+    if (!within_budget(engine, clause->line, clause->column)) return false;
 
     if (engine->trace_enabled && clause->predicate < engine->module->predicate_count) {
         const YogIRPredicate *predicate = &engine->module->predicates[clause->predicate];
@@ -417,6 +463,9 @@ YogEngine *yog_engine_create(const YogModule *module, YogEvalError *error)
     engine->space.module = module;
     engine->max_steps = YOG_VM_MAX_STEPS;
     engine->max_depth = YOG_VM_MAX_DEPTH;
+    engine->max_solutions = YOG_VM_MAX_SOLUTIONS;
+    engine->max_millis = YOG_VM_MAX_MILLIS;
+    engine->max_memory = YOG_VM_MAX_MEMORY;
     return engine;
 }
 
@@ -429,11 +478,14 @@ void yog_engine_free(YogEngine *engine)
     free(engine);
 }
 
-void yog_engine_set_limits(YogEngine *engine, size_t max_steps, int max_depth)
+void yog_engine_set_limits(YogEngine *engine, YogEngineLimits limits)
 {
     if (engine == NULL) return;
-    if (max_steps > 0) engine->max_steps = max_steps;
-    if (max_depth > 0) engine->max_depth = max_depth;
+    if (limits.max_steps > 0) engine->max_steps = limits.max_steps;
+    if (limits.max_depth > 0) engine->max_depth = limits.max_depth;
+    if (limits.max_solutions > 0) engine->max_solutions = limits.max_solutions;
+    if (limits.max_millis > 0) engine->max_millis = limits.max_millis;
+    if (limits.max_memory > 0) engine->max_memory = limits.max_memory;
 }
 
 static void engine_reset(YogEngine *engine, const YogModule *context, bool trace_enabled)
@@ -441,6 +493,8 @@ static void engine_reset(YogEngine *engine, const YogModule *context, bool trace
     engine->store.trail_count = 0;
     engine->store.cell_count = 0;
     engine->steps = 0;
+    engine->solutions = 0;
+    engine->clock_ok = timespec_get(&engine->started, TIME_UTC) == TIME_UTC;
     engine->failed = false;
     engine->error.line = 0;
     engine->error.column = 0;
@@ -647,6 +701,11 @@ static bool collect_solution(void *user, YogEngine *engine)
     QueryCtx *ctx = user;
     size_t i;
     bool printed = false;
+
+    engine->solutions++;
+    if (engine->solutions > engine->max_solutions)
+        return fail(engine, ctx->query->line, ctx->query->column,
+                    "solution limit exceeded (%zu)", engine->max_solutions);
 
     if (!ctx->any) {
         fprintf(ctx->out, "  -> TRUE\n");

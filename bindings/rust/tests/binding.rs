@@ -46,11 +46,13 @@ fn limits_round_trip_and_fail_closed() {
     policy.set_limits(Limits {
         max_steps: 1_000_000,
         max_depth: 8,
+        ..Limits::default()
     });
     assert_eq!(policy.limits().max_depth, 8);
     policy.set_limits(Limits {
         max_steps: 1,
         max_depth: 8,
+        ..Limits::default()
     });
     assert!(policy.check("nobody", "can_access", "db").is_err());
 }
@@ -99,4 +101,20 @@ fn policy_is_shareable_across_threads() {
     for handle in handles {
         handle.join().unwrap();
     }
+}
+
+#[test]
+fn resource_limits_default_and_fail_closed() {
+    let mut policy = Yog::compile(POLICY).expect("compile");
+    let defaults = policy.limits();
+    assert_eq!(defaults.max_solutions, 100_000);
+    assert_eq!(defaults.max_millis, 10_000);
+    assert_eq!(defaults.max_memory, 64 * 1024 * 1024);
+    policy.set_limits(Limits {
+        max_memory: 1,
+        ..Limits::default()
+    });
+    assert_eq!(policy.limits().max_memory, 1);
+    assert_eq!(policy.limits().max_steps, defaults.max_steps);
+    assert!(policy.check("bob", "can_access", "db").is_err());
 }
