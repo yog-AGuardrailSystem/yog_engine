@@ -100,3 +100,8 @@ fn policy_is_shareable_across_threads() {
         handle.join().unwrap();
     }
 }
+
+#[test]
+fn library_version_matches_crate_version() {
+    assert_eq!(yog::library_version(), yog::VERSION);
+}

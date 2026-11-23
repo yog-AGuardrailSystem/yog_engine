@@ -37,7 +37,11 @@ __all__ = [
     "ALLOW",
     "DENY",
     "library_path",
+    "library_version",
+    "__version__",
 ]
+
+__version__ = "0.2.0a1"
 
 ALLOW = "ALLOW"
 DENY = "DENY"
@@ -150,6 +154,8 @@ def _load() -> ctypes.CDLL:
     library.yog_check.restype = ctypes.c_bool
     library.yog_result_free.argtypes = [ctypes.POINTER(_YogResult)]
     library.yog_result_free.restype = None
+    library.yog_version.argtypes = []
+    library.yog_version.restype = ctypes.c_char_p
     return library
 
 
@@ -266,6 +272,12 @@ class Yog:
         if not handle:
             raise ValueError("the policy is closed")
         return handle
+
+
+def library_version() -> str:
+    """Version string reported by the loaded shared library."""
+    raw = _library().yog_version()
+    return raw.decode("utf-8") if raw else ""
 
 
 def _encode(value: str) -> bytes:

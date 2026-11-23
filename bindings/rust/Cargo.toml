@@ -1,6 +1,6 @@
 [package]
 name = "yog"
-version = "0.1.0-alpha.1"
+version = "0.2.0-alpha.1"
 edition = "2021"
 description = "Safe Rust wrapper for the experimental YOG policy engine"
 license = "Apache-2.0"

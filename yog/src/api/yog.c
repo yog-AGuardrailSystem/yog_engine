@@ -143,6 +143,11 @@ void yog_set_limits(Yog *yog, YogLimits limits)
     yog->limits.max_depth = limits.max_depth <= 0 ? YOG_VM_MAX_DEPTH : limits.max_depth;
 }
 
+const char *yog_version(void)
+{
+    return YOG_VERSION_STRING;
+}
+
 YogLimits yog_get_limits(const Yog *yog)
 {
     YogLimits defaults;

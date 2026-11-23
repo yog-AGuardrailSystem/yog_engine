@@ -40,6 +40,14 @@
 #  define YOG_API
 #endif
 
+/* Library version.  Keep in sync with project(VERSION) in CMakeLists.txt and
+ * the Python/Rust package manifests (tests/test_versions.py checks this). */
+#define YOG_VERSION_MAJOR 0
+#define YOG_VERSION_MINOR 2
+#define YOG_VERSION_PATCH 0
+#define YOG_VERSION_PRERELEASE "alpha.1"
+#define YOG_VERSION_STRING "0.2.0-alpha.1"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -72,6 +80,10 @@ typedef struct {
     size_t max_steps;   /* default YOG_VM_MAX_STEPS (1,000,000) */
     int    max_depth;   /* default YOG_VM_MAX_DEPTH (256) */
 } YogLimits;
+
+/* Version of the loaded library, e.g. "0.2.0-alpha.1".  Compare with
+ * YOG_VERSION_STRING to detect a header/library mismatch. */
+YOG_API const char *yog_version(void);
 
 /* Compile a policy.  Returns NULL on error and fills `error`. */
 YOG_API Yog *yog_compile(const char *source, size_t length, YogError *error);
