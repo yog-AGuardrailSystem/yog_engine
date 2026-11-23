@@ -320,6 +320,21 @@ allow act(U, R):
 """,
      req("u", "act", "r", ("ip", ["10.0.0.1"])))
 
+IPV6_ADDRESSES = [
+    "2001:db8::1", "2001:db9::1", "2001:0db8:0000:0000:0000:0000:0000:0001", "2001:DB8::FFFF", "2001:db8::1:0", "::1", "::2",
+    "::", "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff", "fe80::1", "fec0::1", "2001:db8:0:1::5", "2001:db8:0:2::5",
+    "1:2:3:4:5:6:7::", "::ffff:10.1.2.3", "::ffff:11.1.2.3", "10.1.2.3", "2001:db8::1%eth0", "[2001:db8::1]", "2001:db8:::1",
+    "2001::db8::1", "1:2:3:4:5:6:7:8:9", "1:2:3:4:5:6:7::8", "12345::1", ":1:2:3:4:5:6:7", "1:2:3:4:5:6:7:", "g::1",
+    "::1.2.3", "1:2:3:4:5:6:1.2.3.4", "1:2:3:4:5:6:7:1.2.3.4", "::01.2.3.4", "1::2::3", "", ":", "::::", "0:0:0:0:0:0:0:0",
+    "2001:db8::", "2001:db8:ffff:ffff:ffff:ffff:ffff:ffff", "2001:db7:ffff:ffff:ffff:ffff:ffff:ffff",
+]
+for _network in ["2001:db8::/32", "2001:db8::/112", "::1/128", "::/0", "fe80::/10", "2001:db8:0:1::/64", "::ffff:10.0.0.0/104",
+                 "1:2:3:4:5:6:7:0/128", "0.0.0.0/0", "::1/129", "::1/", "::1", "1:2:3/16", "::1/1234", "::1/12a",
+                 "2001:db8::/0", "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff/128", "8000::/1"]:
+    case(f"built-ins: cidr {_network}",
+         'input ip(text)\nallow act(U, R):\n    ip(X)\n    cidr(X, "' + _network + '")\n',
+         *[req("u", "act", "r", ("ip", [a])) for a in IPV6_ADDRESSES])
+
 case("built-ins: regex", """
 input s(text)
 deny act(U, R):
@@ -387,12 +402,12 @@ allow act(U, R):
 # ------------------------------------------------------------- random corpus
 
 TEXT_POOL = ["ls", "cat file", "rm -rf /", "git status", "git push --force", "/work/a", "/work/../etc",
-             "/prod/db", "10.1.2.3", "8.8.8.8", "a/b", "", "Drop Table", "app.log", "x1", "abab"]
+             "/prod/db", "10.1.2.3", "8.8.8.8", "2001:db8::7", "fe80::1", "::1", "a/b", "", "Drop Table", "app.log", "x1", "abab"]
 INT_POOL = [0, 1, 5, 9, 13, 100]
 REGEXES = ["drop|rm", "^[a-z]+$", "(?i)table", "^/work", "[0-9]+", "a.c|ab+", "^(ab)+$", "x?1"]
 GLOBS = ["*.log", "*a*", "?s", "git*", "*"]
 PREFIXES = ["/work", "/prod", "/", "a"]
-NETS = ["10.0.0.0/8", "8.8.8.0/24", "0.0.0.0/0"]
+NETS = ["10.0.0.0/8", "8.8.8.0/24", "0.0.0.0/0", "2001:db8::/32", "::/0", "fe80::/10"]
 
 
 class Generator:

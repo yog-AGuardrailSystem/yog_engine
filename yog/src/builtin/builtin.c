@@ -633,16 +633,127 @@ static bool parse_ipv4(const char *s, size_t n, uint32_t *out, size_t *consumed)
     return true;
 }
 
+static int hex_value(char c)
+{
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return -1;
+}
+
+/* RFC 4291 text form: 1-4 hex digits per group, one "::" standing for one or more all-zero groups, and an
+ * optional dotted IPv4 tail in the last 32 bits.  No zone ids, no brackets, no prefix. */
+static bool parse_ipv6(const char *s, size_t n, uint64_t *hi, uint64_t *lo)
+{
+    unsigned groups[8];
+    unsigned full[8];
+    size_t count = 0, i = 0, tail, k;
+    int gap = -1;
+    if (n < 2 || n > 45) return false;
+    if (s[0] == ':') {
+        if (s[1] != ':') return false;
+        gap = 0;
+        i = 2;
+    }
+    while (i < n) {
+        size_t start = i;
+        unsigned value = 0;
+        while (i < n && hex_value(s[i]) >= 0) {
+            value = value * 16u + (unsigned)hex_value(s[i]);
+            i++;
+            if (i - start > 4) return false;
+        }
+        if (i == start) return false;
+        if (i < n && s[i] == '.') { /* an IPv4 tail: it must be the last thing and fill two groups */
+            uint32_t v4;
+            size_t used = 0;
+            if (!parse_ipv4(s + start, n - start, &v4, &used) || used != n - start) return false;
+            if (count > 6) return false;
+            groups[count++] = (unsigned)(v4 >> 16);
+            groups[count++] = (unsigned)(v4 & 0xFFFFu);
+            break;
+        }
+        if (count >= 8) return false;
+        groups[count++] = value;
+        if (i == n) break;
+        if (s[i] != ':') return false;
+        i++;
+        if (i < n && s[i] == ':') {
+            if (gap >= 0) return false;
+            gap = (int)count;
+            i++;
+        } else if (i == n) {
+            return false; /* a single trailing colon */
+        }
+    }
+    if (gap < 0 ? count != 8 : count > 7) return false;
+    if (gap < 0) {
+        for (k = 0; k < 8; ++k) full[k] = groups[k];
+    } else {
+        tail = count - (size_t)gap;
+        for (k = 0; k < 8; ++k) full[k] = 0;
+        for (k = 0; k < (size_t)gap; ++k) full[k] = groups[k];
+        for (k = 0; k < tail; ++k) full[8 - tail + k] = groups[(size_t)gap + k];
+    }
+    *hi = ((uint64_t)full[0] << 48) | ((uint64_t)full[1] << 32) | ((uint64_t)full[2] << 16) | full[3];
+    *lo = ((uint64_t)full[4] << 48) | ((uint64_t)full[5] << 32) | ((uint64_t)full[6] << 16) | full[7];
+    return true;
+}
+
+static bool parse_prefix(const char *s, size_t n, unsigned max_digits, unsigned *bits)
+{
+    size_t i;
+    unsigned value = 0;
+    if (n == 0 || n > max_digits) return false;
+    for (i = 0; i < n; ++i) {
+        if (s[i] < '0' || s[i] > '9') return false;
+        value = value * 10u + (unsigned)(s[i] - '0');
+    }
+    *bits = value;
+    return true;
+}
+
+static bool cidr_contains_v6(const YogBuiltinArg *net, uint64_t address_hi, uint64_t address_lo, bool *result,
+                             char *message, size_t message_size)
+{
+    uint64_t net_hi = 0, net_lo = 0, mask_hi, mask_lo;
+    const char *slash = memchr(net->text, '/', net->length);
+    unsigned bits = 0;
+    if (slash == NULL || !parse_ipv6(net->text, (size_t)(slash - net->text), &net_hi, &net_lo))
+        return fail(message, message_size, "cidr: invalid network %s", "(expected a.b.c.d/n)");
+    if (!parse_prefix(slash + 1, net->length - (size_t)(slash - net->text) - 1u, 3, &bits))
+        return fail(message, message_size, "cidr: invalid network %s", "(bad prefix length)");
+    if (bits > 128u) return fail(message, message_size, "cidr: invalid network %s", "(prefix over 128)");
+    mask_hi = bits >= 64u ? ~(uint64_t)0 : (bits == 0u ? 0u : (~(uint64_t)0 << (64u - bits)));
+    mask_lo = bits <= 64u ? 0u : (bits == 128u ? ~(uint64_t)0 : (~(uint64_t)0 << (128u - bits)));
+    *result = (address_hi & mask_hi) == (net_hi & mask_hi) && (address_lo & mask_lo) == (net_lo & mask_lo);
+    return true;
+}
+
 static bool cidr_contains(const YogBuiltinArg *ip, const YogBuiltinArg *net, bool *result,
                           char *message, size_t message_size)
 {
-    uint32_t address, network, mask;
+    uint32_t address = 0, network, mask;
+    uint64_t address_hi = 0, address_lo = 0;
     size_t used = 0;
     unsigned bits = 0;
     size_t i;
+    bool ip_is_v6, net_is_v6;
     *result = false;
     if (ip->length > 64 || net->length > 64) return true;
-    if (!parse_ipv4(ip->text, ip->length, &address, &used) || used != ip->length) return true;
+    ip_is_v6 = memchr(ip->text, ':', ip->length) != NULL;
+    net_is_v6 = memchr(net->text, ':', net->length) != NULL;
+    if (ip_is_v6) {
+        if (!parse_ipv6(ip->text, ip->length, &address_hi, &address_lo)) return true;
+    } else if (!parse_ipv4(ip->text, ip->length, &address, &used) || used != ip->length) {
+        return true;
+    }
+    if (net_is_v6) {
+        bool inside = false;
+        if (!cidr_contains_v6(net, address_hi, address_lo, &inside, message, message_size)) return false;
+        *result = ip_is_v6 && inside; /* an IPv4 address is never inside an IPv6 network */
+        return true;
+    }
     if (!parse_ipv4(net->text, net->length, &network, &used) || used >= net->length ||
         net->text[used] != '/')
         return fail(message, message_size, "cidr: invalid network %s", "(expected a.b.c.d/n)");
@@ -656,7 +767,7 @@ static bool cidr_contains(const YogBuiltinArg *ip, const YogBuiltinArg *net, boo
     }
     if (bits > 32u) return fail(message, message_size, "cidr: invalid network %s", "(prefix over 32)");
     mask = bits == 0 ? 0u : (0xFFFFFFFFu << (32u - bits));
-    *result = (address & mask) == (network & mask);
+    *result = !ip_is_v6 && (address & mask) == (network & mask);
     return true;
 }
 

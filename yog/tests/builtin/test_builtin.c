@@ -145,6 +145,47 @@ static void test_cidr(void)
     TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "10.0.0.1", "10.0.0.0/") == -1);
 }
 
+static void test_cidr_ipv6(void)
+{
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "2001:db8::1", "2001:db8::/32") == 1);
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "2001:db9::1", "2001:db8::/32") == 0);
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "2001:0db8:0000:0000:0000:0000:0000:0001", "2001:db8::/32") == 1);
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "2001:DB8::FFFF", "2001:db8::/112") == 1);
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "2001:db8::1:0", "2001:db8::/112") == 0);
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "::1", "::1/128") == 1);
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "::2", "::1/128") == 0);
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "::", "::/0") == 1);
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff", "::/0") == 1);
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "fe80::1", "fe80::/10") == 1);
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "fec0::1", "fe80::/10") == 0);
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "2001:db8:0:1::5", "2001:db8:0:1::/64") == 1);
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "2001:db8:0:2::5", "2001:db8:0:1::/64") == 0);
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "1:2:3:4:5:6:7::", "1:2:3:4:5:6:7:0/128") == 1);   /* :: for one group */
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "::ffff:10.1.2.3", "::ffff:10.0.0.0/104") == 1);   /* dotted tail */
+    /* families never mix */
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "10.1.2.3", "::/0") == 0);
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "::1", "0.0.0.0/0") == 0);
+    /* a malformed address is not inside any network */
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "2001:db8::1%eth0", "2001:db8::/32") == 0);        /* zone id */
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "[2001:db8::1]", "2001:db8::/32") == 0);
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "2001:db8:::1", "2001:db8::/32") == 0);
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "2001::db8::1", "2001:db8::/32") == 0);            /* two :: */
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "1:2:3:4:5:6:7:8:9", "::/0") == 0);
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "1:2:3:4:5:6:7::8", "::/0") == 0);                  /* :: must stand for a group */
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "12345::1", "::/0") == 0);
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, ":1:2:3:4:5:6:7", "::/0") == 0);
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "1:2:3:4:5:6:7:", "::/0") == 0);
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "g::1", "::/0") == 0);
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "::1.2.3", "::/0") == 0);
+    /* a malformed IPv6 network is an error, so it fails closed */
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "::1", "::1") == -1);
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "::1", "::1/129") == -1);
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "::1", "::1/") == -1);
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "::1", "::1/12a") == -1);
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "::1", "::1/1234") == -1);
+    TEST_CHECK(eval2(YOG_BUILTIN_CIDR, "::1", "1:2:3/16") == -1);
+}
+
 static void test_regex_basics(void)
 {
     TEST_CHECK(eval2(YOG_BUILTIN_MATCHES, "DROP TABLE users", "DROP TABLE") == 1);
@@ -247,6 +288,7 @@ int main(void)
     test_glob();
     test_under();
     test_cidr();
+    test_cidr_ipv6();
     test_regex_basics();
     test_regex_case_insensitive();
     test_regex_invalid_patterns_fail_closed();

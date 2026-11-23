@@ -131,7 +131,7 @@ Arguments of the wrong type (for example an integer passed to `contains`) are an
 | `glob(Text, Pattern)` | the whole text matches; `*` is any run of bytes (including `/`), `?` any one byte |
 | `under(Path, Prefix)` | the normalised path equals the prefix or lies below it |
 | `starts_with(Text, S)`, `ends_with(Text, S)`, `contains(Text, S)` | bytewise prefix, suffix, substring |
-| `cidr(Ip, Network)` | the IPv4 address is inside `a.b.c.d/n` |
+| `cidr(Ip, Network)` | the address is inside the network: IPv4 `a.b.c.d/n` or IPv6 `addr/n` (n up to 128) |
 
 **Regular expressions** run on a linear-time NFA, so a hostile pattern cannot cause exponential
 blow-up. Supported syntax: literals, `.` (any byte), `[abc]` `[a-z]` `[^...]`, `\d \w \s` and their
@@ -147,8 +147,11 @@ under `/work`; `/work/../etc` is not under `/work`. It does **not** decode perce
 symlinks, treat `\` as a separator or fold case; extractors must do that first. Up to 128 segments and
 4,096 bytes.
 
-**`cidr`** accepts dotted-quad IPv4 with no leading zeros; a malformed address is simply not inside any
-network, while a malformed network in the policy is an evaluation error. IPv6 is not supported yet.
+**`cidr`** accepts dotted-quad IPv4 with no leading zeros and IPv6 in RFC 4291 text form: 1-4 hex digits per group, one
+`::` standing for one or more zero groups, an optional dotted IPv4 tail (`::ffff:10.1.2.3`); no zone ids (`%eth0`), no
+brackets. A malformed address is simply not inside any network, while a malformed network in the policy (including a
+prefix over 32 for IPv4 or 128 for IPv6) is an evaluation error. The families never mix: an IPv4 address is never inside
+an IPv6 network or the other way round (IPv4-mapped IPv6 addresses are not translated).
 
 ## 7. Obligations
 
