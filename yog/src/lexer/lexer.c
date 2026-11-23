@@ -40,6 +40,12 @@ static const TextEntry KEYWORDS[] = {
     {"deny",  TOK_DENY},
     {"query", TOK_QUERY},
     {"not",   TOK_NOT},
+    {"require_approval", TOK_REQUIRE_APPROVAL},
+    {"obligation", TOK_OBLIGATION},
+    {"input", TOK_INPUT},
+    {"version", TOK_VERSION},
+    {"true",  TOK_TRUE},
+    {"false", TOK_FALSE},
 };
 
 /* ORDER MATTERS: longest first, so "<=" is tried before "<". */

@@ -5,7 +5,7 @@ turns a `.yog` policy into a validated clause-table IR and evaluates
 authorization requests against it.
 
 The language contract is frozen in [`../docs/COMPILER.md`](../docs/COMPILER.md).
-`../yog.py` remains the behavioural reference; the C engine is validated both
+`../reference/yog_ref.py` remains the behavioural reference; the C engine is validated both
 against it and by independent semantic tests.
 
 ## Pipeline
@@ -72,7 +72,7 @@ ctest --test-dir yog/build --output-on-failure
 | `test_ir` | clause table, wildcard slots, constant interning, dump |
 | `test_vm` | unification, backtracking, context facts, precedence |
 | `test_api` | ownership, diagnostics, trace opt-in, exact reasons |
-| `test_security` | step/depth limits, fail-closed errors, context isolation, concurrency |
+| `test_security` | step/depth/solution/time/memory limits, fail-closed errors, context isolation, concurrency |
 | `test_fuzz_smoke` | deterministic malformed-input robustness |
 
 ### Differential tests against the Python reference
@@ -93,7 +93,7 @@ python yog/tests/property/property_conformance.py
 ```
 
 The conformance suite states the expected result for every Group A–V request
-and every compile error directly in `cases.json`, independently of `yog.py`.
+and every compile error directly in `cases.json`, independently of `reference/yog_ref.py`.
 The property suite generates acyclic policies and compares the engine with a
 plain-Python oracle that does not use the YOG solver. See
 [`../docs/CORRECTNESS.md`](../docs/CORRECTNESS.md).
@@ -163,10 +163,14 @@ check with `result.decision == YOG_DENY`. On `false`, `result.decision` is still
 initialized to `YOG_DENY`, so a caller that ignores the return value cannot
 accidentally allow the action.
 
-Evaluation budgets can be lowered from their defaults:
+Evaluation budgets (steps, depth, solutions, time, memory) can be lowered
+from their defaults:
 
 ```c
-YogLimits limits = { .max_steps = 50000, .max_depth = 64 };
+YogLimits limits = {0};            /* zero fields keep their defaults */
+limits.max_steps  = 50000;
+limits.max_depth  = 64;
+limits.max_millis = 50;             /* wall-clock backstop */
 yog_set_limits(yog, limits);
 ```
 

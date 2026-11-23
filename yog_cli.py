@@ -4,7 +4,9 @@ import json
 import sys
 from pathlib import Path
 
-from yog import load_policy
+sys.path.insert(0, str(Path(__file__).resolve().parent / "reference"))
+
+from yog_ref import load_policy  # noqa: E402
 
 
 def main():

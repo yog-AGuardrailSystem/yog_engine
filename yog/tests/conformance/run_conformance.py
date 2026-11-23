@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Data-driven conformance suite for the YOG compiler.
 
-The expectations in `cases.json` are stated independently of `yog.py` and of
+The expectations in `cases.json` are stated independently of `reference/yog_ref.py` and of
 the C implementation: each request names the decision the authorization
 contract must produce, and each compile case names the diagnostic it must
 report.  This is the suite that catches a bug shared by both implementations.

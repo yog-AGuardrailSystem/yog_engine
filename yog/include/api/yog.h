@@ -40,6 +40,14 @@
 #  define YOG_API
 #endif
 
+/* Library version.  Keep in sync with project(VERSION) in CMakeLists.txt and
+ * the Python/Rust package manifests (tests/test_versions.py checks this). */
+#define YOG_VERSION_MAJOR 0
+#define YOG_VERSION_MINOR 2
+#define YOG_VERSION_PATCH 0
+#define YOG_VERSION_PRERELEASE "alpha.1"
+#define YOG_VERSION_STRING "0.2.0-alpha.1"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -54,29 +62,75 @@ typedef struct {
 
 typedef struct Yog Yog;
 
+/* Outcomes.  Precedence when several clauses match: deny > require_approval >
+ * allow > default deny.  Callers must treat anything other than YOG_ALLOW as
+ * "do not run the action now"; YOG_REQUIRE_APPROVAL means a human or another
+ * authority must approve this exact request first. */
 typedef enum {
     YOG_ALLOW = 0,
-    YOG_DENY = 1
+    YOG_DENY = 1,
+    YOG_REQUIRE_APPROVAL = 2
 } YogDecision;
 
+/* An obligation is data the policy attaches to an ALLOW or REQUIRE_APPROVAL
+ * decision (for example "audit this call").  YOG never performs it: the
+ * enforcement point (gateway, agent runtime) must. */
+typedef enum {
+    YOG_OBLIGATION_TEXT = 0,
+    YOG_OBLIGATION_INTEGER = 1,
+    YOG_OBLIGATION_BOOLEAN = 2
+} YogObligationArgKind;
+
 typedef struct {
-    YogDecision decision;
-    char       *reason;
-    char       *trace;   /* NULL unless trace output was requested */
+    YogObligationArgKind kind;
+    char                *text;     /* TEXT only */
+    long long            integer;  /* INTEGER value, or 0/1 for BOOLEAN */
+} YogObligationArg;
+
+typedef struct {
+    char             *name;
+    YogObligationArg *args;
+    size_t            arg_count;
+} YogObligation;
+
+typedef struct {
+    YogDecision    decision;
+    char          *reason;
+    char          *trace;   /* NULL unless trace output was requested */
+    int            matched_line;      /* line of the first clause that decided; 0 for default deny */
+    YogObligation *obligations;       /* NULL when there are none */
+    size_t         obligation_count;
 } YogResult;
 
 /* Evaluation budgets.  A zero field keeps the built-in default; non-positive
  * max_depth also uses the default. Policies are untrusted input, so these caps
- * bound the work a single request may do. */
+ * bound the work a single request may do.  Exceeding any of them is an
+ * evaluation error, which callers must treat as DENY.
+ *
+ * Always zero-initialise this struct (YogLimits l = {0};) before setting the
+ * fields you care about, so new fields added later keep their defaults. */
 typedef struct {
-    size_t max_steps;   /* default YOG_VM_MAX_STEPS (1,000,000) */
-    int    max_depth;   /* default YOG_VM_MAX_DEPTH (256) */
+    size_t max_steps;     /* clause attempts; default 1,000,000 */
+    int    max_depth;     /* goal nesting;   default 256 */
+    size_t max_solutions; /* solutions enumerated per query; default 100,000 */
+    size_t max_millis;    /* wall-clock backstop per check; default 10,000 ms */
+    size_t max_memory;    /* evaluator bytes per check; default 64 MiB */
 } YogLimits;
+
+/* "ALLOW", "DENY" or "REQUIRE_APPROVAL" ("UNKNOWN" for any other value). */
+YOG_API const char *yog_decision_name(YogDecision decision);
+
+/* Version of the loaded library, e.g. "0.2.0-alpha.1".  Compare with
+ * YOG_VERSION_STRING to detect a header/library mismatch. */
+YOG_API const char *yog_version(void);
 
 /* Compile a policy.  Returns NULL on error and fills `error`. */
 YOG_API Yog *yog_compile(const char *source, size_t length, YogError *error);
 
 YOG_API void yog_free(Yog *yog);
+
+/* Language version the policy declared with `version N` (1 when absent). */
+YOG_API int yog_policy_version(const Yog *yog);
 
 /* Read-only view of the compiled module, for `yogc ir` and tooling. */
 YOG_API const YogModule *yog_module(const Yog *yog);
@@ -93,7 +147,7 @@ YOG_API YogLimits yog_get_limits(const Yog *yog);
 
 /*
  * Apply the policy-combining contract to one request:
- *   deny > allow > default deny.
+ *   deny > require_approval > allow > default deny.
  *
  * `context` is an optional string of ground facts separated by ';'
  * (for example "fact amount(acct_1, 9000)").  It is parsed per request and
@@ -110,6 +164,27 @@ YOG_API YogLimits yog_get_limits(const Yog *yog);
  */
 YOG_API bool yog_check(Yog *yog, const char *actor, const char *action, const char *resource,
                        const char *context, bool trace, YogResult *result, YogError *error);
+
+/*
+ * Checks one request given as JSON (see docs/INTERFACES.md):
+ *   {"actor": "..", "action": "..", "resource": "..",
+ *    "args": {..}, "env": {..}, "state": {"version": 1, "values": {..}},
+ *    "now": 1700000000, "facts": [{"predicate": "p", "args": [..]}], "request_id": ".."}
+ * The optional objects become typed facts (arg/2, env/2, state/2, now/1, state_version/1) that the
+ * policy reads through matching `input` declarations.  Values never pass through policy text, so they
+ * cannot forge facts.  Strings must be valid UTF-8; null, floats and nested arrays are rejected.
+ * Same contract as yog_check(): false means an evaluation or input error and the decision is DENY.
+ */
+YOG_API bool yog_check_json(Yog *yog, const char *json, size_t length, bool trace,
+                            YogResult *result, YogError *error);
+
+/* Serialises a result as one JSON object; free with yog_string_free().  `yog` may be NULL. */
+YOG_API char *yog_result_to_json(const Yog *yog, const YogResult *result);
+
+/* {"error":{"message":..,"line":..,"column":..}} for a failed call; free with yog_string_free(). */
+YOG_API char *yog_error_to_json(const YogError *error);
+
+YOG_API void yog_string_free(char *text);
 
 /* Evaluate every `query` in the policy, printing in the reference format. */
 YOG_API bool yog_run_queries(Yog *yog, FILE *out, bool trace);

@@ -34,7 +34,7 @@ static bool values_equal(const YogValueSpace *space, size_t left, size_t right)
     const YogValue *b = yog_value_at(space, right);
     if (a == NULL || b == NULL) return false;
     if (a->kind != b->kind) return false;
-    if (a->kind == YOG_VALUE_INTEGER) return a->integer == b->integer;
+    if (a->kind == YOG_VALUE_INTEGER || a->kind == YOG_VALUE_BOOLEAN) return a->integer == b->integer;
     if (a->text.length != b->text.length) return false;
     return a->text.length == 0 || memcmp(a->text.text, b->text.text, a->text.length) == 0;
 }

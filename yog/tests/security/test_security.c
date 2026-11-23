@@ -56,7 +56,7 @@ static YogDecision check(Yog *yog, const char *actor, const char *action,
 static void test_step_limit_fails_closed(void)
 {
     Yog *yog = compile_policy();
-    YogLimits limits;
+    YogLimits limits = {0};
     YogError error;
     YogResult result;
 
@@ -81,7 +81,7 @@ static void test_step_limit_fails_closed(void)
 static void test_depth_limit_fails_closed(void)
 {
     Yog *yog = compile_policy();
-    YogLimits limits;
+    YogLimits limits = {0};
     YogError error;
     YogResult result;
 
@@ -103,7 +103,7 @@ static void test_depth_limit_fails_closed(void)
 static void test_negative_depth_limit_uses_default(void)
 {
     Yog *yog = compile_policy();
-    YogLimits limits;
+    YogLimits limits = {0};
     YogLimits defaults;
 
     TEST_CHECK(yog != NULL);
@@ -117,6 +117,120 @@ static void test_negative_depth_limit_uses_default(void)
     TEST_CHECK(yog_get_limits(yog).max_depth == defaults.max_depth);
     TEST_CHECK(check(yog, "i_customer", "can_transfer", "i_acct_999",
                      "fact amount(i_acct_999, 9000)") == YOG_ALLOW);
+    yog_free(yog);
+}
+
+static Yog *compile_text(const char *source)
+{
+    YogError error;
+    Yog *yog = yog_compile(source, strlen(source), &error);
+    if (yog == NULL) {
+        (void)fprintf(stderr, "    compile failed: %s\n", error.message);
+    }
+    return yog;
+}
+
+/* A wide cross product: item/1 has 60 facts, so a 3-way join enumerates 60^3
+ * combinations.  Used to drive the solution, memory and time guards. */
+static Yog *compile_fanout(void)
+{
+    static char source[8192];
+    size_t used = 0;
+    int i;
+    for (i = 0; i < 60; ++i) {
+        int written = snprintf(source + used, sizeof(source) - used, "fact item(i%d)\n", i);
+        if (written < 0 || (size_t)written >= sizeof(source) - used) return NULL;
+        used += (size_t)written;
+    }
+    (void)snprintf(source + used, sizeof(source) - used,
+                   "rule triple(A, B, C):\n    item(A)\n    item(B)\n    item(C)\n"
+                   "query triple(A, B, C)\n"
+                   "deny can_scan(U, R):\n    triple(A, B, C)\n    A == \"never\"\n"
+                   "allow can_scan(U, R):\n    item(R)\n");
+    return compile_text(source);
+}
+
+static void test_solution_limit_fails_closed(void)
+{
+    Yog *yog = compile_fanout();
+    YogLimits limits = {0};
+    FILE *sink;
+
+    TEST_CHECK(yog != NULL);
+    if (yog == NULL) return;
+    TEST_CHECK(yog_get_limits(yog).max_solutions > 0);
+
+    limits.max_solutions = 10;
+    yog_set_limits(yog, limits);
+    TEST_CHECK(yog_get_limits(yog).max_solutions == 10);
+    TEST_CHECK(yog_get_limits(yog).max_steps == yog_get_limits(NULL).max_steps);
+
+    sink = tmpfile();
+    TEST_CHECK(sink != NULL);
+    if (sink != NULL) {
+        /* 60^3 solutions exist; enumerating more than 10 must be an error. */
+        TEST_CHECK(!yog_run_queries(yog, sink, false));
+        fclose(sink);
+    }
+    yog_free(yog);
+}
+
+static void test_memory_limit_fails_closed(void)
+{
+    Yog *yog = compile_fanout();
+    YogLimits limits = {0};
+    YogError error;
+    YogResult result;
+
+    TEST_CHECK(yog != NULL);
+    if (yog == NULL) return;
+
+    /* Far below what even one clause frame needs. */
+    limits.max_memory = 1;
+    yog_set_limits(yog, limits);
+    TEST_CHECK(!yog_check(yog, "u", "can_scan", "i1", NULL, false, &result, &error));
+    TEST_CHECK(strstr(error.message, "memory limit exceeded") != NULL);
+    TEST_CHECK(result.decision != YOG_ALLOW);
+    yog_result_free(&result);
+    yog_free(yog);
+}
+
+static void test_time_limit_fails_closed(void)
+{
+    Yog *yog = compile_fanout();
+    YogLimits limits = {0};
+    YogError error;
+    YogResult result;
+
+    TEST_CHECK(yog != NULL);
+    if (yog == NULL) return;
+
+    /* The deny clause must try all 60^3 bindings (A is never "never"), which
+     * takes far longer than 1 ms; the step budget is raised so that only the
+     * clock can stop it. */
+    limits.max_steps = (size_t)1 << 30;
+    limits.max_millis = 1;
+    yog_set_limits(yog, limits);
+    TEST_CHECK(!yog_check(yog, "u", "can_scan", "i1", NULL, false, &result, &error));
+    TEST_CHECK(strstr(error.message, "time limit exceeded") != NULL);
+    TEST_CHECK(result.decision != YOG_ALLOW);
+    yog_result_free(&result);
+    yog_free(yog);
+}
+
+static void test_default_limits_allow_normal_policies(void)
+{
+    Yog *yog = compile_fanout();
+    YogLimits defaults = yog_get_limits(NULL);
+
+    TEST_CHECK(defaults.max_solutions == 100000u);
+    TEST_CHECK(defaults.max_millis == 10000u);
+    TEST_CHECK(defaults.max_memory == (size_t)64u * 1024u * 1024u);
+    TEST_CHECK(yog != NULL);
+    if (yog == NULL) return;
+    /* The deny clause scans 60^3 = 216,000 bindings, well inside the default
+     * step budget, and never matches, so the request is allowed. */
+    TEST_CHECK(check(yog, "u", "can_scan", "i1", NULL) == YOG_ALLOW);
     yog_free(yog);
 }
 
@@ -299,6 +413,10 @@ int main(void)
     test_step_limit_fails_closed();
     test_depth_limit_fails_closed();
     test_negative_depth_limit_uses_default();
+    test_solution_limit_fails_closed();
+    test_memory_limit_fails_closed();
+    test_time_limit_fails_closed();
+    test_default_limits_allow_normal_policies();
     test_context_is_isolated_between_checks();
     test_context_rejects_non_facts();
     test_repeated_compile_and_free();

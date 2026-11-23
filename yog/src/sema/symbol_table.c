@@ -55,6 +55,7 @@ bool yog_symbol_table_add(YogSymbolTable *table, YogText name, size_t arity,
     table->items[table->count].arity = arity;
     table->items[table->count].role = role;
     table->items[table->count].line = line;
+    table->items[table->count].input_decl = NULL;
     if (out_index != NULL) *out_index = table->count;
     table->count++;
     return true;
@@ -65,7 +66,8 @@ const char *yog_role_name(YogPredicateRole role)
     switch (role) {
     case YOG_ROLE_FACT: return "fact";
     case YOG_ROLE_RULE: return "rule head";
-    case YOG_ROLE_DECISION: return "allow/deny head";
+    case YOG_ROLE_DECISION: return "allow/deny/require_approval head";
+    case YOG_ROLE_INPUT: return "input";
     default: return "unknown";
     }
 }

@@ -1,4 +1,9 @@
-from yog import load_policy, YogError
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "reference"))
+
+from yog_ref import load_policy, YogError  # noqa: E402
 POLICY_FILE = "all_examples.yog"
 def run_mocked_agent(engine, actions):
     """Evaluate simulated actions without executing them."""

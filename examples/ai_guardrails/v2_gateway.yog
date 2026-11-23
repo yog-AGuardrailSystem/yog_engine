@@ -1,0 +1,115 @@
+version 2
+
+# Policy for the YOG gateway (yog_platform/gateway.py).  The gateway sets these facts:
+#   arg("input.<name>", v)   what the agent asked for (the agent controls these)
+#   arg("sql.*" | "shell.*" | "http.*" | "k8s.*", v)   what the extractors found (the agent cannot forge them)
+#   env("stage", s), env("context_tainted", b)           set by the gateway
+#   state("<counter>", n), state_version(n), now(t)      from the state provider
+# Unparseable input is never trusted: every extractor reports parsed=false and we deny it.
+
+input arg(text, any)
+input env(text, any)
+input state(text, any)
+input state_version(int)
+input now(int)
+
+fact approved_tool(read_file)
+fact approved_tool(list_dir)
+fact approved_tool(fetch_url)
+fact approved_tool(sql_exec)
+fact approved_tool(shell)
+fact approved_tool(http_request)
+fact approved_tool(kubectl_apply)
+
+# ---- SQL --------------------------------------------------------------------------------------------
+deny run_tool(Agent, Tool):
+    arg("sql.parsed", false)
+
+deny run_tool(Agent, Tool):
+    arg("sql.statement", S)
+    in(S, "drop", "truncate", "alter", "grant", "revoke", "attach", "pragma")
+
+deny run_tool(Agent, Tool):
+    arg("sql.has_where", false)
+
+deny run_tool(Agent, Tool):
+    arg("sql.statement_count", N)
+    N > 1
+
+# ---- shell ------------------------------------------------------------------------------------------
+deny run_tool(Agent, Tool):
+    arg("shell.parsed", false)
+
+deny run_tool(Agent, Tool):
+    arg("shell.rm_rf", true)
+
+deny run_tool(Agent, Tool):
+    arg("shell.pipe_to_shell", true)
+
+deny run_tool(Agent, Tool):
+    arg("shell.has_subshell", true)
+
+deny run_tool(Agent, Tool):
+    arg("shell.has_eval", true)
+
+deny run_tool(Agent, Tool):
+    arg("shell.sudo", true)
+
+deny run_tool(Agent, Tool):
+    arg("shell.path", P)
+    not under(P, "/workspace")
+
+# ---- HTTP -------------------------------------------------------------------------------------------
+deny run_tool(Agent, Tool):
+    arg("http.parsed", false)
+
+deny run_tool(Agent, Tool):
+    arg("http.host_is_private", true)
+
+deny run_tool(Agent, Tool):
+    arg("http.has_credentials", true)
+
+deny run_tool(Agent, Tool):
+    arg("http.scheme", S)
+    not in(S, "https")
+
+# ---- Kubernetes -------------------------------------------------------------------------------------
+deny run_tool(Agent, Tool):
+    arg("k8s.parsed", false)
+
+deny run_tool(Agent, Tool):
+    arg("k8s.privileged", true)
+
+deny run_tool(Agent, Tool):
+    arg("k8s.host_network", true)
+
+deny run_tool(Agent, Tool):
+    arg("k8s.host_path", true)
+
+# ---- files ------------------------------------------------------------------------------------------
+deny run_tool(Agent, Tool):
+    arg("input.path", P)
+    not under(P, "/workspace")
+
+# ---- state: too many destructive calls recently ------------------------------------------------------
+deny run_tool(Agent, Tool):
+    state("deletes_last_10m", N)
+    N >= 3
+
+# ---- risky tools after the agent has read untrusted content need a human -----------------------------
+require_approval run_tool(Agent, Tool):
+    env("context_tainted", true)
+    in(Tool, "shell", "sql_exec", "kubectl_apply", "http_request")
+    obligation audit("tainted_context_call", Tool)
+
+# ---- production needs a human ------------------------------------------------------------------------
+require_approval run_tool(Agent, Tool):
+    env("stage", "prod")
+    obligation audit("prod_call", Tool)
+
+# ---- everything else on the approved list is allowed, with obligations -------------------------------
+allow run_tool(Agent, Tool):
+    approved_tool(Tool)
+    obligation audit("tool_call", Tool)
+    obligation rate_limit(Agent, 30)
+    obligation max_output_bytes(2000)

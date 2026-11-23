@@ -18,6 +18,9 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+
+#include "builtin/builtin.h"
 
 typedef bool (*YogYield)(void *user, YogEngine *engine);
 
@@ -33,7 +36,13 @@ struct YogEngine {
 
     size_t               max_steps;
     int                  max_depth;
+    size_t               max_solutions;
+    size_t               max_millis;
+    size_t               max_memory;
     size_t               steps;
+    size_t               solutions;
+    struct timespec      started;
+    bool                 clock_ok;
 
     bool                 failed;
     YogEvalError         error;
@@ -89,6 +98,47 @@ static void tracef(YogEngine *engine, const char *fmt, ...)
     if (engine->trace_length >= engine->trace_capacity) engine->trace_length = engine->trace_capacity - 1;
 }
 
+/* --------------------------------------------------------------- budgets */
+
+/* Steps between wall-clock reads; reading the clock on every step would cost
+ * more than the work it guards. */
+#define YOG_CLOCK_INTERVAL 1024u
+
+static size_t elapsed_millis(const YogEngine *engine)
+{
+    struct timespec now;
+    long long ms;
+    if (!engine->clock_ok || timespec_get(&now, TIME_UTC) != TIME_UTC) return 0;
+    ms = (long long)(now.tv_sec - engine->started.tv_sec) * 1000LL +
+         (long long)(now.tv_nsec - engine->started.tv_nsec) / 1000000LL;
+    return ms < 0 ? 0 : (size_t)ms;
+}
+
+/* Bytes currently held by the evaluator for one request. */
+static size_t engine_memory(const YogEngine *engine)
+{
+    return engine->store.cell_capacity * sizeof(YogIRTerm) +
+           engine->store.trail_capacity * sizeof(size_t) +
+           engine->match_capacity * sizeof(ContextMatch) +
+           engine->trace_capacity;
+}
+
+/* Called once per clause attempt.  Every limit fails closed: the caller sees an
+ * evaluation error, never a partial answer. */
+static bool within_budget(YogEngine *engine, int line, int column)
+{
+    engine->steps++;
+    if (engine->steps > engine->max_steps)
+        return fail(engine, line, column, "evaluation step limit exceeded");
+    if (engine_memory(engine) > engine->max_memory)
+        return fail(engine, line, column, "evaluation memory limit exceeded (%zu bytes)",
+                    engine->max_memory);
+    if (engine->steps % YOG_CLOCK_INTERVAL == 0 && elapsed_millis(engine) > engine->max_millis)
+        return fail(engine, line, column, "evaluation time limit exceeded (%zu ms)",
+                    engine->max_millis);
+    return true;
+}
+
 /* ------------------------------------------------------------------ values */
 
 static void format_value(const YogEngine *engine, YogIRTerm term, char *buffer, size_t size)
@@ -104,6 +154,8 @@ static void format_value(const YogEngine *engine, YogIRTerm term, char *buffer, 
             (void)snprintf(buffer, size, "<bad>");
         } else if (value->kind == YOG_VALUE_INTEGER) {
             (void)snprintf(buffer, size, "%lld", (long long)value->integer);
+        } else if (value->kind == YOG_VALUE_BOOLEAN) {
+            (void)snprintf(buffer, size, "%s", value->integer != 0 ? "true" : "false");
         } else {
             (void)snprintf(buffer, size, "%.*s", (int)value->text.length, value->text.text);
         }
@@ -198,9 +250,7 @@ static bool try_clause(YogEngine *engine, const YogIRClause *clause,
     size_t frame = engine->store.cell_count;
     bool keep_searching = true;
 
-    engine->steps++;
-    if (engine->steps > engine->max_steps)
-        return fail(engine, clause->line, clause->column, "evaluation step limit exceeded");
+    if (!within_budget(engine, clause->line, clause->column)) return false;
 
     if (engine->trace_enabled && clause->predicate < engine->module->predicate_count) {
         const YogIRPredicate *predicate = &engine->module->predicates[clause->predicate];
@@ -302,6 +352,54 @@ static bool negation_yield(void *user, YogEngine *engine)
     return false; /* stop at the first proof */
 }
 
+/* Returns 1 when the built-in holds, 0 when it does not, -1 on error. */
+static int eval_builtin_goal(YogEngine *engine, size_t frame, const YogIRGoal *goal)
+{
+    YogBuiltinArg args[YOG_IR_MAX_ARGS];
+    char message[160];
+    bool result = false;
+    size_t i;
+
+    if (!within_budget(engine, goal->line, goal->column)) return -1;
+    if (goal->arg_count > YOG_IR_MAX_ARGS) {
+        (void)fail(engine, goal->line, goal->column, "built-in has too many arguments");
+        return -1;
+    }
+    for (i = 0; i < goal->arg_count; ++i) {
+        YogIRTerm term = yog_store_resolve(&engine->store, to_absolute(goal->args[i], frame));
+        const YogValue *value;
+        if (term.kind == YOG_IR_VAR) {
+            (void)fail(engine, goal->line, goal->column, "built-in argument is not bound");
+            return -1;
+        }
+        value = yog_value_at(&engine->space, term.index);
+        if (value == NULL) {
+            (void)fail(engine, goal->line, goal->column, "built-in refers to an invalid constant");
+            return -1;
+        }
+        args[i].text = NULL;
+        args[i].length = 0;
+        args[i].integer = 0;
+        if (value->kind == YOG_VALUE_INTEGER) {
+            args[i].kind = YOG_ARG_INTEGER;
+            args[i].integer = value->integer;
+        } else if (value->kind == YOG_VALUE_BOOLEAN) {
+            args[i].kind = YOG_ARG_BOOLEAN;
+            args[i].integer = value->integer;
+        } else {
+            args[i].kind = YOG_ARG_TEXT;
+            args[i].text = value->text.text;
+            args[i].length = value->text.length;
+        }
+    }
+    if (!yog_builtin_eval((YogBuiltinId)goal->builtin, args, goal->arg_count, &result,
+                          message, sizeof(message))) {
+        (void)fail(engine, goal->line, goal->column, "%s", message);
+        return -1;
+    }
+    return result ? 1 : 0;
+}
+
 /* Returns 1 when the comparison holds, 0 when it does not, -1 on error. */
 static int eval_comparison(YogEngine *engine, size_t frame, const YogIRGoal *goal)
 {
@@ -334,9 +432,19 @@ static int eval_comparison(YogEngine *engine, size_t frame, const YogIRGoal *goa
         equal = a->text.length == b->text.length && (shared == 0 || cmp == 0);
         order = cmp != 0 ? (cmp < 0 ? -1 : 1) : (a->text.length < b->text.length ? -1 :
                                                 (a->text.length > b->text.length ? 1 : 0));
-    } else {
+    } else if (a->kind == YOG_VALUE_BOOLEAN && b->kind == YOG_VALUE_BOOLEAN) {
+        if (goal->comparison != YOG_COMPARE_EQ && goal->comparison != YOG_COMPARE_NE) {
+            (void)fail(engine, goal->line, goal->column, "booleans can only be compared with == and !=");
+            return -1;
+        }
+        equal = a->integer == b->integer;
+    } else if ((a->kind == YOG_VALUE_TEXT && b->kind == YOG_VALUE_INTEGER) ||
+               (a->kind == YOG_VALUE_INTEGER && b->kind == YOG_VALUE_TEXT)) {
         (void)fail(engine, goal->line, goal->column,
                    "cannot compare a string with an integer");
+        return -1;
+    } else {
+        (void)fail(engine, goal->line, goal->column, "cannot compare values of different types");
         return -1;
     }
 
@@ -363,6 +471,18 @@ static bool solve_goals(YogEngine *engine, const YogIRClause *clause,
         return fail(engine, clause->line, clause->column, "evaluation depth limit exceeded (%d)", engine->max_depth);
 
     goal = &clause->goals[index];
+
+    /* An obligation never filters solutions; it is read when the clause wins. */
+    if (goal->kind == YOG_IR_OBLIGATION)
+        return solve_goals(engine, clause, frame, index + 1, yield, user, depth);
+
+    if (goal->builtin != 0) {
+        int outcome = eval_builtin_goal(engine, frame, goal);
+        if (outcome < 0) return false;
+        if (goal->kind == YOG_IR_NOT) outcome = !outcome;
+        if (!outcome) return true;
+        return solve_goals(engine, clause, frame, index + 1, yield, user, depth);
+    }
 
     if (goal->kind == YOG_IR_CALL) {
         ConjCtx ctx;
@@ -417,6 +537,9 @@ YogEngine *yog_engine_create(const YogModule *module, YogEvalError *error)
     engine->space.module = module;
     engine->max_steps = YOG_VM_MAX_STEPS;
     engine->max_depth = YOG_VM_MAX_DEPTH;
+    engine->max_solutions = YOG_VM_MAX_SOLUTIONS;
+    engine->max_millis = YOG_VM_MAX_MILLIS;
+    engine->max_memory = YOG_VM_MAX_MEMORY;
     return engine;
 }
 
@@ -429,11 +552,14 @@ void yog_engine_free(YogEngine *engine)
     free(engine);
 }
 
-void yog_engine_set_limits(YogEngine *engine, size_t max_steps, int max_depth)
+void yog_engine_set_limits(YogEngine *engine, YogEngineLimits limits)
 {
     if (engine == NULL) return;
-    if (max_steps > 0) engine->max_steps = max_steps;
-    if (max_depth > 0) engine->max_depth = max_depth;
+    if (limits.max_steps > 0) engine->max_steps = limits.max_steps;
+    if (limits.max_depth > 0) engine->max_depth = limits.max_depth;
+    if (limits.max_solutions > 0) engine->max_solutions = limits.max_solutions;
+    if (limits.max_millis > 0) engine->max_millis = limits.max_millis;
+    if (limits.max_memory > 0) engine->max_memory = limits.max_memory;
 }
 
 static void engine_reset(YogEngine *engine, const YogModule *context, bool trace_enabled)
@@ -441,6 +567,8 @@ static void engine_reset(YogEngine *engine, const YogModule *context, bool trace
     engine->store.trail_count = 0;
     engine->store.cell_count = 0;
     engine->steps = 0;
+    engine->solutions = 0;
+    engine->clock_ok = timespec_get(&engine->started, TIME_UTC) == TIME_UTC;
     engine->failed = false;
     engine->error.line = 0;
     engine->error.column = 0;
@@ -452,7 +580,44 @@ static void engine_reset(YogEngine *engine, const YogModule *context, bool trace
     engine->match_count = 0;
 }
 
-static bool build_matches(YogEngine *engine, const YogModule *context)
+/* A context fact for an `input` predicate must have the declared argument
+ * types.  Returns false and fills `error` on a mismatch: a malformed request is
+ * an evaluation error, which callers treat as DENY. */
+static bool check_input_types(const YogEngine *engine, const YogModule *context,
+                              const YogIRClause *clause, const YogIRPredicate *predicate,
+                              YogEvalError *error)
+{
+    size_t a;
+    if (predicate->role != YOG_ROLE_INPUT || predicate->arg_types == NULL) return true;
+    for (a = 0; a < clause->head_count && a < predicate->arity; ++a) {
+        const YogIRTerm term = clause->head[a];
+        const YogValue *value;
+        unsigned char wanted = predicate->arg_types[a];
+        bool fits;
+        if (term.kind != YOG_IR_CONST || term.index >= context->value_count) continue;
+        value = &context->values[term.index];
+        fits = wanted == YOG_TYPE_ANY ||
+               (wanted == YOG_TYPE_TEXT && value->kind == YOG_VALUE_TEXT) ||
+               (wanted == YOG_TYPE_INT && value->kind == YOG_VALUE_INTEGER) ||
+               (wanted == YOG_TYPE_BOOL && value->kind == YOG_VALUE_BOOLEAN);
+        if (!fits) {
+            if (error != NULL) {
+                error->line = clause->line;
+                error->column = clause->column;
+                (void)snprintf(error->message, sizeof(error->message),
+                               "context fact %.*s/%zu: argument %zu must be %s",
+                               (int)predicate->name.length, predicate->name.text, predicate->arity,
+                               a + 1,
+                               wanted == YOG_TYPE_TEXT ? "text" : (wanted == YOG_TYPE_INT ? "int" : "bool"));
+            }
+            return false;
+        }
+    }
+    (void)engine;
+    return true;
+}
+
+static bool build_matches(YogEngine *engine, const YogModule *context, YogEvalError *error)
 {
     size_t i;
     if (context == NULL) return true;
@@ -465,6 +630,8 @@ static bool build_matches(YogEngine *engine, const YogModule *context)
         predicate = &context->predicates[clause->predicate];
         id = find_predicate(engine->module, predicate->name.text, predicate->name.length, predicate->arity);
         if (id == SIZE_MAX) continue; /* a context fact for an unknown predicate is ignored */
+        if (!check_input_types(engine, context, clause, &engine->module->predicates[id], error))
+            return false;
         if (engine->match_count == engine->match_capacity) {
             size_t next = engine->match_capacity == 0 ? 8 : engine->match_capacity * 2;
             ContextMatch *grown;
@@ -506,38 +673,187 @@ static bool finish_result(YogEngine *engine, YogVerdict decision, const char *re
     return true;
 }
 
-typedef struct {
-    bool found;
-} StopCtx;
-
-static bool stop_on_solution(void *user, YogEngine *engine)
+/* Frees everything a result owns; safe to call twice. */
+void yog_engine_result_free(YogEngineResult *result)
 {
+    size_t i;
+    if (result == NULL) return;
+    for (i = 0; i < result->obligation_count; ++i) {
+        size_t a;
+        for (a = 0; a < result->obligations[i].arg_count; ++a) free(result->obligations[i].args[a].text);
+        free(result->obligations[i].args);
+        free(result->obligations[i].name);
+    }
+    free(result->obligations);
+    free(result->reason);
+    free(result->trace);
+    result->obligations = NULL;
+    result->obligation_count = 0;
+    result->reason = NULL;
+    result->trace = NULL;
+}
+
+/* ------------------------------------------------------------- obligations */
+
+typedef struct {
+    YogEngine         *engine;
+    const YogIRClause *clause;
+    size_t             frame;
+    bool               collect;
+    bool               found;
+    YogEngineResult   *result;
+    size_t            *capacity;
+} DecisionCtx;
+
+static bool arg_from_term(YogEngine *engine, YogIRTerm term, size_t frame,
+                          const YogIRGoal *goal, YogEngineArg *out)
+{
+    YogIRTerm resolved = yog_store_resolve(&engine->store, to_absolute(term, frame));
+    const YogValue *value;
+    memset(out, 0, sizeof(*out));
+    if (resolved.kind == YOG_IR_VAR)
+        return fail(engine, goal->line, goal->column, "obligation argument is not bound");
+    value = yog_value_at(&engine->space, resolved.index);
+    if (value == NULL)
+        return fail(engine, goal->line, goal->column, "obligation refers to an invalid constant");
+    if (value->kind == YOG_VALUE_INTEGER) {
+        out->kind = 1;
+        out->integer = value->integer;
+    } else if (value->kind == YOG_VALUE_BOOLEAN) {
+        out->kind = 2;
+        out->integer = value->integer;
+    } else {
+        out->kind = 0;
+        out->text = malloc(value->text.length + 1);
+        if (out->text == NULL)
+            return fail(engine, goal->line, goal->column, "out of memory recording an obligation");
+        if (value->text.length > 0) memcpy(out->text, value->text.text, value->text.length);
+        out->text[value->text.length] = '\0';
+    }
+    return true;
+}
+
+static bool obligation_equal(const YogEngineObligation *a, const YogEngineObligation *b)
+{
+    size_t i;
+    if (a->arg_count != b->arg_count || strcmp(a->name, b->name) != 0) return false;
+    for (i = 0; i < a->arg_count; ++i) {
+        if (a->args[i].kind != b->args[i].kind) return false;
+        if (a->args[i].kind == 0) {
+            if (strcmp(a->args[i].text, b->args[i].text) != 0) return false;
+        } else if (a->args[i].integer != b->args[i].integer) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static void obligation_release(YogEngineObligation *o)
+{
+    size_t a;
+    for (a = 0; a < o->arg_count; ++a) free(o->args[a].text);
+    free(o->args);
+    free(o->name);
+    memset(o, 0, sizeof(*o));
+}
+
+/* Reads one obligation goal while the clause's bindings are still live.  A
+ * duplicate of an obligation already collected is dropped, so the result is a
+ * deterministic, deduplicated list in clause order. */
+static bool record_obligation(DecisionCtx *ctx, const YogIRGoal *goal)
+{
+    YogEngine *engine = ctx->engine;
+    YogEngineResult *result = ctx->result;
+    YogEngineObligation fresh;
+    size_t a;
+
+    memset(&fresh, 0, sizeof(fresh));
+    fresh.name = malloc(goal->name.length + 1);
+    if (fresh.name == NULL)
+        return fail(engine, goal->line, goal->column, "out of memory recording an obligation");
+    if (goal->name.length > 0) memcpy(fresh.name, goal->name.text, goal->name.length);
+    fresh.name[goal->name.length] = '\0';
+    fresh.args = goal->arg_count == 0 ? NULL : calloc(goal->arg_count, sizeof(*fresh.args));
+    if (goal->arg_count > 0 && fresh.args == NULL) {
+        obligation_release(&fresh);
+        return fail(engine, goal->line, goal->column, "out of memory recording an obligation");
+    }
+    fresh.arg_count = goal->arg_count;
+    for (a = 0; a < goal->arg_count; ++a) {
+        if (!arg_from_term(engine, goal->args[a], ctx->frame, goal, &fresh.args[a])) {
+            fresh.arg_count = a;
+            obligation_release(&fresh);
+            return false;
+        }
+    }
+    for (a = 0; a < result->obligation_count; ++a) {
+        if (obligation_equal(&result->obligations[a], &fresh)) {
+            obligation_release(&fresh);
+            return true;
+        }
+    }
+    if (result->obligation_count >= YOG_VM_MAX_OBLIGATIONS) {
+        obligation_release(&fresh);
+        return fail(engine, goal->line, goal->column, "obligation limit exceeded (%u)",
+                    (unsigned)YOG_VM_MAX_OBLIGATIONS);
+    }
+    if (result->obligation_count == *ctx->capacity) {
+        size_t next = *ctx->capacity == 0 ? 4 : *ctx->capacity * 2;
+        YogEngineObligation *grown = realloc(result->obligations, next * sizeof(*grown));
+        if (grown == NULL) {
+            obligation_release(&fresh);
+            return fail(engine, goal->line, goal->column, "out of memory recording an obligation");
+        }
+        result->obligations = grown;
+        *ctx->capacity = next;
+    }
+    result->obligations[result->obligation_count++] = fresh;
+    return true;
+}
+
+static bool decision_yield(void *user, YogEngine *engine)
+{
+    DecisionCtx *ctx = user;
+    size_t g;
     (void)engine;
-    ((StopCtx *)user)->found = true;
+    ctx->found = true;
+    if (ctx->collect) {
+        for (g = 0; g < ctx->clause->goal_count; ++g) {
+            const YogIRGoal *goal = &ctx->clause->goals[g];
+            if (goal->kind != YOG_IR_OBLIGATION) continue;
+            if (!record_obligation(ctx, goal)) return false;
+        }
+    }
+    return false; /* the first solution of a clause is enough */
+}
+
+static bool clause_has_obligations(const YogIRClause *clause)
+{
+    size_t g;
+    for (g = 0; g < clause->goal_count; ++g)
+        if (clause->goals[g].kind == YOG_IR_OBLIGATION) return true;
     return false;
 }
 
-static bool body_has_solution(YogEngine *engine, const YogIRClause *clause, size_t frame,
-                              size_t args_base, const YogIRTerm *args)
+static bool clause_matches(YogEngine *engine, const YogIRClause *clause, size_t frame,
+                           const YogIRTerm *args, bool collect, YogEngineResult *result,
+                           size_t *capacity)
 {
-    StopCtx stop;
-    stop.found = false;
-    if (!unify_head(engine, clause, frame, args, clause->head_count, args_base, NULL)) return false;
+    DecisionCtx ctx;
+    ctx.engine = engine;
+    ctx.clause = clause;
+    ctx.frame = frame;
+    ctx.collect = collect;
+    ctx.found = false;
+    ctx.result = result;
+    ctx.capacity = capacity;
+    if (!unify_head(engine, clause, frame, args, clause->head_count, 0, NULL)) return false;
     if (clause->goal_count == 0) {
-        stop.found = true;
-        return true;
+        (void)decision_yield(&ctx, engine);
+        return ctx.found && !engine->failed;
     }
-    (void)solve_goals(engine, clause, frame, 0, stop_on_solution, &stop, 1);
-    return stop.found;
-}
-
-void yog_engine_result_free(YogEngineResult *result)
-{
-    if (result == NULL) return;
-    free(result->reason);
-    free(result->trace);
-    result->reason = NULL;
-    result->trace = NULL;
+    (void)solve_goals(engine, clause, frame, 0, decision_yield, &ctx, 1);
+    return ctx.found && !engine->failed;
 }
 
 /* ---------------------------------------------------------------- check() */
@@ -546,11 +862,13 @@ bool yog_engine_check(YogEngine *engine, const char *actor, const char *action,
                       const char *resource, const YogModule *context,
                       bool want_trace, YogEngineResult *result, YogEvalError *error)
 {
+    static const YogClauseKind passes[3] = { YOG_CLAUSE_DENY, YOG_CLAUSE_APPROVAL, YOG_CLAUSE_ALLOW };
     YogValue request[2];
     YogIRTerm goal[2];
     size_t predicate_id;
     size_t base;
     size_t kind_pass;
+    size_t capacity = 0;
     char reason[256];
 
     if (engine == NULL || result == NULL) return false;
@@ -561,8 +879,9 @@ bool yog_engine_check(YogEngine *engine, const char *actor, const char *action,
     }
 
     engine_reset(engine, context, want_trace);
-    if (!build_matches(engine, context)) {
-        if (error != NULL) (void)snprintf(error->message, sizeof(error->message), "out of memory preparing context facts");
+    if (!build_matches(engine, context, error)) {
+        if (error != NULL && error->message[0] == '\0')
+            (void)snprintf(error->message, sizeof(error->message), "out of memory preparing context facts");
         return false;
     }
 
@@ -590,9 +909,12 @@ bool yog_engine_check(YogEngine *engine, const char *actor, const char *action,
         return finish_result(engine, YOG_VERDICT_DENY, reason, result, error);
     }
 
-    for (kind_pass = 0; kind_pass < 2; ++kind_pass) {
+    /* Precedence: deny > require_approval > allow > default deny.  Obligations
+     * come only from the winning kind, in clause order, without duplicates. */
+    for (kind_pass = 0; kind_pass < 3; ++kind_pass) {
         const YogIRPredicate *predicate = &engine->module->predicates[predicate_id];
-        YogClauseKind wanted = kind_pass == 0 ? YOG_CLAUSE_DENY : YOG_CLAUSE_ALLOW;
+        YogClauseKind wanted = passes[kind_pass];
+        int first_line = 0;
         size_t i;
         for (i = 0; i < predicate->decision_count; ++i) {
             const YogIRClause *clause = &engine->module->clauses[predicate->decisions[i]];
@@ -601,29 +923,47 @@ bool yog_engine_check(YogEngine *engine, const char *actor, const char *action,
             bool matched;
 
             if (clause->kind != wanted) continue;
+            /* After the first match, later clauses only matter for their obligations. */
+            if (first_line != 0 && !clause_has_obligations(clause)) continue;
 
             mark = yog_store_mark(&engine->store);
             frame = 0;
             if (!yog_store_push_frame(&engine->store, clause->variable_count, &frame)) {
                 (void)fail(engine, clause->line, clause->column, "out of memory evaluating a decision clause");
-                (void)error;
+                if (error != NULL) *error = engine->error;
+                yog_engine_result_free(result);
                 return false;
             }
-            matched = body_has_solution(engine, clause, frame, 0, goal);
+            matched = clause_matches(engine, clause, frame, goal, wanted != YOG_CLAUSE_DENY,
+                                     result, &capacity);
             (void)yog_store_reset(&engine->store, mark);
             engine->store.cell_count = frame;
 
             if (engine->failed) {
                 if (error != NULL) *error = engine->error;
+                yog_engine_result_free(result);
                 return false;
             }
             if (matched) {
-                (void)snprintf(reason, sizeof(reason), "%s clause at line %d matched",
-                               wanted == YOG_CLAUSE_DENY ? "deny" : "allow", clause->line);
-                tracef(engine, "-> %s (%s)\n", wanted == YOG_CLAUSE_DENY ? "DENY" : "ALLOW", reason);
-                return finish_result(engine, wanted == YOG_CLAUSE_DENY ? YOG_VERDICT_DENY : YOG_VERDICT_ALLOW,
-                                     reason, result, error);
+                if (first_line == 0) first_line = clause->line;
+                if (wanted == YOG_CLAUSE_DENY) break;
             }
+        }
+        if (first_line != 0) {
+            const char *kind_name = wanted == YOG_CLAUSE_DENY ? "deny" :
+                                    (wanted == YOG_CLAUSE_APPROVAL ? "require_approval" : "allow");
+            const char *verdict_name = wanted == YOG_CLAUSE_DENY ? "DENY" :
+                                       (wanted == YOG_CLAUSE_APPROVAL ? "REQUIRE_APPROVAL" : "ALLOW");
+            YogVerdict verdict = wanted == YOG_CLAUSE_DENY ? YOG_VERDICT_DENY :
+                                 (wanted == YOG_CLAUSE_APPROVAL ? YOG_VERDICT_REQUIRE_APPROVAL : YOG_VERDICT_ALLOW);
+            (void)snprintf(reason, sizeof(reason), "%s clause at line %d matched", kind_name, first_line);
+            tracef(engine, "-> %s (%s)\n", verdict_name, reason);
+            result->matched_line = first_line;
+            if (!finish_result(engine, verdict, reason, result, error)) {
+                yog_engine_result_free(result);
+                return false;
+            }
+            return true;
         }
     }
 
@@ -647,6 +987,11 @@ static bool collect_solution(void *user, YogEngine *engine)
     QueryCtx *ctx = user;
     size_t i;
     bool printed = false;
+
+    engine->solutions++;
+    if (engine->solutions > engine->max_solutions)
+        return fail(engine, ctx->query->line, ctx->query->column,
+                    "solution limit exceeded (%zu)", engine->max_solutions);
 
     if (!ctx->any) {
         fprintf(ctx->out, "  -> TRUE\n");
@@ -676,8 +1021,9 @@ bool yog_engine_run_queries(YogEngine *engine, const YogModule *context,
 
     if (engine == NULL || out == NULL) return false;
     engine_reset(engine, context, want_trace);
-    if (!build_matches(engine, context)) {
-        if (error != NULL) (void)snprintf(error->message, sizeof(error->message), "out of memory preparing context facts");
+    if (!build_matches(engine, context, error)) {
+        if (error != NULL && error->message[0] == '\0')
+            (void)snprintf(error->message, sizeof(error->message), "out of memory preparing context facts");
         return false;
     }
 

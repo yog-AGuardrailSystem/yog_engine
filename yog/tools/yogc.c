@@ -12,7 +12,8 @@
  *                                                   compiled decisions; with one:
  *                                                   show the decision and its trace
  *
- * Exit status: 0 ok / allowed, 1 compile error, 2 usage or I/O error, 3 denied.
+ * Exit status: 0 ok / allowed, 1 compile error, 2 usage or I/O error, 3 denied,
+ * 4 requires approval.
  */
 #include <stdbool.h>
 #include <stdio.h>
@@ -61,9 +62,55 @@ static Yog *load(const char *path)
     return y;
 }
 
+/* Exit status for a decision: 0 allow, 3 deny, 4 require approval. */
+static int decision_exit_code(YogDecision decision)
+{
+    switch (decision) {
+    case YOG_ALLOW: return 0;
+    case YOG_REQUIRE_APPROVAL: return 4;
+    default: return 3;
+    }
+}
+
+/* One obligation per line after the header, as a JSON object. */
+static void print_json_string(const char *text)
+{
+    const unsigned char *p = (const unsigned char *)text;
+    putchar('"');
+    for (; *p; ++p) {
+        if (*p == '"' || *p == '\\') printf("\\%c", *p);
+        else if (*p == '\n') fputs("\\n", stdout);
+        else if (*p == '\r') fputs("\\r", stdout);
+        else if (*p == '\t') fputs("\\t", stdout);
+        else if (*p < 0x20) printf("\\u%04x", *p);
+        else putchar(*p);
+    }
+    putchar('"');
+}
+
+static void print_obligations(const YogResult *result)
+{
+    size_t i;
+    for (i = 0; i < result->obligation_count; ++i) {
+        const YogObligation *o = &result->obligations[i];
+        size_t a;
+        fputs("OBLIGATION|{\"name\":", stdout);
+        print_json_string(o->name);
+        fputs(",\"args\":[", stdout);
+        for (a = 0; a < o->arg_count; ++a) {
+            if (a > 0) putchar(',');
+            if (o->args[a].kind == YOG_OBLIGATION_INTEGER) printf("%lld", o->args[a].integer);
+            else if (o->args[a].kind == YOG_OBLIGATION_BOOLEAN) fputs(o->args[a].integer != 0 ? "true" : "false", stdout);
+            else print_json_string(o->args[a].text);
+        }
+        fputs("]}\n", stdout);
+    }
+}
+
 static void print_result(const YogResult *result, bool trace)
 {
-    printf("%s|%s\n", result->decision == YOG_ALLOW ? "ALLOW" : "DENY", result->reason);
+    printf("%s|%s\n", yog_decision_name(result->decision), result->reason);
+    print_obligations(result);
     if (trace && result->trace != NULL) {
         const char *line = result->trace;
         while (*line) {
@@ -100,8 +147,9 @@ static void explain_module(const Yog *yog)
     if (module == NULL) return;
     printf("policy: %zu predicates, %zu clauses, %zu queries\n",
            module->predicate_count, module->clause_count, module->query_count);
-    printf("limits: max_steps=%zu max_depth=%d\n",
-           limits.max_steps, limits.max_depth);
+    printf("limits: max_steps=%zu max_depth=%d max_solutions=%zu max_millis=%zu max_memory=%zu\n",
+           limits.max_steps, limits.max_depth, limits.max_solutions, limits.max_millis,
+           limits.max_memory);
 
     for (i = 0; i < module->predicate_count; ++i) {
         const YogIRPredicate *predicate = &module->predicates[i];
@@ -146,7 +194,7 @@ static int cmd_explain(Yog *yog, const char *context, const char *const *pos, in
         }
         print_result(&result, true);
         if (result.trace == NULL) puts("> (no clauses were entered)");
-        rc = result.decision == YOG_ALLOW ? 0 : 3;
+        rc = decision_exit_code(result.decision);
         yog_result_free(&result);
         return rc;
     }
@@ -190,6 +238,122 @@ static int cmd_batch(Yog *yog, bool trace)
     return 0;
 }
 
+/* ---------------------------------------------------------------- JSON mode */
+
+#define JSON_REQUEST_LIMIT ((size_t)1 << 20)
+
+/* Reads a whole stream, up to JSON_REQUEST_LIMIT bytes (more sets *too_big). */
+static char *read_stream(FILE *in, size_t *length, bool *too_big)
+{
+    size_t capacity = 4096, used = 0;
+    char *buffer = malloc(capacity);
+    *too_big = false;
+    if (buffer == NULL) return NULL;
+    for (;;) {
+        size_t got;
+        if (used + 4096 + 1 > capacity) {
+            char *grown;
+            capacity *= 2;
+            grown = realloc(buffer, capacity);
+            if (grown == NULL) { free(buffer); return NULL; }
+            buffer = grown;
+        }
+        got = fread(buffer + used, 1, 4096, in);
+        used += got;
+        if (used > JSON_REQUEST_LIMIT) { *too_big = true; used = JSON_REQUEST_LIMIT; break; }
+        if (got < 4096) break;
+    }
+    buffer[used] = '\0';
+    *length = used;
+    return buffer;
+}
+
+/* One line of JSON Lines; sets *too_big (and skips the rest of the line) when it is over the limit. */
+static char *read_json_line(FILE *in, size_t *length, bool *too_big, bool *eof)
+{
+    size_t capacity = 1024, used = 0;
+    char *buffer = malloc(capacity);
+    int c;
+    *too_big = false;
+    *eof = false;
+    if (buffer == NULL) return NULL;
+    while ((c = fgetc(in)) != EOF && c != '\n') {
+        if (*too_big) continue;
+        if (used >= JSON_REQUEST_LIMIT) { *too_big = true; continue; }
+        if (used + 2 > capacity) {
+            char *grown;
+            capacity *= 2;
+            grown = realloc(buffer, capacity);
+            if (grown == NULL) { free(buffer); return NULL; }
+            buffer = grown;
+        }
+        buffer[used++] = (char)c;
+    }
+    if (c == EOF && used == 0 && !*too_big) { free(buffer); *eof = true; return NULL; }
+    buffer[used] = '\0';
+    *length = used;
+    return buffer;
+}
+
+static int print_json_outcome(Yog *yog, const char *json, size_t length, bool trace)
+{
+    YogResult result;
+    YogError error;
+    char *text;
+    int rc;
+    if (!yog_check_json(yog, json, length, trace, &result, &error)) {
+        text = yog_error_to_json(&error);
+        puts(text != NULL ? text : "{\"error\":{\"message\":\"out of memory\"}}");
+        yog_string_free(text);
+        yog_result_free(&result);
+        return 2;
+    }
+    text = yog_result_to_json(yog, &result);
+    puts(text != NULL ? text : "{\"error\":{\"message\":\"out of memory\"}}");
+    yog_string_free(text);
+    rc = decision_exit_code(result.decision);
+    yog_result_free(&result);
+    return rc;
+}
+
+static int cmd_check_json(Yog *yog, const char *file, bool trace)
+{
+    FILE *in = stdin;
+    char *json;
+    size_t length = 0;
+    bool too_big;
+    int rc;
+    if (file != NULL && strcmp(file, "-") != 0) {
+        in = fopen(file, "rb");
+        if (in == NULL) { fprintf(stderr, "error: cannot open %s\n", file); return 2; }
+    }
+    json = read_stream(in, &length, &too_big);
+    if (in != stdin) fclose(in);
+    if (json == NULL) { fputs("error: out of memory\n", stderr); return 2; }
+    if (too_big) { puts("{\"error\":{\"message\":\"request is larger than 1 MiB\"}}"); free(json); return 2; }
+    rc = print_json_outcome(yog, json, length, trace);
+    free(json);
+    return rc;
+}
+
+/* JSON Lines in, JSON Lines out: one result (or {"error":..}) per request line.  Never exits early on a
+ * bad request, so a gateway can keep one process open. */
+static int cmd_batch_json(Yog *yog, bool trace)
+{
+    for (;;) {
+        size_t length = 0;
+        bool too_big, eof;
+        char *line = read_json_line(stdin, &length, &too_big, &eof);
+        if (eof) break;
+        if (line == NULL) { puts("{\"error\":{\"message\":\"out of memory\"}}"); fflush(stdout); return 2; }
+        if (too_big) puts("{\"error\":{\"message\":\"request is larger than 1 MiB\"}}");
+        else if (length > 0) (void)print_json_outcome(yog, line, length, trace);
+        fflush(stdout);
+        free(line);
+    }
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     const char *cmd;
@@ -202,6 +366,10 @@ int main(int argc, char **argv)
     int rc = 0;
     int i;
 
+    if (argc == 2 && strcmp(argv[1], "--version") == 0) {
+        printf("yogc %s\n", yog_version());
+        return 0;
+    }
     if (argc < 3) goto usage;
     cmd = argv[1];
     path = argv[2];
@@ -222,6 +390,10 @@ int main(int argc, char **argv)
         yog_ir_dump(yog_module(yog), stdout);
     } else if (strcmp(cmd, "batch") == 0) {
         rc = cmd_batch(yog, trace);
+    } else if (strcmp(cmd, "check-json") == 0) {
+        rc = cmd_check_json(yog, npos > 0 ? pos[0] : NULL, trace);
+    } else if (strcmp(cmd, "batch-json") == 0) {
+        rc = cmd_batch_json(yog, trace);
     } else if (strcmp(cmd, "validate") == 0) {
         printf("ok: %s\n", path);
     } else if (strcmp(cmd, "explain") == 0) {
@@ -234,7 +406,7 @@ int main(int argc, char **argv)
             rc = 2;
         } else {
             print_result(&result, trace);
-            rc = result.decision == YOG_ALLOW ? 0 : 3;
+            rc = decision_exit_code(result.decision);
             yog_result_free(&result);
         }
     } else {
@@ -245,7 +417,10 @@ int main(int argc, char **argv)
     return rc;
 
 usage:
-    fputs("usage: yogc run|ir|batch|validate POLICY [--trace]\n"
+    fputs("usage: yogc --version\n"
+          "       yogc run|ir|batch|validate POLICY [--trace]\n"
+          "       yogc check-json POLICY [REQUEST.json|-] [--trace]   (one JSON request, JSON result)\n"
+          "       yogc batch-json POLICY [--trace]                    (JSON Lines in, JSON Lines out)\n"
           "       yogc check POLICY ACTOR ACTION RESOURCE [--context \"fact a(b); ...\"] [--trace]\n"
           "       yogc explain POLICY [ACTOR ACTION RESOURCE] [--context \"fact a(b); ...\"]\n", stderr);
     return 2;

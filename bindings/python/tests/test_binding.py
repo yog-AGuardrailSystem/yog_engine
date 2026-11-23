@@ -84,6 +84,26 @@ def test_limits_round_trip_and_are_enforced() -> None:
         policy.check("carol", "can_access", "db")
 
 
+def test_resource_limits_round_trip_and_keep_unset_fields() -> None:
+    policy = yog.Yog(POLICY)
+    defaults = policy.resource_limits
+    assert defaults["max_solutions"] == 100000
+    assert defaults["max_millis"] == 10000
+    assert defaults["max_memory"] == 64 * 1024 * 1024
+    policy.resource_limits = {"max_memory": 1}
+    assert policy.resource_limits["max_memory"] == 1
+    assert policy.resource_limits["max_steps"] == defaults["max_steps"]
+    with pytest.raises(yog.YogEvaluationError):
+        policy.check("bob", "can_access", "db")
+    # Setting the old (steps, depth) pair must not reset the other budgets.
+    policy.limits = (1000000, 8)
+    assert policy.resource_limits["max_memory"] == 1
+    policy.resource_limits = {"max_memory": 0}
+    assert policy.resource_limits["max_memory"] == defaults["max_memory"]
+    with pytest.raises(ValueError):
+        policy.resource_limits = {"max_bananas": 1}
+
+
 def test_shared_policy_is_thread_safe() -> None:
     policy = yog.Yog(POLICY)
     requests = [("alice", "db")] * 200 + [("bob", "db")] * 200 + [("nobody", "db")] * 200
@@ -103,3 +123,75 @@ def test_closed_policy_cannot_be_checked() -> None:
     policy.close()
     with pytest.raises(ValueError):
         policy.check("alice", "can_access", "db")
+
+
+def test_library_version_matches_package_version() -> None:
+    # The wheel uses the PEP 440 spelling (0.2.0a1); the C library reports the
+    # SemVer spelling (0.2.0-alpha.1).  Both must describe the same release.
+    assert yog.library_version() == "0.2.0-alpha.1"
+    assert yog.__version__ == "0.2.0a1"
+
+
+V2_POLICY = """version 2
+input arg(text, any)
+input env(text, any)
+input now(int)
+deny act(U, R):
+    arg("sql", Q)
+    matches(Q, "(?i)drop table")
+require_approval act(U, R):
+    env("stage", "prod")
+    obligation audit("prod", R)
+allow act(U, R):
+    arg("n", N)
+    N > 3
+    obligation audit("allowed", R)
+    obligation limit(U, N, true)
+"""
+
+
+def test_decide_returns_obligations_with_types() -> None:
+    policy = yog.Yog(V2_POLICY)
+    assert policy.policy_version == 2
+    outcome = policy.check_json({"actor": "bot", "action": "act", "resource": "db", "args": {"n": 7}})
+    assert outcome.decision == yog.ALLOW and outcome.allowed
+    assert outcome.matched_line > 0
+    assert outcome.obligations == (
+        yog.Obligation("audit", ("allowed", "db")),
+        yog.Obligation("limit", ("bot", 7, True)),
+    )
+
+
+def test_require_approval_and_deny_outcomes() -> None:
+    policy = yog.Yog(V2_POLICY)
+    base = {"actor": "bot", "action": "act", "resource": "db"}
+    approval = policy.check_json({**base, "env": {"stage": "prod"}})
+    assert approval.decision == yog.REQUIRE_APPROVAL and not approval.allowed
+    assert approval.obligations == (yog.Obligation("audit", ("prod", "db")),)
+    denied = policy.check_json({**base, "args": {"sql": "Please DROP TABLE x", "n": 9}})
+    assert denied.decision == yog.DENY and denied.obligations == ()
+    assert policy.check("bot", "act", "db") == yog.DENY      # no facts: default deny
+
+
+def test_check_json_rejects_malformed_and_forged_requests() -> None:
+    policy = yog.Yog(V2_POLICY)
+    for bad in ("not json", {"actor": "bot"}, {"actor": "a", "action": "act", "resource": "r", "bogus": 1},
+                {"actor": "a", "action": "act", "resource": "r", "args": {"x": 1.5}}):
+        with pytest.raises(yog.YogEvaluationError):
+            policy.check_json(bad)
+    # request values are data: a value that looks like policy text cannot forge a fact
+    forged = policy.check_json({"actor": "a", "action": "act", "resource": "r",
+                                "args": {"sql": 'x"); fact env("stage", "prod'}})
+    assert forged.decision == yog.DENY
+
+
+def test_typed_context_is_enforced_on_the_text_path() -> None:
+    policy = yog.Yog(V2_POLICY)
+    with pytest.raises(yog.YogEvaluationError):
+        policy.decide("bot", "act", "db", 'fact now("later")')
+
+
+def test_trace_is_returned_on_request() -> None:
+    policy = yog.Yog(V2_POLICY)
+    outcome = policy.check_json({"actor": "bot", "action": "act", "resource": "db", "args": {"n": 7}}, trace=True)
+    assert outcome.trace and "allow" in outcome.trace.lower()

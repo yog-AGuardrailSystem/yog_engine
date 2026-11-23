@@ -35,6 +35,12 @@
     X(TOK_DENY,     "DENY")                                                   \
     X(TOK_QUERY,    "QUERY")                                                  \
     X(TOK_NOT,      "NOT")                                                    \
+    X(TOK_REQUIRE_APPROVAL, "REQUIRE_APPROVAL")                               \
+    X(TOK_OBLIGATION, "OBLIGATION")                                           \
+    X(TOK_INPUT,    "INPUT")                                                  \
+    X(TOK_VERSION,  "VERSION")                                                \
+    X(TOK_TRUE,     "TRUE")                                                   \
+    X(TOK_FALSE,    "FALSE")                                                  \
     /* --- punctuation --- */                                                 \
     X(TOK_LPAREN,   "LPAREN")                                                 \
     X(TOK_RPAREN,   "RPAREN")                                                 \

@@ -5,12 +5,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "yog-engine"
-version = "0.1.0"
+version = "0.2.0a1"
 description = "A lightweight deterministic policy engine for AI-agent tool calls"
 readme = "README.md"
 requires-python = ">=3.10"
-license = "MIT"
+license = "Apache-2.0"
 dependencies = []
 
 [tool.setuptools]
-py-modules = ["yog"]
+package-dir = {"" = "reference"}
+py-modules = ["yog_ref"]

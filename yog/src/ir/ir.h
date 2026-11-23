@@ -36,12 +36,16 @@ typedef struct {
     size_t        index;
 } YogIRTerm;
 
-typedef enum { YOG_IR_CALL, YOG_IR_NOT, YOG_IR_COMPARE } YogIRGoalKind;
+/* YOG_IR_OBLIGATION never filters solutions: when its clause wins, the engine
+ * reads `name` and the resolved args and returns them to the caller. */
+typedef enum { YOG_IR_CALL, YOG_IR_NOT, YOG_IR_COMPARE, YOG_IR_OBLIGATION } YogIRGoalKind;
 
 typedef struct {
     YogIRGoalKind           kind;
     YogComparisonOperator   comparison;  /* valid for YOG_IR_COMPARE */
-    size_t                  predicate;   /* valid for CALL / NOT */
+    size_t                  predicate;   /* valid for CALL / NOT unless builtin != 0 */
+    int                     builtin;     /* YogBuiltinId for CALL / NOT, else 0 */
+    YogText                 name;        /* valid for YOG_IR_OBLIGATION */
     YogIRTerm              *args;
     size_t                  arg_count;
     int                     line;
@@ -52,7 +56,8 @@ typedef enum {
     YOG_CLAUSE_FACT,
     YOG_CLAUSE_RULE,
     YOG_CLAUSE_ALLOW,
-    YOG_CLAUSE_DENY
+    YOG_CLAUSE_DENY,
+    YOG_CLAUSE_APPROVAL   /* require_approval */
 } YogClauseKind;
 
 typedef struct {
@@ -68,10 +73,14 @@ typedef struct {
     int           column;
 } YogIRClause;
 
+/* Declared argument types of an `input` predicate. */
+typedef enum { YOG_TYPE_ANY = 0, YOG_TYPE_TEXT, YOG_TYPE_INT, YOG_TYPE_BOOL } YogArgType;
+
 typedef struct {
     YogText          name;
     size_t           arity;
     YogPredicateRole role;
+    unsigned char   *arg_types;      /* arity entries (YogArgType); NULL unless role is INPUT */
     size_t          *facts;
     size_t           fact_count;
     size_t           fact_capacity;
@@ -95,12 +104,12 @@ typedef struct {
     int       column;
 } YogIRQuery;
 
-typedef enum { YOG_VALUE_TEXT, YOG_VALUE_INTEGER } YogValueKind;
+typedef enum { YOG_VALUE_TEXT, YOG_VALUE_INTEGER, YOG_VALUE_BOOLEAN } YogValueKind;
 
 typedef struct {
     YogValueKind kind;
     YogText      text;       /* identifiers and quoted strings share this kind */
-    int64_t      integer;
+    int64_t      integer;    /* the number, or 0/1 for YOG_VALUE_BOOLEAN */
 } YogValue;
 
 typedef struct YogModule {
@@ -124,6 +133,7 @@ typedef struct YogModule {
     size_t          query_capacity;
 
     size_t          variable_count;   /* informational: total slots allocated */
+    int             language_version; /* from the `version` statement; 1 when absent */
 } YogModule;
 
 typedef struct {

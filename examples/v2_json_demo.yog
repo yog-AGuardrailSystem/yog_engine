@@ -1,0 +1,34 @@
+version 2
+
+# Facts supplied by the JSON request (see docs/INTERFACES.md):
+#   args  -> arg("key", value)     env -> env("key", value)
+#   state -> state("key", value)   now -> now(N)      state.version -> state_version(N)
+input arg(text, any)
+input env(text, any)
+input state(text, any)
+input now(int)
+
+fact allowed_tool(read_file)
+fact allowed_tool(list_dir)
+
+deny run_tool(Agent, Tool):
+    arg("sql", Q)
+    matches(Q, "(?i)(drop|truncate)\s")
+
+deny run_tool(Agent, Tool):
+    arg("path", P)
+    not under(P, "/workspace")
+
+require_approval run_tool(Agent, Tool):
+    env("stage", "prod")
+    obligation audit("prod_call", Tool)
+
+deny run_tool(Agent, Tool):
+    state("deletes_last_10m", N)
+    N >= 3
+
+allow run_tool(Agent, Tool):
+    allowed_tool(Tool)
+    obligation audit("tool_call", Tool)
+    now(T)
+    obligation seen_at(T)

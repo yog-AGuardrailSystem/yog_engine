@@ -15,6 +15,7 @@ static const char *clause_kind_name(YogClauseKind kind)
     case YOG_CLAUSE_RULE: return "rule";
     case YOG_CLAUSE_ALLOW: return "allow";
     case YOG_CLAUSE_DENY: return "deny";
+    case YOG_CLAUSE_APPROVAL: return "require_approval";
     default: return "?";
     }
 }
@@ -25,6 +26,7 @@ static const char *goal_kind_name(YogIRGoalKind kind)
     case YOG_IR_CALL: return "call";
     case YOG_IR_NOT: return "not";
     case YOG_IR_COMPARE: return "compare";
+    case YOG_IR_OBLIGATION: return "obligation";
     default: return "?";
     }
 }
@@ -54,6 +56,8 @@ static void dump_term(const YogModule *module, const YogIRTerm *term, FILE *out)
     }
     if (module->values[term->index].kind == YOG_VALUE_INTEGER) {
         fprintf(out, "%lld", (long long)module->values[term->index].integer);
+    } else if (module->values[term->index].kind == YOG_VALUE_BOOLEAN) {
+        fputs(module->values[term->index].integer != 0 ? "true" : "false", out);
     } else {
         fprintf(out, "\"%.*s\"", (int)module->values[term->index].text.length,
                 module->values[term->index].text.text);
@@ -81,6 +85,8 @@ void yog_ir_dump(const YogModule *module, FILE *out)
         const YogValue *value = &module->values[i];
         if (value->kind == YOG_VALUE_INTEGER)
             fprintf(out, "value[%zu]=int:%lld\n", i, (long long)value->integer);
+        else if (value->kind == YOG_VALUE_BOOLEAN)
+            fprintf(out, "value[%zu]=bool:%s\n", i, value->integer != 0 ? "true" : "false");
         else
             fprintf(out, "value[%zu]=text:\"%.*s\"\n", i, (int)value->text.length, value->text.text);
     }
@@ -121,6 +127,10 @@ void yog_ir_dump(const YogModule *module, FILE *out)
             fprintf(out, "  goal[%zu]=%s", g, goal_kind_name(goal->kind));
             if (goal->kind == YOG_IR_COMPARE) {
                 fprintf(out, " %s", comparison_name(goal->comparison));
+            } else if (goal->kind == YOG_IR_OBLIGATION) {
+                fprintf(out, " %.*s", (int)goal->name.length, goal->name.text);
+            } else if (goal->builtin != 0) {
+                fprintf(out, " builtin#%d", goal->builtin);
             } else {
                 const YogIRPredicate *target = &module->predicates[goal->predicate];
                 fprintf(out, " %.*s/%zu", (int)target->name.length, target->name.text, target->arity);

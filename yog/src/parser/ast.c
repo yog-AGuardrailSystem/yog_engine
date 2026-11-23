@@ -67,7 +67,9 @@ void yog_atom_free(YogAtom *atom)
 void yog_goal_free(YogGoal *goal)
 {
     if (goal == NULL) return;
-    if (goal->type == YOG_GOAL_ATOM || goal->type == YOG_GOAL_NEGATION) yog_atom_free(&goal->as.atom);
+    if (goal->type == YOG_GOAL_ATOM || goal->type == YOG_GOAL_NEGATION ||
+        goal->type == YOG_GOAL_OBLIGATION)
+        yog_atom_free(&goal->as.atom);
     memset(goal, 0, sizeof(*goal));
 }
 
@@ -84,10 +86,15 @@ void yog_statement_free(YogStatement *statement)
 {
     if (statement == NULL) return;
     switch (statement->type) {
-    case YOG_STATEMENT_FACT: yog_atom_free(&statement->as.fact); break;
+    case YOG_STATEMENT_FACT:
+    case YOG_STATEMENT_INPUT:
+    case YOG_STATEMENT_VERSION:
+        yog_atom_free(&statement->as.fact);
+        break;
     case YOG_STATEMENT_RULE:
     case YOG_STATEMENT_ALLOW:
     case YOG_STATEMENT_DENY:
+    case YOG_STATEMENT_REQUIRE_APPROVAL:
         yog_atom_free(&statement->as.clause.head);
         yog_body_free(&statement->as.clause.body);
         break;

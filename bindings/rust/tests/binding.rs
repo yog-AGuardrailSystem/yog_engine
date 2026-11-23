@@ -1,4 +1,4 @@
-use yog::{Decision, Limits, Yog};
+use yog::{Decision, Limits, Obligation, ObligationArg, Yog};
 
 const POLICY: &str = "\
 fact role(alice, admin)
@@ -46,11 +46,13 @@ fn limits_round_trip_and_fail_closed() {
     policy.set_limits(Limits {
         max_steps: 1_000_000,
         max_depth: 8,
+        ..Limits::default()
     });
     assert_eq!(policy.limits().max_depth, 8);
     policy.set_limits(Limits {
         max_steps: 1,
         max_depth: 8,
+        ..Limits::default()
     });
     assert!(policy.check("nobody", "can_access", "db").is_err());
 }
@@ -98,5 +100,91 @@ fn policy_is_shareable_across_threads() {
     }
     for handle in handles {
         handle.join().unwrap();
+    }
+}
+
+#[test]
+fn library_version_matches_crate_version() {
+    assert_eq!(yog::library_version(), yog::VERSION);
+}
+
+#[test]
+fn resource_limits_default_and_fail_closed() {
+    let mut policy = Yog::compile(POLICY).expect("compile");
+    let defaults = policy.limits();
+    assert_eq!(defaults.max_solutions, 100_000);
+    assert_eq!(defaults.max_millis, 10_000);
+    assert_eq!(defaults.max_memory, 64 * 1024 * 1024);
+    policy.set_limits(Limits {
+        max_memory: 1,
+        ..Limits::default()
+    });
+    assert_eq!(policy.limits().max_memory, 1);
+    assert_eq!(policy.limits().max_steps, defaults.max_steps);
+    assert!(policy.check("bob", "can_access", "db").is_err());
+}
+
+const V2: &str = "version 2
+input arg(text, any)
+input env(text, any)
+deny act(U, R):
+    arg(\"sql\", Q)
+    matches(Q, \"(?i)drop table\")
+require_approval act(U, R):
+    env(\"stage\", \"prod\")
+    obligation audit(\"prod\", R)
+allow act(U, R):
+    arg(\"n\", N)
+    N > 3
+    obligation audit(\"allowed\", R)
+    obligation limit(U, N, true)
+";
+
+#[test]
+fn outcomes_and_obligations_round_trip() {
+    let policy = Yog::compile(V2).expect("compile");
+    assert_eq!(policy.policy_version(), 2);
+    let allow = policy
+        .check_json(r#"{"actor":"bot","action":"act","resource":"db","args":{"n":7}}"#, false)
+        .expect("check");
+    assert_eq!(allow.decision, Decision::Allow);
+    assert_eq!(
+        allow.obligations,
+        vec![
+            Obligation {
+                name: "audit".into(),
+                args: vec![ObligationArg::Text("allowed".into()), ObligationArg::Text("db".into())],
+            },
+            Obligation {
+                name: "limit".into(),
+                args: vec![
+                    ObligationArg::Text("bot".into()),
+                    ObligationArg::Integer(7),
+                    ObligationArg::Boolean(true),
+                ],
+            },
+        ]
+    );
+    let approval = policy
+        .check_json(r#"{"actor":"bot","action":"act","resource":"db","env":{"stage":"prod"}}"#, false)
+        .expect("check");
+    assert_eq!(approval.decision, Decision::RequireApproval);
+    let denied = policy
+        .check_json(r#"{"actor":"bot","action":"act","resource":"db","args":{"sql":"x DROP TABLE y","n":9}}"#, false)
+        .expect("check");
+    assert_eq!(denied.decision, Decision::Deny);
+    assert!(denied.obligations.is_empty());
+}
+
+#[test]
+fn malformed_json_requests_are_errors_not_allows() {
+    let policy = Yog::compile(V2).expect("compile");
+    for bad in [
+        "not json",
+        r#"{"actor":"bot"}"#,
+        r#"{"actor":"a","action":"act","resource":"r","bogus":1}"#,
+        r#"{"actor":"a","action":"act","resource":"r","args":{"x":1.5}}"#,
+    ] {
+        assert!(policy.check_json(bad, false).is_err(), "{bad}");
     }
 }

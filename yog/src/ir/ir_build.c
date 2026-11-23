@@ -7,6 +7,8 @@
  */
 #include "ir/ir.h"
 
+#include "builtin/builtin.h"
+
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
@@ -90,7 +92,7 @@ static bool intern_value(BuildCtx *ctx, YogValue value, size_t *out)
     for (i = 0; i < module->value_count; ++i) {
         const YogValue *candidate = &module->values[i];
         if (candidate->kind != value.kind) continue;
-        if (value.kind == YOG_VALUE_INTEGER) {
+        if (value.kind == YOG_VALUE_INTEGER || value.kind == YOG_VALUE_BOOLEAN) {
             if (candidate->integer == value.integer) { *out = i; return true; }
         } else if (text_equal(candidate->text, value.text)) {
             *out = i;
@@ -134,6 +136,16 @@ static bool intern_integer(BuildCtx *ctx, int64_t number, size_t *out)
     return intern_value(ctx, value, out);
 }
 
+static bool intern_boolean(BuildCtx *ctx, bool flag, size_t *out)
+{
+    YogValue value;
+    value.kind = YOG_VALUE_BOOLEAN;
+    value.text.text = NULL;
+    value.text.length = 0;
+    value.integer = flag ? 1 : 0;
+    return intern_value(ctx, value, out);
+}
+
 /* Build one IR term.  Wildcards always allocate a fresh slot, which is how the
  * reference implements `_` (a variable unique to that occurrence). */
 static bool build_term(BuildCtx *ctx, const YogTerm *term, VarSlots *slots, YogIRTerm *out)
@@ -159,6 +171,9 @@ static bool build_term(BuildCtx *ctx, const YogTerm *term, VarSlots *slots, YogI
     case YOG_TERM_INTEGER:
         out->kind = YOG_IR_CONST;
         return intern_integer(ctx, term->integer_value, &out->index);
+    case YOG_TERM_BOOLEAN:
+        out->kind = YOG_IR_CONST;
+        return intern_boolean(ctx, term->integer_value != 0, &out->index);
     default:
         return set_error(ctx, term->line, term->column, "unsupported term");
     }
@@ -234,7 +249,22 @@ static bool build_goal(BuildCtx *ctx, const YogGoal *goal, VarSlots *slots, YogI
         return true;
     }
 
+    if (goal->type == YOG_GOAL_OBLIGATION) {
+        out->kind = YOG_IR_OBLIGATION;
+        out->name = goal->as.atom.predicate;
+        out->predicate = SIZE_MAX;
+        out->arg_count = goal->as.atom.term_count;
+        return build_term_array(ctx, goal->as.atom.terms, goal->as.atom.term_count, slots, &out->args);
+    }
+
     out->kind = goal->type == YOG_GOAL_NEGATION ? YOG_IR_NOT : YOG_IR_CALL;
+    out->builtin = (int)yog_builtin_find(goal->as.atom.predicate.text, goal->as.atom.predicate.length,
+                                         goal->as.atom.term_count);
+    if (out->builtin != 0) {
+        out->predicate = SIZE_MAX;
+        out->arg_count = goal->as.atom.term_count;
+        return build_term_array(ctx, goal->as.atom.terms, goal->as.atom.term_count, slots, &out->args);
+    }
     out->predicate = predicate_id(ctx->symbols, goal->as.atom.predicate, goal->as.atom.term_count);
     if (out->predicate == SIZE_MAX)
         return set_error(ctx, goal->line, goal->column,
@@ -257,6 +287,7 @@ static void free_module_contents(YogModule *module)
         free(module->predicates[i].facts);
         free(module->predicates[i].rules);
         free(module->predicates[i].decisions);
+        free(module->predicates[i].arg_types);
     }
     for (i = 0; i < module->clause_count; ++i) {
         size_t g;
@@ -336,6 +367,11 @@ static bool build_statement(BuildCtx *ctx, const YogStatement *statement)
         break;
     case YOG_STATEMENT_DENY:
         clause->kind = YOG_CLAUSE_DENY;
+        head = &statement->as.clause.head;
+        body = &statement->as.clause.body;
+        break;
+    case YOG_STATEMENT_REQUIRE_APPROVAL:
+        clause->kind = YOG_CLAUSE_APPROVAL;
         head = &statement->as.clause.head;
         body = &statement->as.clause.body;
         break;
@@ -479,6 +515,7 @@ bool yog_ir_build(const YogProgram *program, const YogSymbolTable *symbols,
         return false;
     }
     module->source = source;
+    module->language_version = 1;
     ctx.module = module;
     ctx.symbols = symbols;
     ctx.error = error;
@@ -505,6 +542,31 @@ bool yog_ir_build(const YogProgram *program, const YogSymbolTable *symbols,
     for (i = 0; i < program->statement_count; ++i) {
         const YogStatement *statement = &program->statements[i];
         bool ok;
+        if (statement->type == YOG_STATEMENT_VERSION) {
+            module->language_version = (int)statement->as.fact.terms[0].integer_value;
+            continue;
+        }
+        if (statement->type == YOG_STATEMENT_INPUT) {
+            const YogAtom *atom = &statement->as.fact;
+            size_t id = predicate_id(symbols, atom->predicate, atom->term_count);
+            size_t t;
+            if (id == SIZE_MAX || module->predicates[id].arg_types != NULL) continue;
+            module->predicates[id].arg_types = calloc(atom->term_count, 1);
+            if (module->predicates[id].arg_types == NULL) {
+                (void)set_error(&ctx, statement->line, statement->column, "out of memory recording input types");
+                yog_ir_free(module);
+                return false;
+            }
+            for (t = 0; t < atom->term_count; ++t) {
+                const YogText type = atom->terms[t].text;
+                unsigned char code = YOG_TYPE_ANY;
+                if (type.length == 4 && memcmp(type.text, "text", 4) == 0) code = YOG_TYPE_TEXT;
+                else if (type.length == 3 && memcmp(type.text, "int", 3) == 0) code = YOG_TYPE_INT;
+                else if (type.length == 4 && memcmp(type.text, "bool", 4) == 0) code = YOG_TYPE_BOOL;
+                module->predicates[id].arg_types[t] = code;
+            }
+            continue;
+        }
         if (statement->type == YOG_STATEMENT_QUERY) ok = build_query(&ctx, statement);
         else ok = build_statement(&ctx, statement);
         if (!ok) {

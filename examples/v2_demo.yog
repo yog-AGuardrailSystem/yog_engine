@@ -1,0 +1,25 @@
+version 2
+
+input tool_call(text, text)
+input arg(text, any)
+input env(text)
+
+fact approver(alice)
+fact sensitive_path(secrets)
+
+rule dangerous_sql(Q):
+    arg("query", Q)
+    matches(Q, "(?i)drop|truncate")
+
+deny run_tool(Agent, Tool):
+    dangerous_sql(_)
+
+require_approval run_tool(Agent, Tool):
+    tool_call(Tool, "deploy")
+    env("prod")
+    obligation audit("prod_deploy", Tool)
+
+allow run_tool(Agent, Tool):
+    tool_call(Tool, _)
+    obligation audit("tool_call", Tool)
+    obligation rate_limit(Agent, 10)

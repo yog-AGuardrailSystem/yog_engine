@@ -1,5 +1,13 @@
 cmake_minimum_required(VERSION 3.16)
-project(yog C)
+project(yog VERSION 0.2.0 LANGUAGES C)
+
+# The C header is the single source of the version string; fail early if the
+# CMake project version drifts from it.
+file(READ ${CMAKE_CURRENT_SOURCE_DIR}/include/api/yog.h YOG_HEADER_TEXT)
+string(REGEX MATCH "#define YOG_VERSION_STRING \"([0-9]+[.][0-9]+[.][0-9]+)" _yog_ver_match "${YOG_HEADER_TEXT}")
+if(NOT CMAKE_MATCH_1 STREQUAL PROJECT_VERSION)
+  message(FATAL_ERROR "yog.h YOG_VERSION_STRING (${CMAKE_MATCH_1}) does not match project version ${PROJECT_VERSION}")
+endif()
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -39,11 +47,14 @@ set(YOG_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 add_library(yog_lexer STATIC src/lexer/lexer.c)
 target_include_directories(yog_lexer PUBLIC ${YOG_SRC_DIR})
 
+add_library(yog_builtin STATIC src/builtin/builtin.c)
+target_include_directories(yog_builtin PUBLIC ${YOG_SRC_DIR})
+
 add_library(yog_parser STATIC src/parser/ast.c src/parser/parser.c)
 target_link_libraries(yog_parser PUBLIC yog_lexer)
 
 add_library(yog_sema STATIC src/sema/symbol_table.c src/sema/sema.c)
-target_link_libraries(yog_sema PUBLIC yog_parser)
+target_link_libraries(yog_sema PUBLIC yog_parser yog_builtin)
 
 add_library(yog_ir STATIC src/ir/ir_build.c src/ir/ir_dump.c)
 target_link_libraries(yog_ir PUBLIC yog_sema)
@@ -51,7 +62,7 @@ target_link_libraries(yog_ir PUBLIC yog_sema)
 add_library(yog_vm STATIC src/vm/unify.c src/vm/engine.c)
 target_link_libraries(yog_vm PUBLIC yog_ir)
 
-add_library(yog_api STATIC src/api/yog.c)
+add_library(yog_api STATIC src/api/yog.c src/api/json.c src/api/request.c)
 target_include_directories(yog_api PUBLIC ${YOG_INCLUDE_DIR} ${YOG_SRC_DIR})
 target_link_libraries(yog_api PUBLIC yog_vm)
 
@@ -60,6 +71,7 @@ target_link_libraries(yog_api PUBLIC yog_vm)
 # compiled directly so the exported symbols are exactly those marked YOG_API.
 add_library(yog_shared SHARED
   src/lexer/lexer.c
+  src/builtin/builtin.c
   src/parser/ast.c
   src/parser/parser.c
   src/sema/symbol_table.c
@@ -69,11 +81,15 @@ add_library(yog_shared SHARED
   src/vm/unify.c
   src/vm/engine.c
   src/api/yog.c
+  src/api/json.c
+  src/api/request.c
 )
 target_include_directories(yog_shared PUBLIC ${YOG_INCLUDE_DIR} ${YOG_SRC_DIR})
 target_compile_definitions(yog_shared PRIVATE YOG_SHARED_EXPORTS)
 set_target_properties(yog_shared PROPERTIES
   OUTPUT_NAME yog
+  VERSION ${PROJECT_VERSION}
+  SOVERSION ${PROJECT_VERSION_MAJOR}
   POSITION_INDEPENDENT_CODE ON
   C_VISIBILITY_PRESET hidden
 )
@@ -95,11 +111,14 @@ function(yog_test name source library)
 endfunction()
 
 yog_test(test_lexer  tests/lexer/test_lexer.c   yog_lexer)
+yog_test(test_builtin tests/builtin/test_builtin.c yog_builtin)
 yog_test(test_parser tests/parser/test_parser.c yog_parser)
 yog_test(test_sema   tests/sema/test_sema.c     yog_sema)
 yog_test(test_ir     tests/ir/test_ir.c         yog_ir)
 yog_test(test_vm     tests/vm/test_vm.c         yog_api)
 yog_test(test_api    tests/api/test_api.c       yog_api)
+yog_test(test_v2     tests/api/test_v2.c        yog_api)
+yog_test(test_json   tests/api/test_json.c      yog_api)
 
 add_executable(test_security tests/security/test_security.c)
 target_link_libraries(test_security PRIVATE yog_api Threads::Threads)

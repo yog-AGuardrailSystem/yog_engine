@@ -1,0 +1,20 @@
+[
+  {"name": "normalises host, dot segments and query keys", "input": {"url": "https://Example.com./a/../b?x=1&Y=2"},
+   "expected": {"http": {"parsed": true, "method": "GET", "scheme": "https", "host": "example.com", "port": 443, "path": "/b", "host_is_ip": false, "host_is_private": false, "has_credentials": false, "query_key": ["x", "y"]}}},
+  {"name": "cloud metadata endpoint is private", "input": {"url": "http://169.254.169.254/latest/meta-data/", "method": "post"},
+   "expected": {"http": {"parsed": true, "method": "POST", "scheme": "http", "host": "169.254.169.254", "port": 80, "path": "/latest/meta-data", "host_is_ip": true, "host_is_private": true, "has_credentials": false, "query_key": []}}},
+  {"name": "localhost is private", "input": {"url": "http://localhost:8080/x"},
+   "expected": {"http": {"parsed": true, "method": "GET", "scheme": "http", "host": "localhost", "port": 8080, "path": "/x", "host_is_ip": false, "host_is_private": true, "has_credentials": false, "query_key": []}}},
+  {"name": "credentials in the URL", "input": {"url": "https://user:pw@evil.example/"},
+   "expected": {"http": {"parsed": true, "method": "GET", "scheme": "https", "host": "evil.example", "port": 443, "path": "/", "host_is_ip": false, "host_is_private": false, "has_credentials": true, "query_key": []}}},
+  {"name": "percent-encoded dot segments cannot hide a traversal", "input": {"url": "http://example.com/a/%2e%2e/etc/passwd"},
+   "expected": {"http": {"parsed": true, "method": "GET", "scheme": "http", "host": "example.com", "port": 80, "path": "/etc/passwd", "host_is_ip": false, "host_is_private": false, "has_credentials": false, "query_key": []}}},
+  {"name": "ipv6 loopback", "input": {"url": "http://[::1]/"},
+   "expected": {"http": {"parsed": true, "method": "GET", "scheme": "http", "host": "::1", "port": 80, "path": "/", "host_is_ip": true, "host_is_private": true, "has_credentials": false, "query_key": []}}},
+  {"name": "internal suffix is private", "input": {"url": "https://db.internal/x"},
+   "expected": {"http": {"parsed": true, "method": "GET", "scheme": "https", "host": "db.internal", "port": 443, "path": "/x", "host_is_ip": false, "host_is_private": true, "has_credentials": false, "query_key": []}}},
+  {"name": "a space makes it not a URL", "input": {"url": "not a url"}, "expected": {"http": {"parsed": false}}},
+  {"name": "unsupported scheme", "input": {"url": "gopher://x/"}, "expected": {"http": {"parsed": false}}},
+  {"name": "bad port", "input": {"url": "http://example.com:99999/"}, "expected": {"http": {"parsed": false}}},
+  {"name": "missing url", "input": {}, "expected": {"http": {"parsed": false}}}
+]

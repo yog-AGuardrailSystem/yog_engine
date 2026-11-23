@@ -24,28 +24,64 @@ been set.
 from __future__ import annotations
 
 import ctypes
+import json
 import os
 import sys
 import threading
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, Union
 
 __all__ = [
     "Yog",
+    "Decision",
+    "Obligation",
     "YogCompileError",
     "YogEvaluationError",
     "ALLOW",
     "DENY",
+    "REQUIRE_APPROVAL",
     "library_path",
+    "library_version",
+    "__version__",
 ]
+
+__version__ = "0.2.0a1"
 
 ALLOW = "ALLOW"
 DENY = "DENY"
+REQUIRE_APPROVAL = "REQUIRE_APPROVAL"
 
-_YOG_ALLOW = 0
-_YOG_DENY = 1
+# Values of YogDecision in yog.h.  An unknown value is an error, never an ALLOW.
+_DECISIONS = {0: ALLOW, 1: DENY, 2: REQUIRE_APPROVAL}
 _MESSAGE_SIZE = 192
 _SIZEOF_SIZE_T = ctypes.sizeof(ctypes.c_size_t)
+
+
+@dataclass(frozen=True)
+class Obligation:
+    """Data the policy attaches to an ALLOW or REQUIRE_APPROVAL decision.
+
+    YOG never performs an obligation: the enforcement point must, and must refuse the action if it cannot.
+    """
+
+    name: str
+    args: Tuple[Union[str, int, bool], ...]
+
+
+@dataclass(frozen=True)
+class Decision:
+    """The full outcome of one check."""
+
+    decision: str                      # ALLOW, DENY or REQUIRE_APPROVAL
+    reason: str
+    matched_line: int
+    obligations: Tuple[Obligation, ...]
+    trace: Optional[str] = None
+
+    @property
+    def allowed(self) -> bool:
+        return self.decision == ALLOW
 
 
 class YogCompileError(ValueError):
@@ -70,11 +106,31 @@ class _YogError(ctypes.Structure):
     ]
 
 
+class _YogObligationArg(ctypes.Structure):
+    _fields_ = [
+        ("kind", ctypes.c_int),            # 0 text, 1 integer, 2 boolean
+        ("text", ctypes.c_char_p),
+        ("integer", ctypes.c_longlong),
+    ]
+
+
+class _YogObligation(ctypes.Structure):
+    _fields_ = [
+        ("name", ctypes.c_char_p),
+        ("args", ctypes.POINTER(_YogObligationArg)),
+        ("arg_count", ctypes.c_size_t),
+    ]
+
+
 class _YogResult(ctypes.Structure):
+    # Must match YogResult in yog/include/api/yog.h field for field.
     _fields_ = [
         ("decision", ctypes.c_int),
         ("reason", ctypes.c_char_p),
         ("trace", ctypes.c_char_p),
+        ("matched_line", ctypes.c_int),
+        ("obligations", ctypes.POINTER(_YogObligation)),
+        ("obligation_count", ctypes.c_size_t),
     ]
 
 
@@ -82,7 +138,13 @@ class _YogLimits(ctypes.Structure):
     _fields_ = [
         ("max_steps", ctypes.c_size_t),
         ("max_depth", ctypes.c_int),
+        ("max_solutions", ctypes.c_size_t),
+        ("max_millis", ctypes.c_size_t),
+        ("max_memory", ctypes.c_size_t),
     ]
+
+
+_RESOURCE_LIMIT_FIELDS = ("max_steps", "max_depth", "max_solutions", "max_millis", "max_memory")
 
 
 def _candidate_paths() -> list[Path]:
@@ -150,6 +212,23 @@ def _load() -> ctypes.CDLL:
     library.yog_check.restype = ctypes.c_bool
     library.yog_result_free.argtypes = [ctypes.POINTER(_YogResult)]
     library.yog_result_free.restype = None
+    library.yog_version.argtypes = []
+    library.yog_version.restype = ctypes.c_char_p
+    library.yog_check_json.argtypes = [
+        ctypes.c_void_p,
+        ctypes.c_char_p,
+        ctypes.c_size_t,
+        ctypes.c_bool,
+        ctypes.POINTER(_YogResult),
+        ctypes.POINTER(_YogError),
+    ]
+    library.yog_check_json.restype = ctypes.c_bool
+    library.yog_result_to_json.argtypes = [ctypes.c_void_p, ctypes.POINTER(_YogResult)]
+    library.yog_result_to_json.restype = ctypes.c_void_p
+    library.yog_string_free.argtypes = [ctypes.c_void_p]
+    library.yog_string_free.restype = None
+    library.yog_policy_version.argtypes = [ctypes.c_void_p]
+    library.yog_policy_version.restype = ctypes.c_int
     return library
 
 
@@ -208,9 +287,29 @@ class Yog:
     @limits.setter
     def limits(self, limits: Tuple[int, int]) -> None:
         steps, depth = limits
-        _library().yog_set_limits(
-            self._require(), _YogLimits(ctypes.c_size_t(steps), ctypes.c_int(depth))
-        )
+        self.resource_limits = {"max_steps": steps, "max_depth": depth}
+
+    @property
+    def resource_limits(self) -> Dict[str, int]:
+        """Every evaluation budget currently in force.
+
+        Keys: ``max_steps``, ``max_depth``, ``max_solutions``, ``max_millis``
+        and ``max_memory`` (bytes).  Exceeding any of them raises
+        ``YogEvaluationError``, which callers must treat as DENY.
+        """
+        raw = _library().yog_get_limits(self._require())
+        return {name: int(getattr(raw, name)) for name in _RESOURCE_LIMIT_FIELDS}
+
+    @resource_limits.setter
+    def resource_limits(self, limits: Dict[str, int]) -> None:
+        """Update some budgets; keys not given keep their current value.
+        A value of 0 restores the built-in default."""
+        unknown = set(limits) - set(_RESOURCE_LIMIT_FIELDS)
+        if unknown:
+            raise ValueError(f"unknown limit(s): {', '.join(sorted(unknown))}")
+        merged = self.resource_limits
+        merged.update(limits)
+        _library().yog_set_limits(self._require(), _YogLimits(**merged))
 
     def check(
         self,
@@ -221,7 +320,7 @@ class Yog:
         *,
         trace: bool = False,
     ) -> str:
-        """Return ``"ALLOW"`` or ``"DENY"`` for one request.
+        """Return ``"ALLOW"``, ``"DENY"`` or ``"REQUIRE_APPROVAL"`` for one request.
 
         ``context`` is an optional ``;``-separated list of ground facts.  On an
         evaluation error this raises :class:`YogEvaluationError`; callers that
@@ -239,6 +338,23 @@ class Yog:
         trace: bool = False,
     ) -> Tuple[str, str]:
         """Return ``(decision, reason)`` for one request."""
+        outcome = self.decide(actor, action, resource, context, trace=trace)
+        return outcome.decision, outcome.reason
+
+    def decide(
+        self,
+        actor: str,
+        action: str,
+        resource: str,
+        context: str = "",
+        *,
+        trace: bool = False,
+    ) -> Decision:
+        """Return the full :class:`Decision` (including obligations) for one request.
+
+        ``context`` is parsed as policy text, so it must only ever contain values you trust.  For
+        request data that comes from an agent or a user, use :meth:`check_json`.
+        """
         result = _YogResult()
         error = _YogError()
         ok = _library().yog_check(
@@ -251,21 +367,74 @@ class Yog:
             ctypes.byref(result),
             ctypes.byref(error),
         )
-        try:
-            if not ok:
-                message = error.message.decode("utf-8", "replace") or "evaluation failed"
-                raise YogEvaluationError(message)
-            decision = ALLOW if result.decision == _YOG_ALLOW else DENY
-            reason = result.reason.decode("utf-8", "replace") if result.reason else ""
-            return decision, reason
-        finally:
-            _library().yog_result_free(ctypes.byref(result))
+        return _finish(ok, result, error)
+
+    def check_json(self, request: Union[str, bytes, Dict[str, Any]], *, trace: bool = False) -> Decision:
+        """Check one request given as JSON (a dict, ``str`` or ``bytes``); see docs/INTERFACES.md.
+
+        Values never pass through policy text, so this is the safe entry point for untrusted data.
+        Raises :class:`YogEvaluationError` on a malformed request or an evaluation error, which callers
+        must treat as DENY.
+        """
+        if isinstance(request, dict):
+            request = json.dumps(request, ensure_ascii=False)
+        data = request.encode("utf-8") if isinstance(request, str) else bytes(request)
+        result = _YogResult()
+        error = _YogError()
+        ok = _library().yog_check_json(
+            self._require(), data, len(data), bool(trace), ctypes.byref(result), ctypes.byref(error)
+        )
+        return _finish(ok, result, error)
+
+    @property
+    def policy_version(self) -> int:
+        """The language version the policy declared with ``version N`` (1 when absent)."""
+        return int(_library().yog_policy_version(self._require()))
 
     def _require(self):
         handle = getattr(self, "_handle", None)
         if not handle:
             raise ValueError("the policy is closed")
         return handle
+
+
+def _finish(ok: bool, result: _YogResult, error: _YogError) -> Decision:
+    """Converts a C result into a :class:`Decision` and always releases the C memory."""
+    try:
+        if not ok:
+            message = error.message.decode("utf-8", "replace") or "evaluation failed"
+            raise YogEvaluationError(message)
+        decision = _DECISIONS.get(result.decision)
+        if decision is None:
+            raise YogEvaluationError(f"the library returned an unknown decision value {result.decision}")
+        obligations = []
+        for i in range(result.obligation_count):
+            item = result.obligations[i]
+            args: list = []
+            for k in range(item.arg_count):
+                arg = item.args[k]
+                if arg.kind == 1:
+                    args.append(int(arg.integer))
+                elif arg.kind == 2:
+                    args.append(bool(arg.integer))
+                else:
+                    args.append(arg.text.decode("utf-8", "replace") if arg.text else "")
+            obligations.append(Obligation(item.name.decode("utf-8", "replace"), tuple(args)))
+        return Decision(
+            decision=decision,
+            reason=result.reason.decode("utf-8", "replace") if result.reason else "",
+            matched_line=int(result.matched_line),
+            obligations=tuple(obligations),
+            trace=result.trace.decode("utf-8", "replace") if result.trace else None,
+        )
+    finally:
+        _library().yog_result_free(ctypes.byref(result))
+
+
+def library_version() -> str:
+    """Version string reported by the loaded shared library."""
+    raw = _library().yog_version()
+    return raw.decode("utf-8") if raw else ""
 
 
 def _encode(value: str) -> bytes:
