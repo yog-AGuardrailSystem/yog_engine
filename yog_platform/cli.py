@@ -162,7 +162,7 @@ def cmd_serve(args) -> int:
             manager.load_bundle(json.load(handle))
     audit = AuditLog(args.audit) if args.audit else None
     sidecar = Sidecar(manager, audit=audit, cache=DecisionCache(ttl=args.cache_ttl) if args.cache_ttl > 0 else None,
-                      trusted_bundle_dir=args.bundle_dir)
+                      trusted_bundle_dir=args.bundle_dir, shadow=args.shadow)
     if args.registry:
         syncer = Syncer(manager, args.registry, args.channel)
         stop = threading.Event()
@@ -213,6 +213,7 @@ def main(argv=None) -> int:
     p.add_argument("--yogc"); p.add_argument("--engine", choices=["yogc", "library"], default="yogc")
     p.add_argument("--audit"); p.add_argument("--host", default="127.0.0.1"); p.add_argument("--port", type=int, default=8787)
     p.add_argument("--cache-ttl", type=float, default=30.0); p.add_argument("--bundle-dir")
+    p.add_argument("--shadow", action="store_true", help="log-only: record decisions, answer ALLOW (see docs/OPERATIONS.md)")
     p.add_argument("--registry"); p.add_argument("--channel", default="stable"); p.add_argument("--sync-interval", type=float, default=30.0)
 
     args = parser.parse_args(argv)

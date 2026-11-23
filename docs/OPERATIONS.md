@@ -25,6 +25,14 @@ YOG never reads a clock or a database. The caller supplies `state` (with `state_
 echoes them. The gateway owns freshness: reject state older than your bound, and keep counters (rate limits) in a
 store outside YOG. Replaying a request with the same policy and state gives the same decision.
 
+## Trying a policy first: shadow mode
+`serve --shadow`, `claude_hook --shadow` and `Gateway(mode="shadow")` decide and audit exactly as in enforcement but
+never block: the sidecar answers ALLOW with `enforced: false` and the real answer in `shadow_decision`; the gateway
+audits `would_have_status` / `would_have_decision`; obligations other than `audit` are not performed and no approval
+is created. Roll out in three steps: run in shadow, read the audit log (and the `shadow_would_deny` /
+`shadow_would_approve` metrics) for false positives, then switch to enforcement. Malformed calls are still refused by
+the gateway; a client must not use shadow mode as a security control.
+
 ## Failure behaviour
 Any engine crash, hang, missing policy or audit-write failure yields DENY with an error. Clients must treat anything
 but an explicit ALLOW as a refusal. A partition between gateway and sidecar means deny unless you configure an explicit,

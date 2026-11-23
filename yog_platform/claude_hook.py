@@ -76,6 +76,7 @@ def main(argv=None) -> int:
     parser.add_argument("--sidecar", help="ask a running sidecar (http://host:port) instead of evaluating locally")
     parser.add_argument("--audit", help="hash-chained audit log file (needed if the policy uses `obligation audit`)")
     parser.add_argument("--stage", default="dev")
+    parser.add_argument("--shadow", action="store_true", help="log-only: audit what the policy would do, block nothing")
     args = parser.parse_args(argv)
 
     try:
@@ -99,7 +100,8 @@ def main(argv=None) -> int:
             from .audit import AuditLog
             audit = AuditLog(args.audit)
         env = {"stage": args.stage, "cwd": event.get("cwd") if isinstance(event.get("cwd"), str) else ""}
-        output = handle_event(event, Gateway(pdp, tools=TOOLS, env=env, audit=audit, ask_user=True))
+        output = handle_event(event, Gateway(pdp, tools=TOOLS, env=env, audit=audit, ask_user=True,
+                                                   mode="shadow" if args.shadow else "enforce"))
     except Exception as exc:                                  # a broken guard must block, not wave through
         output = _decision(f"YOG guard error: {type(exc).__name__}: {exc}", "deny")
     if output is not None:

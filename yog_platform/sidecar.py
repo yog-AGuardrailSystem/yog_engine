@@ -56,8 +56,9 @@ class Metrics:
 
 class Sidecar:
     def __init__(self, manager: PolicyManager, *, audit: Optional[AuditLog] = None,
-                 cache: Optional[DecisionCache] = None, trusted_bundle_dir: Optional[str] = None):
+                 cache: Optional[DecisionCache] = None, trusted_bundle_dir: Optional[str] = None, shadow: bool = False):
         self.manager = manager
+        self.shadow = shadow          # decide and audit as usual, but answer ALLOW (see handle_check)
         self.audit = audit
         self.cache = cache
         self.metrics = Metrics()
@@ -67,10 +68,23 @@ class Sidecar:
     def handle_check(self, body: bytes) -> tuple[int, dict]:
         self.metrics.inc("requests")
         try:
-            return self._check(body)
+            status, reply = self._check(body)
         except Exception as exc:                                  # never let a bug become an allow
             self.metrics.inc("internal_errors")
-            return _deny(f"internal error: {type(exc).__name__}")
+            status, reply = _deny(f"internal error: {type(exc).__name__}")
+        if self.shadow:
+            return self._as_shadow(status, reply)
+        return status, reply
+
+    def _as_shadow(self, status: int, reply: dict) -> tuple[int, dict]:
+        """Shadow mode: report what the policy decided, but tell the caller to proceed.  The real answer stays in
+        ``shadow_decision``; obligations are dropped because nothing is being enforced."""
+        real = reply.get("decision", "DENY")
+        self.metrics.inc("shadow_would_" + {"DENY": "deny", "REQUIRE_APPROVAL": "approve"}.get(real, "allow"))
+        out = dict(reply)
+        out.update(decision="ALLOW", shadow_decision=real, enforced=False, obligations=[],
+                   reason="shadow mode: " + str(reply.get("reason", "")))
+        return 200, out
 
     def _check(self, body: bytes) -> tuple[int, dict]:
         if len(body) > MAX_BODY:
@@ -121,6 +135,7 @@ class Sidecar:
             "obligations": result.get("obligations", []),
             "cached": from_cache,
             "error": "error" in result,
+            "shadow": self.shadow,
         }
         if self.audit is not None:
             try:
