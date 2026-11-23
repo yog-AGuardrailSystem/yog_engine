@@ -4,60 +4,119 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   c-tests:
-    name: C build, sanitizers and tests
-    runs-on: ubuntu-latest
+    name: C build and tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.11"
 
       - name: Configure
-        run: cmake -S yog -B yog/build -DCMAKE_BUILD_TYPE=Debug -DYOG_SANITIZE=ON
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            cmake -S yog -B yog/build -DCMAKE_BUILD_TYPE=Debug -DYOG_SANITIZE=ON
+          else
+            cmake -S yog -B yog/build -DCMAKE_BUILD_TYPE=Debug
+          fi
 
       - name: Build
-        run: cmake --build yog/build --parallel
-
+        run: cmake --build yog/build --config Debug --parallel
+      
       - name: Run C tests
-        run: ctest --test-dir yog/build --output-on-failure
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            ctest --test-dir yog/build -C Debug --output-on-failure
+          else
+            ctest --test-dir yog/build --output-on-failure
+          fi
+
+      - name: Set compiler executable path
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            echo "YOGC=yog/build/Debug/yogc.exe" >> "$GITHUB_ENV"
+            echo "BENCH_YOG=yog/build/Debug/bench_yog.exe" >> "$GITHUB_ENV"
+          else
+            echo "YOGC=yog/build/yogc" >> "$GITHUB_ENV"
+            echo "BENCH_YOG=yog/build/bench_yog" >> "$GITHUB_ENV"
+          fi
 
       - name: Differential check against yog.py
-        run: python yog/tests/differential/diff_vs_python.py --yogc yog/build/yogc
+        shell: bash
+        run: python yog/tests/differential/diff_vs_python.py --yogc "$YOGC"
 
       - name: Independent conformance suite
-        run: python yog/tests/conformance/run_conformance.py --yogc yog/build/yogc
+        shell: bash
+        run: python yog/tests/conformance/run_conformance.py --yogc "$YOGC"
 
       - name: Property-based oracle
-        run: python yog/tests/property/property_conformance.py
+        shell: bash
+        run: |
+          python yog/tests/property/property_conformance.py --yogc "$YOGC"
 
       - name: AI guardrail examples
-        run: python examples/ai_guardrails/enforce_demo.py --yogc yog/build/yogc
+        shell: bash
+        run: python examples/ai_guardrails/enforce_demo.py --yogc "$YOGC"
 
       - name: Benchmark smoke test
+        shell: bash
         run: |
           python benchmarks/gen_corpus.py
-          yog/build/bench_yog check benchmarks/generated/small.yog u0000 can_access r0000 --iterations 100
-          yog/build/bench_yog compile benchmarks/generated/small.yog --iterations 10
+          "$BENCH_YOG" check benchmarks/generated/small.yog u0000 can_access r0000 --iterations 100
+          "$BENCH_YOG" compile benchmarks/generated/small.yog --iterations 10
 
   bindings:
-    name: Bindings and in-process harnesses
+    name: Bindings and in-process harnesses (Linux)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       YOG_LIB_DIR: ${{ github.workspace }}/yog/build-release
       YOG_LIBRARY: ${{ github.workspace }}/yog/build-release/libyog.so
       LD_LIBRARY_PATH: ${{ github.workspace }}/yog/build-release
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.11"
 
-      - uses: actions/setup-go@v5
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.5.0
         with:
           go-version: "stable"
           check-latest: true
 
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # master
+        with:
+          toolchain: stable
 
       - name: Install pytest
         run: python -m pip install --upgrade pip pytest
@@ -88,10 +147,15 @@ jobs:
   python-tests:
     name: Python reference tests
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.11"
 
