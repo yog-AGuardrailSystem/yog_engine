@@ -161,3 +161,23 @@ Every feature merges with spec text, conformance cases, a reference-interpreter 
 - `pytest` (`yog/tests/engine`, `tests/`, `bindings/python/tests`); `cargo test` in `bindings/rust`
 - `benchmarks/run_benchmarks.py` and `benchmarks/compare.py`
 - Demo/pilot: scripted agent scenario and red-team suite in CI on Linux, Windows and macOS
+
+## 8. Status (updated with each commit on `feat/yog-v2`)
+
+Legend: **done** = implemented, tested locally and in this branch; **partial** = some of the item is
+done (see note); **unverified** = written but not built or run on this machine; **todo** = not started.
+
+Local test environment: Windows laptop, MSVC `/W4 /WX`, Python 3.11. Application Control blocks some
+freshly built executables and `yog.dll`, so the Python/Rust binding tests, Rust, Go, WASM and container
+items can only be verified by CI or on another machine.
+
+| ID | Status | Note |
+|---|---|---|
+| P0-0 | done | VS 2022 Build Tools, Python 3.11 installed; cargo/go/emcc/docker are NOT installed |
+| P0-4 (a-d) | done | Apache-2.0, single version, `reference/yog_ref.py`, .gitignore |
+| P0-5 | done | step/depth/solution/time/memory limits |
+| P0-9 | done | roadmap aligned |
+| P1-1 | partial | `version`, `input`, bool, typed context done; JSON request loader: todo |
+| P1-2 | done | `require_approval`, obligations, lattice, exit code 4, API/yogc |
+| P1-3 | partial | in, matches, glob, under, starts_with, ends_with, contains, cidr (IPv4 only) |
+| P1-6 | done | reference interpreter rewritten; `diff_v2.py` (81 curated + 3,000 random per seed) |
