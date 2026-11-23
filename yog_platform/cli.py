@@ -133,8 +133,7 @@ def cmd_import_cedar(args) -> int:
         print(f"{args.file}: {exc}", file=sys.stderr)
         return 1
     if args.out:
-        with open(args.out, "w", encoding="utf-8", newline="
-") as handle:
+        with open(args.out, "w", encoding="utf-8", newline="\n") as handle:
             handle.write(source)
         print(f"wrote {args.out}: {len(mapping)} clause(s) from {len({m['cedar_line'] for m in mapping})} Cedar polic(ies)", file=sys.stderr)
     else:
