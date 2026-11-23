@@ -62,15 +62,44 @@ typedef struct {
 
 typedef struct Yog Yog;
 
+/* Outcomes.  Precedence when several clauses match: deny > require_approval >
+ * allow > default deny.  Callers must treat anything other than YOG_ALLOW as
+ * "do not run the action now"; YOG_REQUIRE_APPROVAL means a human or another
+ * authority must approve this exact request first. */
 typedef enum {
     YOG_ALLOW = 0,
-    YOG_DENY = 1
+    YOG_DENY = 1,
+    YOG_REQUIRE_APPROVAL = 2
 } YogDecision;
 
+/* An obligation is data the policy attaches to an ALLOW or REQUIRE_APPROVAL
+ * decision (for example "audit this call").  YOG never performs it: the
+ * enforcement point (gateway, agent runtime) must. */
+typedef enum {
+    YOG_OBLIGATION_TEXT = 0,
+    YOG_OBLIGATION_INTEGER = 1,
+    YOG_OBLIGATION_BOOLEAN = 2
+} YogObligationArgKind;
+
 typedef struct {
-    YogDecision decision;
-    char       *reason;
-    char       *trace;   /* NULL unless trace output was requested */
+    YogObligationArgKind kind;
+    char                *text;     /* TEXT only */
+    long long            integer;  /* INTEGER value, or 0/1 for BOOLEAN */
+} YogObligationArg;
+
+typedef struct {
+    char             *name;
+    YogObligationArg *args;
+    size_t            arg_count;
+} YogObligation;
+
+typedef struct {
+    YogDecision    decision;
+    char          *reason;
+    char          *trace;   /* NULL unless trace output was requested */
+    int            matched_line;      /* line of the first clause that decided; 0 for default deny */
+    YogObligation *obligations;       /* NULL when there are none */
+    size_t         obligation_count;
 } YogResult;
 
 /* Evaluation budgets.  A zero field keeps the built-in default; non-positive
@@ -88,6 +117,9 @@ typedef struct {
     size_t max_memory;    /* evaluator bytes per check; default 64 MiB */
 } YogLimits;
 
+/* "ALLOW", "DENY" or "REQUIRE_APPROVAL" ("UNKNOWN" for any other value). */
+YOG_API const char *yog_decision_name(YogDecision decision);
+
 /* Version of the loaded library, e.g. "0.2.0-alpha.1".  Compare with
  * YOG_VERSION_STRING to detect a header/library mismatch. */
 YOG_API const char *yog_version(void);
@@ -96,6 +128,9 @@ YOG_API const char *yog_version(void);
 YOG_API Yog *yog_compile(const char *source, size_t length, YogError *error);
 
 YOG_API void yog_free(Yog *yog);
+
+/* Language version the policy declared with `version N` (1 when absent). */
+YOG_API int yog_policy_version(const Yog *yog);
 
 /* Read-only view of the compiled module, for `yogc ir` and tooling. */
 YOG_API const YogModule *yog_module(const Yog *yog);
@@ -112,7 +147,7 @@ YOG_API YogLimits yog_get_limits(const Yog *yog);
 
 /*
  * Apply the policy-combining contract to one request:
- *   deny > allow > default deny.
+ *   deny > require_approval > allow > default deny.
  *
  * `context` is an optional string of ground facts separated by ';'
  * (for example "fact amount(acct_1, 9000)").  It is parsed per request and

@@ -19,6 +19,8 @@
 #define YOG_VM_MAX_DEPTH     256
 #define YOG_VM_MAX_STEPS     1000000u
 #define YOG_VM_MAX_SOLUTIONS 100000u
+/* Distinct obligations one decision may return. */
+#define YOG_VM_MAX_OBLIGATIONS 256u
 /* Wall-clock backstop for one check or one query run.  The step budget is the
  * primary, deterministic bound; this only catches pathological slowness. */
 #define YOG_VM_MAX_MILLIS    10000u
@@ -80,12 +82,33 @@ typedef struct {
 
 /* Kept distinct from the public YogDecision so the VM layer does not have to
  * include the API header (and vice versa). */
-typedef enum { YOG_VERDICT_ALLOW = 0, YOG_VERDICT_DENY = 1 } YogVerdict;
+typedef enum {
+    YOG_VERDICT_ALLOW = 0,
+    YOG_VERDICT_DENY = 1,
+    YOG_VERDICT_REQUIRE_APPROVAL = 2
+} YogVerdict;
+
+/* Obligation argument kinds match YogObligationArgKind in the public API. */
+typedef struct {
+    int      kind;      /* 0 text, 1 integer, 2 boolean */
+    char    *text;      /* text arguments only (NUL-terminated copy) */
+    int64_t  integer;   /* integers, and 0/1 for booleans */
+} YogEngineArg;
 
 typedef struct {
-    YogVerdict  decision;
-    char       *reason;
-    char       *trace;
+    char         *name;
+    YogEngineArg *args;
+    size_t        arg_count;
+} YogEngineObligation;
+
+
+typedef struct {
+    YogVerdict           decision;
+    char                *reason;
+    char                *trace;
+    int                  matched_line;      /* line of the first clause that decided */
+    YogEngineObligation *obligations;       /* ALLOW / REQUIRE_APPROVAL only */
+    size_t               obligation_count;
 } YogEngineResult;
 
 typedef struct YogEngine YogEngine;

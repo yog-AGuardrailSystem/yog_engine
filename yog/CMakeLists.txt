@@ -115,6 +115,7 @@ yog_test(test_sema   tests/sema/test_sema.c     yog_sema)
 yog_test(test_ir     tests/ir/test_ir.c         yog_ir)
 yog_test(test_vm     tests/vm/test_vm.c         yog_api)
 yog_test(test_api    tests/api/test_api.c       yog_api)
+yog_test(test_v2     tests/api/test_v2.c        yog_api)
 
 add_executable(test_security tests/security/test_security.c)
 target_link_libraries(test_security PRIVATE yog_api Threads::Threads)

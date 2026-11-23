@@ -14,7 +14,7 @@ typedef struct { const char *text; size_t length; } YogText;
 
 typedef enum {
     YOG_TERM_VARIABLE, YOG_TERM_IDENTIFIER, YOG_TERM_STRING,
-    YOG_TERM_INTEGER, YOG_TERM_WILDCARD
+    YOG_TERM_INTEGER, YOG_TERM_WILDCARD, YOG_TERM_BOOLEAN /* integer_value is 0 or 1 */
 } YogTermType;
 
 typedef struct {
@@ -38,7 +38,12 @@ typedef enum {
     YOG_COMPARE_LE, YOG_COMPARE_GT, YOG_COMPARE_GE
 } YogComparisonOperator;
 
-typedef enum { YOG_GOAL_ATOM, YOG_GOAL_NEGATION, YOG_GOAL_COMPARISON } YogGoalType;
+/* YOG_GOAL_OBLIGATION is an annotation, not a condition: `obligation name(args)`
+ * inside an allow/require_approval body is returned to the caller when that
+ * clause wins.  It always succeeds and its atom is stored in as.atom. */
+typedef enum {
+    YOG_GOAL_ATOM, YOG_GOAL_NEGATION, YOG_GOAL_COMPARISON, YOG_GOAL_OBLIGATION
+} YogGoalType;
 typedef struct YogGoal YogGoal;
 struct YogGoal {
     YogGoalType type;
@@ -53,7 +58,10 @@ struct YogGoal {
 typedef struct { YogGoal *goals; size_t goal_count; } YogBody;
 typedef enum {
     YOG_STATEMENT_FACT, YOG_STATEMENT_RULE, YOG_STATEMENT_ALLOW,
-    YOG_STATEMENT_DENY, YOG_STATEMENT_QUERY
+    YOG_STATEMENT_DENY, YOG_STATEMENT_QUERY,
+    YOG_STATEMENT_REQUIRE_APPROVAL, /* same shape as allow/deny */
+    YOG_STATEMENT_INPUT,            /* as.fact: name(type, ...) with identifier types */
+    YOG_STATEMENT_VERSION           /* as.fact: one INTEGER term */
 } YogStatementType;
 typedef struct YogStatement YogStatement;
 struct YogStatement {

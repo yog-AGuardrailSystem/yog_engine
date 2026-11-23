@@ -21,7 +21,8 @@
 typedef enum {
     YOG_ROLE_FACT = 0,
     YOG_ROLE_RULE,
-    YOG_ROLE_DECISION
+    YOG_ROLE_DECISION,
+    YOG_ROLE_INPUT      /* declared with `input`; facts arrive with each request */
 } YogPredicateRole;
 
 typedef struct {
@@ -29,6 +30,7 @@ typedef struct {
     size_t           arity;
     YogPredicateRole role;
     int              line;      /* first defining statement */
+    const YogAtom   *input_decl; /* the `input` statement, YOG_ROLE_INPUT only */
 } YogSymbol;
 
 typedef struct {

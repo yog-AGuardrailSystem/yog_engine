@@ -90,7 +90,8 @@ static YogText text_of(const Token *t)
 
 static int is_term(YogTokenType t)
 {
-    return t == TOK_VAR || t == TOK_IDENT || t == TOK_STRING || t == TOK_INT || t == TOK_WILDCARD;
+    return t == TOK_VAR || t == TOK_IDENT || t == TOK_STRING || t == TOK_INT || t == TOK_WILDCARD ||
+           t == TOK_TRUE || t == TOK_FALSE;
 }
 
 static YogTermType term_type(YogTokenType t)
@@ -101,6 +102,8 @@ static YogTermType term_type(YogTokenType t)
     case TOK_STRING: return YOG_TERM_STRING;
     case TOK_INT: return YOG_TERM_INTEGER;
     case TOK_WILDCARD: return YOG_TERM_WILDCARD;
+    case TOK_TRUE:
+    case TOK_FALSE: return YOG_TERM_BOOLEAN;
     default: return YOG_TERM_IDENTIFIER;
     }
 }
@@ -114,6 +117,7 @@ static YogParseStatus parse_term(Parser *p, YogTerm *out)
     copy = take(p);
     if (!yog_term_init(out, term_type(copy.type), &copy))
         return set_error(p, &copy, YOG_PARSE_OUT_OF_MEMORY, "Could not initialize term");
+    if (copy.type == TOK_TRUE || copy.type == TOK_FALSE) out->integer_value = copy.type == TOK_TRUE ? 1 : 0;
     return YOG_PARSE_OK;
 }
 
@@ -159,7 +163,7 @@ static YogParseStatus parse_atom(Parser *p, YogAtom *out)
  * operator, so `foo == bar` is rejected instead of being read as a comparison. */
 static int is_comparison_operand(YogTokenType t)
 {
-    return t == TOK_VAR || t == TOK_INT || t == TOK_STRING;
+    return t == TOK_VAR || t == TOK_INT || t == TOK_STRING || t == TOK_TRUE || t == TOK_FALSE;
 }
 
 static int is_comparison(YogTokenType t)
@@ -189,6 +193,11 @@ static YogParseStatus parse_goal(Parser *p, YogGoal *out)
         out->type = YOG_GOAL_NEGATION; out->line = not_token.line; out->column = not_token.column;
         status = parse_atom(p, &out->as.atom);
         return status;
+    }
+    if (start != NULL && start->type == TOK_OBLIGATION) {
+        Token obligation_token = take(p);
+        out->type = YOG_GOAL_OBLIGATION; out->line = obligation_token.line; out->column = obligation_token.column;
+        return parse_atom(p, &out->as.atom);
     }
     if (start != NULL && is_comparison_operand(start->type) && is_comparison(peek(p, 1)->type)) {
         Token left_token;
@@ -248,10 +257,36 @@ static YogParseStatus parse_statement(Parser *p, YogStatement *out)
         if (status != YOG_PARSE_OK) yog_statement_free(out);
         return status;
     }
-    if (t->type == TOK_RULE || t->type == TOK_ALLOW || t->type == TOK_DENY) {
+    if (t->type == TOK_INPUT) {
+        keyword = take(p);
+        out->type = YOG_STATEMENT_INPUT;
+        out->line = keyword.line; out->column = keyword.column;
+        status = parse_atom(p, &out->as.fact);
+        if (status == YOG_PARSE_OK) status = expect(p, TOK_NEWLINE, "newline after input declaration", NULL);
+        if (status != YOG_PARSE_OK) yog_statement_free(out);
+        return status;
+    }
+    if (t->type == TOK_VERSION) {
+        Token number;
+        YogTerm term;
+        keyword = take(p);
+        out->type = YOG_STATEMENT_VERSION;
+        out->line = keyword.line; out->column = keyword.column;
+        status = expect(p, TOK_INT, "a version number", &number);
+        if (status != YOG_PARSE_OK) return status;
+        if (!yog_term_init(&term, YOG_TERM_INTEGER, &number) ||
+            !yog_atom_init(&out->as.fact, text_of(&keyword), &term, 1, keyword.line, keyword.column))
+            return set_error(p, &keyword, YOG_PARSE_OUT_OF_MEMORY, "Out of memory parsing version");
+        status = expect(p, TOK_NEWLINE, "newline after version", NULL);
+        if (status != YOG_PARSE_OK) yog_statement_free(out);
+        return status;
+    }
+    if (t->type == TOK_RULE || t->type == TOK_ALLOW || t->type == TOK_DENY ||
+        t->type == TOK_REQUIRE_APPROVAL) {
         keyword = take(p);
         out->type = keyword.type == TOK_RULE ? YOG_STATEMENT_RULE :
-                    keyword.type == TOK_ALLOW ? YOG_STATEMENT_ALLOW : YOG_STATEMENT_DENY;
+                    keyword.type == TOK_ALLOW ? YOG_STATEMENT_ALLOW :
+                    keyword.type == TOK_REQUIRE_APPROVAL ? YOG_STATEMENT_REQUIRE_APPROVAL : YOG_STATEMENT_DENY;
         out->line = keyword.line; out->column = keyword.column;
         status = parse_atom(p, &out->as.clause.head);
         if (status == YOG_PARSE_OK) status = expect(p, TOK_COLON, "':' after clause head", NULL);
@@ -259,7 +294,7 @@ static YogParseStatus parse_statement(Parser *p, YogStatement *out)
         if (status != YOG_PARSE_OK) yog_statement_free(out);
         return status;
     }
-    return fail_here(p, YOG_PARSE_SYNTAX_ERROR, "fact, rule, allow, deny, or query");
+    return fail_here(p, YOG_PARSE_SYNTAX_ERROR, "fact, rule, allow, deny, require_approval, input, version, or query");
 }
 
 YogParseStatus yog_parse(Lexer *lexer, YogProgram **out_program, YogParseError *out_error)

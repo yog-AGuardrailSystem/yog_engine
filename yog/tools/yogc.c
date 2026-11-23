@@ -12,7 +12,8 @@
  *                                                   compiled decisions; with one:
  *                                                   show the decision and its trace
  *
- * Exit status: 0 ok / allowed, 1 compile error, 2 usage or I/O error, 3 denied.
+ * Exit status: 0 ok / allowed, 1 compile error, 2 usage or I/O error, 3 denied,
+ * 4 requires approval.
  */
 #include <stdbool.h>
 #include <stdio.h>
@@ -61,9 +62,55 @@ static Yog *load(const char *path)
     return y;
 }
 
+/* Exit status for a decision: 0 allow, 3 deny, 4 require approval. */
+static int decision_exit_code(YogDecision decision)
+{
+    switch (decision) {
+    case YOG_ALLOW: return 0;
+    case YOG_REQUIRE_APPROVAL: return 4;
+    default: return 3;
+    }
+}
+
+/* One obligation per line after the header, as a JSON object. */
+static void print_json_string(const char *text)
+{
+    const unsigned char *p = (const unsigned char *)text;
+    putchar('"');
+    for (; *p; ++p) {
+        if (*p == '"' || *p == '\\') printf("\\%c", *p);
+        else if (*p == '\n') fputs("\\n", stdout);
+        else if (*p == '\r') fputs("\\r", stdout);
+        else if (*p == '\t') fputs("\\t", stdout);
+        else if (*p < 0x20) printf("\\u%04x", *p);
+        else putchar(*p);
+    }
+    putchar('"');
+}
+
+static void print_obligations(const YogResult *result)
+{
+    size_t i;
+    for (i = 0; i < result->obligation_count; ++i) {
+        const YogObligation *o = &result->obligations[i];
+        size_t a;
+        fputs("OBLIGATION|{\"name\":", stdout);
+        print_json_string(o->name);
+        fputs(",\"args\":[", stdout);
+        for (a = 0; a < o->arg_count; ++a) {
+            if (a > 0) putchar(',');
+            if (o->args[a].kind == YOG_OBLIGATION_INTEGER) printf("%lld", o->args[a].integer);
+            else if (o->args[a].kind == YOG_OBLIGATION_BOOLEAN) fputs(o->args[a].integer != 0 ? "true" : "false", stdout);
+            else print_json_string(o->args[a].text);
+        }
+        fputs("]}\n", stdout);
+    }
+}
+
 static void print_result(const YogResult *result, bool trace)
 {
-    printf("%s|%s\n", result->decision == YOG_ALLOW ? "ALLOW" : "DENY", result->reason);
+    printf("%s|%s\n", yog_decision_name(result->decision), result->reason);
+    print_obligations(result);
     if (trace && result->trace != NULL) {
         const char *line = result->trace;
         while (*line) {
@@ -147,7 +194,7 @@ static int cmd_explain(Yog *yog, const char *context, const char *const *pos, in
         }
         print_result(&result, true);
         if (result.trace == NULL) puts("> (no clauses were entered)");
-        rc = result.decision == YOG_ALLOW ? 0 : 3;
+        rc = decision_exit_code(result.decision);
         yog_result_free(&result);
         return rc;
     }
@@ -239,7 +286,7 @@ int main(int argc, char **argv)
             rc = 2;
         } else {
             print_result(&result, trace);
-            rc = result.decision == YOG_ALLOW ? 0 : 3;
+            rc = decision_exit_code(result.decision);
             yog_result_free(&result);
         }
     } else {
