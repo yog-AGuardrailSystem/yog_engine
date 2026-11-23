@@ -47,11 +47,14 @@ set(YOG_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 add_library(yog_lexer STATIC src/lexer/lexer.c)
 target_include_directories(yog_lexer PUBLIC ${YOG_SRC_DIR})
 
+add_library(yog_builtin STATIC src/builtin/builtin.c)
+target_include_directories(yog_builtin PUBLIC ${YOG_SRC_DIR})
+
 add_library(yog_parser STATIC src/parser/ast.c src/parser/parser.c)
 target_link_libraries(yog_parser PUBLIC yog_lexer)
 
 add_library(yog_sema STATIC src/sema/symbol_table.c src/sema/sema.c)
-target_link_libraries(yog_sema PUBLIC yog_parser)
+target_link_libraries(yog_sema PUBLIC yog_parser yog_builtin)
 
 add_library(yog_ir STATIC src/ir/ir_build.c src/ir/ir_dump.c)
 target_link_libraries(yog_ir PUBLIC yog_sema)
@@ -68,6 +71,7 @@ target_link_libraries(yog_api PUBLIC yog_vm)
 # compiled directly so the exported symbols are exactly those marked YOG_API.
 add_library(yog_shared SHARED
   src/lexer/lexer.c
+  src/builtin/builtin.c
   src/parser/ast.c
   src/parser/parser.c
   src/sema/symbol_table.c
@@ -105,6 +109,7 @@ function(yog_test name source library)
 endfunction()
 
 yog_test(test_lexer  tests/lexer/test_lexer.c   yog_lexer)
+yog_test(test_builtin tests/builtin/test_builtin.c yog_builtin)
 yog_test(test_parser tests/parser/test_parser.c yog_parser)
 yog_test(test_sema   tests/sema/test_sema.c     yog_sema)
 yog_test(test_ir     tests/ir/test_ir.c         yog_ir)
