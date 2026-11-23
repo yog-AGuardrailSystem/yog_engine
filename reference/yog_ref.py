@@ -567,13 +567,73 @@ def _ipv4(text: str) -> Optional[int]:
     return (parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8) | parts[3]
 
 
+_HEX = frozenset("0123456789abcdefABCDEF")
+
+
+def _ipv6(text: str) -> Optional[int]:
+    """RFC 4291 text form as a 128-bit integer, or None.  One "::" stands for one or more zero groups; a dotted
+    IPv4 tail fills the last two groups; no zone ids, brackets or prefixes."""
+    if len(text) > 45 or text.count("::") > 1 or ":::" in text:
+        return None
+    head, sep, tail = text.partition("::")
+
+    def groups(part: str, last: bool):
+        if part == "":
+            return []
+        items, out = part.split(":"), []
+        for k, item in enumerate(items):
+            if "." in item:
+                if not (last and k == len(items) - 1):
+                    return None
+                v4 = _ipv4(item)
+                if v4 is None:
+                    return None
+                out += [v4 >> 16, v4 & 0xFFFF]
+            elif 1 <= len(item) <= 4 and all(c in _HEX for c in item):
+                out.append(int(item, 16))
+            else:
+                return None
+        return out
+
+    front = groups(head, last=not sep)
+    back = groups(tail, last=True) if sep else []
+    if front is None or back is None:
+        return None
+    if sep:
+        if len(front) + len(back) > 7:
+            return None
+        values = front + [0] * (8 - len(front) - len(back)) + back
+    else:
+        if len(front) != 8:
+            return None
+        values = front
+    result = 0
+    for v in values:
+        result = (result << 16) | v
+    return result
+
+
 def _cidr(ip: str, net: str) -> bool:
     if len(_bytes(ip)) > 64 or len(_bytes(net)) > 64:
         return False
-    address = _ipv4(ip)
+    ip_v6, net_v6 = ":" in ip, ":" in net
+    address = _ipv6(ip) if ip_v6 else _ipv4(ip)
     if address is None:
         return False
     head, slash, bits_text = net.partition("/")
+    if net_v6:
+        network = _ipv6(head) if slash else None
+        if network is None:
+            raise YogError("cidr: invalid network (expected a.b.c.d/n)")
+        if not (1 <= len(bits_text) <= 3) or not all(c in "0123456789" for c in bits_text):
+            raise YogError("cidr: invalid network (bad prefix length)")
+        bits = int(bits_text)
+        if bits > 128:
+            raise YogError("cidr: invalid network (prefix over 128)")
+        if not ip_v6:
+            return False                                   # an IPv4 address is never inside an IPv6 network
+        mask = ((1 << 128) - 1) ^ ((1 << (128 - bits)) - 1)
+        return (address & mask) == (network & mask)
     network = _ipv4(head)
     if network is None or not slash:
         raise YogError("cidr: invalid network (expected a.b.c.d/n)")
@@ -583,7 +643,7 @@ def _cidr(ip: str, net: str) -> bool:
     if bits > 32:
         raise YogError("cidr: invalid network (prefix over 32)")
     mask = 0 if bits == 0 else (0xFFFFFFFF << (32 - bits)) & 0xFFFFFFFF
-    return (address & mask) == (network & mask)
+    return not ip_v6 and (address & mask) == (network & mask)
 
 
 def eval_builtin(name: str, args: list) -> bool:
