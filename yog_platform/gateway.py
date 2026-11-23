@@ -69,7 +69,7 @@ class Gateway:
                  state_provider: Optional[Callable[[], Optional[dict]]] = None, audit=None,
                  limiter: Optional[RateLimiter] = None, clock: Callable[[], float] = time.time,
                  ask_user: bool = False, principal_provider: Optional[Callable[[str], Any]] = None,
-                 mode: str = "enforce", schema=None):
+                 mode: str = "enforce", schema=None, policy_source: Optional[str] = None):
         """``tools`` maps a tool name to ``{"extract": [(argument, extractor), ...]}``.
 
         ``ask_user``: when there is no approval service, report REQUIRE_APPROVAL as ``approval_required`` so the
@@ -85,6 +85,7 @@ class Gateway:
         if mode not in ("enforce", "shadow"):
             raise ValueError("mode must be 'enforce' or 'shadow'")
         self._shadow = mode == "shadow"
+        self._policy_source = policy_source     # lets visible_tools() reason about the policy text
         self._schema = schema        # a yog_platform.schema.Schema: refuse calls that do not conform
         if self._shadow:
             approvals, ask_user = None, True
@@ -197,6 +198,19 @@ class Gateway:
             auth.after.append(lambda output, agent=agent: self._taint(agent, output))
         auth.status = "allowed"
         return self._record(auth)
+
+    def visible_tools(self, agent: str, tool_names) -> list:
+        """The tools worth showing this agent: those the policy could ever allow (a sound over-approximation, see
+        :mod:`yog_platform.partial_eval`).  Without ``policy_source`` every tool is shown.  Calls are authorised
+        regardless; this only keeps irrelevant tools out of the model's context."""
+        names = list(tool_names)
+        if self._policy_source is None:
+            return names
+        from .partial_eval import visible_tools
+        try:
+            return visible_tools(self._policy_source, names, action=ACTION, actor=agent)
+        except Exception:
+            return names
 
     def _taint(self, agent: str, output):
         self._tainted.add(agent)

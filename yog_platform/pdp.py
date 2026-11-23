@@ -12,6 +12,22 @@ import urllib.error
 import urllib.request
 
 
+def check_batch(pdp, requests) -> list:
+    """Decisions for several requests, in order.  Uses ``pdp.check_batch`` when the decision point has one,
+    otherwise asks one request at a time.  An exception for one request becomes a DENY-shaped error result for
+    that request only."""
+    if hasattr(pdp, "check_batch"):
+        return pdp.check_batch(list(requests))
+    out = []
+    for request in requests:
+        try:
+            out.append(pdp.check(request))
+        except Exception as exc:
+            out.append({"decision": "DENY", "reason": f"decision unavailable: {type(exc).__name__}", "obligations": [],
+                        "error": {"message": str(exc)}})
+    return out
+
+
 class PDPError(Exception):
     """The decision point could not be reached or answered badly."""
 
