@@ -3,7 +3,7 @@
  *
  * Each case states the language rule it protects; the expected outcome is
  * taken from the frozen specification in docs/COMPILER.md, not from what
- * yog.py happens to do.
+ * reference/yog_ref.py happens to do.
  */
 #include "../test_util.h"
 

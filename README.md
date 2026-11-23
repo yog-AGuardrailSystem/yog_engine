@@ -41,7 +41,7 @@ ALLOW|allow clause at line 3 matched
 | Path | What it is |
 | --- | --- |
 | `all_examples.yog` | canonical demonstration and conformance corpus (Groups A–V) |
-| `yog.py` | Python behavioural reference (not the sole correctness oracle) |
+| `reference/yog_ref.py` | Python behavioural reference (not the sole correctness oracle) |
 | `yog/` | C implementation: lexer → parser → sema → IR → VM → API → CLI |
 | `yog/tests/` | C semantic/security tests, conformance, property, differential, fuzz |
 | `examples/ai_guardrails/` | four runnable guardrail policies + enforcement demo |
@@ -101,7 +101,7 @@ show the fail-closed path. See
 
 Correctness is validated by independent semantic tests, a conformance corpus
 with hard-coded expected outcomes, a property-based oracle that does not use the
-YOG solver, differential testing against `yog.py`, ASan/UBSan and fuzzing. See
+YOG solver, differential testing against `reference/yog_ref.py`, ASan/UBSan and fuzzing. See
 [`docs/CORRECTNESS.md`](docs/CORRECTNESS.md).
 
 The security model states the trust boundaries, the fail-closed contract,

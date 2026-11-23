@@ -19,7 +19,7 @@
  *   - Errors are sticky: after the first TOK_ERROR, every call returns
  *     TOK_ERROR again.  After TOK_EOF, every call returns TOK_EOF again.
  *
- * Token stream contract (matches the Python reference, reference/yog.py):
+ * Token stream contract (matches the Python reference, reference/yog_ref.py):
  *   - Blank lines and comment-only lines produce NO tokens.
  *   - Every other line ends with exactly one TOK_NEWLINE (even if the file
  *     has no trailing newline).

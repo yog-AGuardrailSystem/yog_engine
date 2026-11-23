@@ -1,6 +1,6 @@
 {
   "policy": "all_examples.yog",
-  "note": "Expected outcomes are stated independently of yog.py. `decision` is the policy-combining result from check(); `reason_contains` pins the contract that produced it.",
+  "note": "Expected outcomes are stated independently of reference/yog_ref.py. `decision` is the policy-combining result from check(); `reason_contains` pins the contract that produced it.",
   "cases": [
     {"name": "A developer cannot delete", "actor": "a_agent", "action": "can_delete", "resource": "database_1", "decision": "DENY", "reason_contains": "default deny"},
     {"name": "A admin can delete", "actor": "a_admin", "action": "can_delete", "resource": "database_1", "decision": "ALLOW", "reason_contains": "allow clause"},

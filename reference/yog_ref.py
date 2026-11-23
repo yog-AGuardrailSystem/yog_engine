@@ -459,7 +459,7 @@ def load_policy(path: str) -> Engine:
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        sys.exit("usage: yog.py <policy.yog> [--trace]")
+        sys.exit("usage: yog_ref.py <policy.yog> [--trace]")
     show_trace = "--trace" in sys.argv
     try:
         eng = load_policy(sys.argv[1])

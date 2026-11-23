@@ -1,7 +1,7 @@
 /*
  * test_parser.c -- AST shape and grammar conformance tests.
  *
- * The parser must accept exactly the language yog.py accepts.  The negative
+ * The parser must accept exactly the language reference/yog_ref.py accepts.  The negative
  * cases below are part of that contract: zero-arity atoms, empty bodies, and
  * comparisons whose left operand is an identifier are syntax errors.
  */

@@ -5,7 +5,7 @@ turns a `.yog` policy into a validated clause-table IR and evaluates
 authorization requests against it.
 
 The language contract is frozen in [`../docs/COMPILER.md`](../docs/COMPILER.md).
-`../yog.py` remains the behavioural reference; the C engine is validated both
+`../reference/yog_ref.py` remains the behavioural reference; the C engine is validated both
 against it and by independent semantic tests.
 
 ## Pipeline
@@ -93,7 +93,7 @@ python yog/tests/property/property_conformance.py
 ```
 
 The conformance suite states the expected result for every Group A–V request
-and every compile error directly in `cases.json`, independently of `yog.py`.
+and every compile error directly in `cases.json`, independently of `reference/yog_ref.py`.
 The property suite generates acyclic policies and compares the engine with a
 plain-Python oracle that does not use the YOG solver. See
 [`../docs/CORRECTNESS.md`](../docs/CORRECTNESS.md).

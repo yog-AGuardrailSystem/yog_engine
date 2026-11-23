@@ -168,12 +168,12 @@ allow can_transfer(User, Account):
     Amt <= Limit
 
 # amount is per-request context — this is why check() supports
-# injecting extra facts just for one query (see yog.py: `context=`)
+# injecting extra facts just for one query (see reference/yog_ref.py: `context=`)
 # NOTE: this one can't use `query` like the others above, because
 # the amount being transferred isn't known until request time.
 # Verify with check() + injected context instead:
 #
-#   from yog import load_policy, Atom, Const
+#   from yog_ref import load_policy, Atom, Const
 #   eng = load_policy("all_examples.yog")
 #   eng.check("i_customer", "can_transfer", "i_acct_999",
 #             context=[Atom("amount", [Const("i_acct_999"), Const(9000)])])

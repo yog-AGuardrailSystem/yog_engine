@@ -4,7 +4,7 @@ This document describes how the C implementation is validated. The contract it
 is validated against is [`COMPILER.md`](COMPILER.md); the security properties
 built on top of it are in [`SECURITY.md`](SECURITY.md).
 
-The guiding rule is that **agreement with `yog.py` is not sufficient**. Shared
+The guiding rule is that **agreement with `reference/yog_ref.py` is not sufficient**. Shared
 bugs are invisible to a differential test, so the suite also contains
 expectations stated directly from the specification, a property-based oracle
 that does not use the YOG solver, sanitizer runs and fuzzing.
@@ -16,7 +16,7 @@ that does not use the YOG solver, sanitizer runs and fuzzing.
 | Unit and semantic tests | each stage obeys its own contract | `yog/tests/{lexer,parser,sema,ir,vm,api,security}` |
 | Conformance corpus | Groups A–V produce the specified decisions | `yog/tests/conformance/cases.json` |
 | Property-based oracle | generated policies match a non-YOG evaluator | `yog/tests/property/property_conformance.py` |
-| Differential test | C and `yog.py` agree on queries and checks | `yog/tests/differential/diff_vs_python.py` |
+| Differential test | C and `reference/yog_ref.py` agree on queries and checks | `yog/tests/differential/diff_vs_python.py` |
 | Sanitizers | no leaks, use-after-free or UB on the suite | `-DYOG_SANITIZE=ON` |
 | Fuzzing | malformed policies do not crash or hang | `test_fuzz_smoke`, `fuzz_compile` |
 | Security tests | fail-closed limits, context isolation, concurrency | `test_security` |
@@ -106,7 +106,7 @@ because the oracle evaluates patterns independently while YOG would join them.
 That shape is covered by the standalone join patterns instead. Extending the
 oracle to shared-variable conjunctions is tracked as future work.
 
-## 5. Differential test against `yog.py`
+## 5. Differential test against `reference/yog_ref.py`
 
 ```sh
 python yog/tests/differential/diff_vs_python.py

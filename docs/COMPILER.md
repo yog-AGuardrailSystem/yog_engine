@@ -2,7 +2,7 @@
 
 This document freezes the behaviour that both implementations must agree on:
 
-- `yog.py` is the behavioural reference;
+- `reference/yog_ref.py` is the behavioural reference;
 - the C compiler in `yog/` is the production implementation;
 - `all_examples.yog` is the canonical demonstration and conformance corpus
   (Groups A–V).
@@ -15,10 +15,10 @@ The C implementation is validated in several independent ways:
    (`yog/tests/conformance/cases.json`);
 3. **property tests** against a non-YOG oracle
    (`yog/tests/property/property_conformance.py`);
-4. **differential tests** that compare the C engine with `yog.py`
+4. **differential tests** that compare the C engine with `reference/yog_ref.py`
    (`yog/tests/differential/diff_vs_python.py`).
 
-Agreement with `yog.py` alone is not enough: a bug shared by both
+Agreement with `reference/yog_ref.py` alone is not enough: a bug shared by both
 implementations would be invisible. Group R, for example, independently
 establishes that a matching deny overrides a matching allow. See
 [`CORRECTNESS.md`](CORRECTNESS.md) for the full strategy.
