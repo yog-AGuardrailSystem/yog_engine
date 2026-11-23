@@ -229,3 +229,10 @@ benchmarks/results/translations/
 benchmarks/results/bin/
 benchmarks/results/tmp/
 
+
+# MSVC / Windows build outputs (yog/build*/ above covers the usual trees)
+/build*/
+*.obj
+*.pdb
+*.ilk
+*.exp
