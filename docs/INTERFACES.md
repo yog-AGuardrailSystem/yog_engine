@@ -93,7 +93,7 @@ Text trace today (`> ?- goal`, `> try rule ...`). The structured form planned fo
 events `{id, parent, kind, line, text}` with `kind` one of `goal`, `try_clause`, `builtin`, `decision`,
 capped in size and flagged `truncated`. Traces contain request values: treat them as sensitive.
 
-## 5. Policy bundle , implemented (tools/yogbundle.py)
+## 5. Policy bundle , implemented (`yog_platform/bundle.py`)
 
 A signed bundle is a JSON document:
 
@@ -118,7 +118,7 @@ of the manifest's canonical JSON. Verification fails closed on: unknown format, 
 `key_id`, expired `not_after`, any file whose hash differs, a `policy_version` lower than the one in force
 (downgrade), or a language version the engine does not support.
 
-## 6. Sidecar HTTP API , implemented (sidecar/yog_sidecar.py)
+## 6. Sidecar HTTP API , implemented (`yog_platform/sidecar.py`)
 
 | Endpoint | Purpose |
 |---|---|
@@ -131,7 +131,7 @@ of the manifest's canonical JSON. Verification fails closed on: unknown format, 
 Any internal error returns HTTP 500 with a body the client must treat as DENY. Request bodies are limited
 to 1 MiB.
 
-## 7. Approval token , implemented (gateway/approvals.py)
+## 7. Approval token , implemented (`yog_platform/approvals.py`)
 
 When the decision is `REQUIRE_APPROVAL` the gateway creates an approval request bound to the exact call:
 
@@ -145,7 +145,7 @@ approver)`. The gateway executes the tool only if the token verifies, the reques
 the call about to run, the policy hash is unchanged, it has not expired and it has not been used. Tokens
 are single-use.
 
-## 8. Audit record , implemented (gateway/audit.py)
+## 8. Audit record , implemented (`yog_platform/audit.py`)
 
 One JSON line per decision, hash-chained:
 

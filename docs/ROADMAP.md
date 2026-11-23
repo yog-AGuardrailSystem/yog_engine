@@ -188,3 +188,8 @@ items can only be verified by CI or on another machine.
 | P2-5 | partial | Ed25519 (RFC 8032 vectors), signed bundles, hash-chained audit log: in `yog_platform/`, tested |
 | P2-6 | done | decision cache (`yog_platform/cache.py`) |
 | P3-7 (core) | done | approval tokens bound to request hash, policy hash, expiry, single use |
+| P3-1/P3-2 (bindings) | partial | Python and Rust bindings and the Windows Go adapter updated to the new `YogResult` layout, `REQUIRE_APPROVAL`, obligations and `check_json`; a C test pins the struct layout. **Rust is unverified** (cargo not installed); Python binding tests need CI (Application Control blocks `yog.dll` here) |
+| P3-4 | done (Python) | sidecar in `yog_platform/sidecar.py` (the roadmap said Rust; Rust is not installed here); 65 platform tests |
+| P2-3 | partial | atomic policy swap in `PolicyManager` (stage, self-test, swap, close old); no C-level refcounted handle |
+| P4-1 | done | `Syncer` pulls signed bundles from a directory or HTTP registry; refuses downgrade, tampering and corrupt registries and keeps serving |
+| P4-3 | done | fail-closed on engine crash/hang/timeout, missing policy, unwritable audit log; tested with a scripted fake `yogc` |

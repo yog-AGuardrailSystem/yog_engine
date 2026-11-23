@@ -5,6 +5,8 @@
  */
 #include "../test_util.h"
 
+#include <stddef.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -435,8 +437,37 @@ static void test_existing_policies_behave_as_before(void)
     yog_free(yog);
 }
 
+/* The Python (ctypes), Rust and Go bindings mirror these structs by hand, and the C library writes through
+ * them.  If this test fails, update every binding in the same change (see bindings/ and
+ * benchmarks/adapters/yog_go/engine_windows.go). */
+static bool same_size(size_t actual, size_t expected)
+{
+    return actual == expected;
+}
+
+static void test_result_layout_matches_the_bindings(void)
+{
+#if UINTPTR_MAX == 0xFFFFFFFFFFFFFFFFu
+    TEST_CHECK(same_size(offsetof(YogResult, decision), 0));
+    TEST_CHECK(same_size(offsetof(YogResult, reason), 8));
+    TEST_CHECK(same_size(offsetof(YogResult, trace), 16));
+    TEST_CHECK(same_size(offsetof(YogResult, matched_line), 24));
+    TEST_CHECK(same_size(offsetof(YogResult, obligations), 32));
+    TEST_CHECK(same_size(offsetof(YogResult, obligation_count), 40));
+    TEST_CHECK(same_size(sizeof(YogResult), 48));
+    TEST_CHECK(same_size(sizeof(YogObligation), 24));
+    TEST_CHECK(same_size(offsetof(YogObligation, args), 8));
+    TEST_CHECK(same_size(offsetof(YogObligation, arg_count), 16));
+    TEST_CHECK(same_size(sizeof(YogObligationArg), 24));
+    TEST_CHECK(same_size(offsetof(YogObligationArg, text), 8));
+    TEST_CHECK(same_size(offsetof(YogObligationArg, integer), 16));
+    TEST_CHECK(same_size(sizeof(YogLimits), 40));
+#endif
+}
+
 int main(void)
 {
+    test_result_layout_matches_the_bindings();
     test_precedence_lattice();
     test_reason_names_the_winning_clause();
     test_decision_names();

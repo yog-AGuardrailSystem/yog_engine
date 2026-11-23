@@ -18,11 +18,16 @@ type yogError struct {
 	Message [messageSize]byte
 }
 
+// Must match YogResult in yog/include/api/yog.h field for field: the DLL writes through it.
 type yogResult struct {
-	Decision int32
-	_        int32
-	Reason   *byte
-	Trace    *byte
+	Decision        int32
+	_               int32
+	Reason          *byte
+	Trace           *byte
+	MatchedLine     int32
+	_               int32
+	Obligations     unsafe.Pointer
+	ObligationCount uintptr
 }
 
 type windowsEngine struct {

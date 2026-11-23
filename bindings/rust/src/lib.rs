@@ -20,7 +20,7 @@
 //! );
 //! ```
 
-use std::ffi::{c_char, c_int, c_void, CStr, CString};
+use std::ffi::{c_char, c_int, c_longlong, c_void, CStr, CString};
 use std::fmt;
 use std::ptr;
 
@@ -33,11 +33,43 @@ struct RawError {
     message: [c_char; MESSAGE_SIZE],
 }
 
+// These three structs must match YogObligationArg, YogObligation and YogResult in
+// yog/include/api/yog.h field for field: the C library writes through them.
+#[repr(C)]
+struct RawObligationArg {
+    kind: c_int, // 0 text, 1 integer, 2 boolean
+    text: *mut c_char,
+    integer: c_longlong,
+}
+
+#[repr(C)]
+struct RawObligation {
+    name: *mut c_char,
+    args: *mut RawObligationArg,
+    arg_count: usize,
+}
+
 #[repr(C)]
 struct RawResult {
     decision: c_int,
     reason: *mut c_char,
     trace: *mut c_char,
+    matched_line: c_int,
+    obligations: *mut RawObligation,
+    obligation_count: usize,
+}
+
+impl RawResult {
+    fn zeroed() -> Self {
+        RawResult {
+            decision: 1, // DENY: fail closed even if the call never fills it in
+            reason: ptr::null_mut(),
+            trace: ptr::null_mut(),
+            matched_line: 0,
+            obligations: ptr::null_mut(),
+            obligation_count: 0,
+        }
+    }
 }
 
 #[repr(C)]
@@ -71,6 +103,15 @@ extern "C" {
         error: *mut RawError,
     ) -> bool;
     fn yog_result_free(result: *mut RawResult);
+    fn yog_check_json(
+        yog: *mut c_void,
+        json: *const c_char,
+        length: usize,
+        trace: bool,
+        result: *mut RawResult,
+        error: *mut RawError,
+    ) -> bool;
+    fn yog_policy_version(yog: *const c_void) -> c_int;
     fn yog_version() -> *const c_char;
 }
 
@@ -91,9 +132,12 @@ pub fn library_version() -> String {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Decision {
     Allow,
     Deny,
+    /// A human or other authority must approve this exact request before it runs.
+    RequireApproval,
 }
 
 impl fmt::Display for Decision {
@@ -101,8 +145,95 @@ impl fmt::Display for Decision {
         f.write_str(match self {
             Decision::Allow => "ALLOW",
             Decision::Deny => "DENY",
+            Decision::RequireApproval => "REQUIRE_APPROVAL",
         })
     }
+}
+
+/// An argument of an obligation.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ObligationArg {
+    Text(String),
+    Integer(i64),
+    Boolean(bool),
+}
+
+/// Data a policy attaches to an ALLOW or REQUIRE_APPROVAL decision.  YOG never performs an
+/// obligation: the enforcement point must, and must refuse the action if it cannot.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Obligation {
+    pub name: String,
+    pub args: Vec<ObligationArg>,
+}
+
+/// The full outcome of one check.
+#[derive(Clone, Debug)]
+pub struct Outcome {
+    pub decision: Decision,
+    pub reason: String,
+    pub matched_line: i32,
+    pub obligations: Vec<Obligation>,
+    pub trace: Option<String>,
+}
+
+fn text_of(raw: *const c_char) -> String {
+    if raw.is_null() {
+        String::new()
+    } else {
+        unsafe { CStr::from_ptr(raw) }.to_string_lossy().into_owned()
+    }
+}
+
+/// Converts a filled-in C result, then always releases the C memory.
+fn finish(ok: bool, result: &mut RawResult, error: &RawError) -> Result<Outcome, EvalError> {
+    let outcome = if !ok {
+        Err(EvalError {
+            message: raw_message(error),
+        })
+    } else {
+        match result.decision {
+            0 | 1 | 2 => {
+                let decision = match result.decision {
+                    0 => Decision::Allow,
+                    1 => Decision::Deny,
+                    _ => Decision::RequireApproval,
+                };
+                let mut obligations = Vec::with_capacity(result.obligation_count);
+                for i in 0..result.obligation_count {
+                    let item = unsafe { &*result.obligations.add(i) };
+                    let mut args = Vec::with_capacity(item.arg_count);
+                    for k in 0..item.arg_count {
+                        let arg = unsafe { &*item.args.add(k) };
+                        args.push(match arg.kind {
+                            1 => ObligationArg::Integer(arg.integer as i64),
+                            2 => ObligationArg::Boolean(arg.integer != 0),
+                            _ => ObligationArg::Text(text_of(arg.text)),
+                        });
+                    }
+                    obligations.push(Obligation {
+                        name: text_of(item.name),
+                        args,
+                    });
+                }
+                Ok(Outcome {
+                    decision,
+                    reason: text_of(result.reason),
+                    matched_line: result.matched_line,
+                    obligations,
+                    trace: if result.trace.is_null() {
+                        None
+                    } else {
+                        Some(text_of(result.trace))
+                    },
+                })
+            }
+            other => Err(EvalError {
+                message: format!("the library returned an unknown decision value {other}"),
+            }),
+        }
+    };
+    unsafe { yog_result_free(result) };
+    outcome
 }
 
 #[derive(Debug)]
@@ -190,6 +321,9 @@ impl Yog {
     }
 
     /// Return `(decision, reason)` with an optional request context.
+    ///
+    /// The context is parsed as policy text, so it must only contain values you trust.  Use
+    /// [`Yog::check_json`] for data that comes from an agent or a user.
     pub fn check_with_context(
         &self,
         actor: &str,
@@ -198,6 +332,19 @@ impl Yog {
         context: Option<&str>,
         trace: bool,
     ) -> Result<(Decision, String), EvalError> {
+        self.decide(actor, action, resource, context, trace)
+            .map(|outcome| (outcome.decision, outcome.reason))
+    }
+
+    /// Return the full [`Outcome`], including obligations.
+    pub fn decide(
+        &self,
+        actor: &str,
+        action: &str,
+        resource: &str,
+        context: Option<&str>,
+        trace: bool,
+    ) -> Result<Outcome, EvalError> {
         let actor = cstring(actor)?;
         let action = cstring(action)?;
         let resource = cstring(resource)?;
@@ -205,18 +352,12 @@ impl Yog {
             Some(text) => cstring(text)?,
             None => CString::new("").expect("empty"),
         };
-
-        let mut result = RawResult {
-            decision: 0,
-            reason: ptr::null_mut(),
-            trace: ptr::null_mut(),
-        };
+        let mut result = RawResult::zeroed();
         let mut error = RawError {
             line: 0,
             column: 0,
             message: [0; MESSAGE_SIZE],
         };
-
         let ok = unsafe {
             yog_check(
                 self.handle,
@@ -229,27 +370,35 @@ impl Yog {
                 &mut error,
             )
         };
-        let outcome = if !ok {
-            Err(EvalError {
-                message: raw_message(&error),
-            })
-        } else {
-            let decision = if result.decision == 0 {
-                Decision::Allow
-            } else {
-                Decision::Deny
-            };
-            let reason = if result.reason.is_null() {
-                String::new()
-            } else {
-                unsafe { CStr::from_ptr(result.reason) }
-                    .to_string_lossy()
-                    .into_owned()
-            };
-            Ok((decision, reason))
+        finish(ok, &mut result, &error)
+    }
+
+    /// Check one request given as JSON (see docs/INTERFACES.md).  Request values never pass through
+    /// policy text, so this is the safe entry point for untrusted data.  An `Err` must be treated
+    /// as a DENY.
+    pub fn check_json(&self, json: &str, trace: bool) -> Result<Outcome, EvalError> {
+        let mut result = RawResult::zeroed();
+        let mut error = RawError {
+            line: 0,
+            column: 0,
+            message: [0; MESSAGE_SIZE],
         };
-        unsafe { yog_result_free(&mut result) };
-        outcome
+        let ok = unsafe {
+            yog_check_json(
+                self.handle,
+                json.as_ptr() as *const c_char,
+                json.len(),
+                trace,
+                &mut result,
+                &mut error,
+            )
+        };
+        finish(ok, &mut result, &error)
+    }
+
+    /// The language version the policy declared with `version N` (1 when absent).
+    pub fn policy_version(&self) -> i32 {
+        unsafe { yog_policy_version(self.handle) }
     }
 }
 

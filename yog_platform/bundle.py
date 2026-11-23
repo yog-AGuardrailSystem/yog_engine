@@ -41,7 +41,8 @@ def _parse_time(text: str) -> _dt.datetime:
 
 
 def build_bundle(files: Mapping[str, str], *, policy_version: int, key_id: str, secret: bytes,
-                 created: str, not_after: str, language_version: int = 2) -> dict:
+                 created: str, not_after: str, language_version: int = 2,
+                 self_tests: Optional[list] = None) -> dict:
     """Creates and signs a bundle.  Run offline; the sidecar only verifies."""
     if ENTRY not in files:
         raise BundleError(f"a bundle needs an entry file named {ENTRY}")
@@ -53,6 +54,9 @@ def build_bundle(files: Mapping[str, str], *, policy_version: int, key_id: str, 
         "key_id": key_id,
         "files": {name: _sha256(text.encode("utf-8")) for name, text in sorted(files.items())},
     }
+    if self_tests:
+        # [{"request": {...}, "expect": "ALLOW"}]: run on the staged engine before it can take traffic.
+        manifest["self_tests"] = self_tests
     signature = ed25519.sign(secret, canonical(manifest))
     return {"format": FORMAT, "manifest": manifest, "files": dict(files),
             "signature": base64.b64encode(signature).decode("ascii")}
