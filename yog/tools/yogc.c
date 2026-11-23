@@ -202,6 +202,10 @@ int main(int argc, char **argv)
     int rc = 0;
     int i;
 
+    if (argc == 2 && strcmp(argv[1], "--version") == 0) {
+        printf("yogc %s\n", yog_version());
+        return 0;
+    }
     if (argc < 3) goto usage;
     cmd = argv[1];
     path = argv[2];
@@ -245,7 +249,8 @@ int main(int argc, char **argv)
     return rc;
 
 usage:
-    fputs("usage: yogc run|ir|batch|validate POLICY [--trace]\n"
+    fputs("usage: yogc --version\n"
+          "       yogc run|ir|batch|validate POLICY [--trace]\n"
           "       yogc check POLICY ACTOR ACTION RESOURCE [--context \"fact a(b); ...\"] [--trace]\n"
           "       yogc explain POLICY [ACTOR ACTION RESOURCE] [--context \"fact a(b); ...\"]\n", stderr);
     return 2;

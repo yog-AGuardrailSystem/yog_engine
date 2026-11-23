@@ -65,6 +65,23 @@ extern "C" {
         error: *mut RawError,
     ) -> bool;
     fn yog_result_free(result: *mut RawResult);
+    fn yog_version() -> *const c_char;
+}
+
+/// Version of this crate, kept equal to the C library version.
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// Version string reported by the linked C library (for example "0.2.0-alpha.1").
+pub fn library_version() -> String {
+    // SAFETY: yog_version returns a pointer to a static NUL-terminated string.
+    unsafe {
+        let raw = yog_version();
+        if raw.is_null() {
+            String::new()
+        } else {
+            CStr::from_ptr(raw).to_string_lossy().into_owned()
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

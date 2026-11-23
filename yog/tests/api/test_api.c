@@ -4,6 +4,7 @@
 #include "../test_util.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "api/yog.h"
 
@@ -165,8 +166,23 @@ static void test_policy_from_file_shape(void)
     yog_free(yog);
 }
 
+static void test_version_matches_header(void)
+{
+    const char *version = yog_version();
+    TEST_CHECK(version != NULL);
+    if (version == NULL) return;
+    TEST_CHECK(strcmp(version, YOG_VERSION_STRING) == 0);
+    {
+        char expected[32];
+        snprintf(expected, sizeof expected, "%d.%d.%d-%s", YOG_VERSION_MAJOR,
+                 YOG_VERSION_MINOR, YOG_VERSION_PATCH, YOG_VERSION_PRERELEASE);
+        TEST_CHECK(strcmp(version, expected) == 0);
+    }
+}
+
 int main(void)
 {
+    test_version_matches_header();
     test_compile_and_check();
     test_trace_is_opt_in();
     test_compile_copies_the_source();

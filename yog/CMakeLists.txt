@@ -1,5 +1,13 @@
 cmake_minimum_required(VERSION 3.16)
-project(yog C)
+project(yog VERSION 0.2.0 LANGUAGES C)
+
+# The C header is the single source of the version string; fail early if the
+# CMake project version drifts from it.
+file(READ ${CMAKE_CURRENT_SOURCE_DIR}/include/api/yog.h YOG_HEADER_TEXT)
+string(REGEX MATCH "#define YOG_VERSION_STRING \"([0-9]+[.][0-9]+[.][0-9]+)" _yog_ver_match "${YOG_HEADER_TEXT}")
+if(NOT CMAKE_MATCH_1 STREQUAL PROJECT_VERSION)
+  message(FATAL_ERROR "yog.h YOG_VERSION_STRING (${CMAKE_MATCH_1}) does not match project version ${PROJECT_VERSION}")
+endif()
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -74,6 +82,8 @@ target_include_directories(yog_shared PUBLIC ${YOG_INCLUDE_DIR} ${YOG_SRC_DIR})
 target_compile_definitions(yog_shared PRIVATE YOG_SHARED_EXPORTS)
 set_target_properties(yog_shared PROPERTIES
   OUTPUT_NAME yog
+  VERSION ${PROJECT_VERSION}
+  SOVERSION ${PROJECT_VERSION_MAJOR}
   POSITION_INDEPENDENT_CODE ON
   C_VISIBILITY_PRESET hidden
 )

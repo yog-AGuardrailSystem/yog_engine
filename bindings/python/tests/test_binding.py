@@ -103,3 +103,10 @@ def test_closed_policy_cannot_be_checked() -> None:
     policy.close()
     with pytest.raises(ValueError):
         policy.check("alice", "can_access", "db")
+
+
+def test_library_version_matches_package_version() -> None:
+    # The wheel uses the PEP 440 spelling (0.2.0a1); the C library reports the
+    # SemVer spelling (0.2.0-alpha.1).  Both must describe the same release.
+    assert yog.library_version() == "0.2.0-alpha.1"
+    assert yog.__version__ == "0.2.0a1"
