@@ -68,7 +68,7 @@ The stages are separate so each part has one job:
 
 ## What is the Python code for?
 
-[`yog.py`](../yog.py) is a Python reference implementation of the language.
+[`reference/yog_ref.py`](../reference/yog_ref.py) is a Python reference implementation of the language.
 It gives the project a second implementation to compare against. It is not
 the C engine's front end.
 
@@ -82,7 +82,7 @@ that reference implementation. The C engine's command-line program is
 | --- | --- |
 | [`README.md`](../README.md) | Project overview, decision rules, and common build/test commands. |
 | [`all_examples.yog`](../all_examples.yog) | Main collection of example policies and requests used by the project. |
-| [`yog.py`](../yog.py) | Python reference interpreter. |
+| [`reference/yog_ref.py`](../reference/yog_ref.py) | Python reference interpreter. |
 | [`yog_cli.py`](../yog_cli.py) | Python CLI for trying the reference interpreter. |
 | [`pyproject.toml`](../pyproject.toml) | Python package metadata and build settings. |
 | [`yog/CMakeLists.txt`](../yog/CMakeLists.txt) | Describes how to build the C libraries, tools, benchmark, and tests. |

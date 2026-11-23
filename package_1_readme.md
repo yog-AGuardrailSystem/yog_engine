@@ -133,7 +133,7 @@ It returns a dictionary containing:
 From the repository directory, execute:
 
 ```powershell
-python yog.py all_examples.yog
+python reference/yog_ref.py all_examples.yog
 ```
 
 This runs the queries included in `all_examples.yog` and prints their results.
@@ -148,7 +148,7 @@ The example policies cover scenarios such as role-based deletion, deployment res
 - **Packaging configuration:** `pyproject.toml`
 - **Installation mode:** Editable installation
 
-The `pyproject.toml` file defines the package metadata and configures installation of the existing `yog.py` module.
+The `pyproject.toml` file defines the package metadata and configures installation of the reference interpreter module `reference/yog_ref.py` (import name `yog_ref`).
 
 ## 9. Validation Status
 

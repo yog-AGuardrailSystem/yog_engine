@@ -1,7 +1,7 @@
 import pytest
 from pathlib import Path
 
-from yog import load_policy, YogError, Parser, tokenize, Engine
+from yog_ref import load_policy, YogError, Parser, tokenize, Engine
 
 
 PROJECT_DIR = Path(__file__).resolve().parents[3]

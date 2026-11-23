@@ -1,4 +1,9 @@
-from yog import Engine
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "reference"))
+
+from yog_ref import Engine  # noqa: E402
 
 
 def main():

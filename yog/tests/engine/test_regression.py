@@ -1,8 +1,8 @@
 
 from pathlib import Path
 
-from yog import load_policy
-from yog import Atom, Const
+from yog_ref import load_policy
+from yog_ref import Atom, Const
 
 
 PROJECT_DIR = Path(__file__).resolve().parents[3]
@@ -337,7 +337,7 @@ def test_group_r_alice_cannot_access_payroll_document():
     assert result["decision"] == "DENY"
 
 def test_rule_cycle_is_rejected(tmp_path):
-    from yog import YogError
+    from yog_ref import YogError
 
     policy = tmp_path / "cycle.yog"
     policy.write_text(
@@ -357,7 +357,7 @@ def test_rule_cycle_is_rejected(tmp_path):
 
         
 def test_unsafe_negation_is_rejected(tmp_path):
-    from yog import YogError
+    from yog_ref import YogError
 
     policy = tmp_path / "unsafe_negation.yog"
     policy.write_text(
@@ -381,7 +381,7 @@ def test_unsafe_negation_is_rejected(tmp_path):
 
 
 def test_undefined_predicate_is_rejected(tmp_path):
-    from yog import YogError
+    from yog_ref import YogError
 
     policy = tmp_path / "undefined_predicate.yog"
     policy.write_text(
@@ -396,7 +396,7 @@ def test_undefined_predicate_is_rejected(tmp_path):
         assert "is not defined by any fact or rule" in str(exc)
 
 def test_predicate_role_conflict_is_rejected(tmp_path):
-    from yog import YogError
+    from yog_ref import YogError
 
     policy = tmp_path / "role_conflict.yog"
     policy.write_text(

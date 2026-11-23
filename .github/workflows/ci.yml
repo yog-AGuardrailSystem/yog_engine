@@ -20,7 +20,7 @@ jobs:
       - name: Run C tests
         run: ctest --test-dir yog/build --output-on-failure
 
-      - name: Differential check against yog.py
+      - name: Differential check against the reference interpreter
         run: python yog/tests/differential/diff_vs_python.py --yogc yog/build/yogc
 
       - name: Independent conformance suite

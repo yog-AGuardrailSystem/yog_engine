@@ -28,7 +28,7 @@ DEFAULT_YOGC = ROOT / "yog" / "build" / ("yogc.exe" if os.name == "nt" else "yog
 
 
 def load_reference():
-    path = ROOT / "yog.py"
+    path = ROOT / "reference" / "yog_ref.py"
     spec = importlib.util.spec_from_file_location("yog_reference", path)
     if spec is None or spec.loader is None:
         raise SystemExit(f"cannot load {path}")

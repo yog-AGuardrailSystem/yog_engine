@@ -13,4 +13,5 @@ license = "MIT"
 dependencies = []
 
 [tool.setuptools]
-py-modules = ["yog"]
+package-dir = {"" = "reference"}
+py-modules = ["yog_ref"]
