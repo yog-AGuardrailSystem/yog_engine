@@ -62,7 +62,7 @@ target_link_libraries(yog_ir PUBLIC yog_sema)
 add_library(yog_vm STATIC src/vm/unify.c src/vm/engine.c)
 target_link_libraries(yog_vm PUBLIC yog_ir)
 
-add_library(yog_api STATIC src/api/yog.c)
+add_library(yog_api STATIC src/api/yog.c src/api/json.c src/api/request.c)
 target_include_directories(yog_api PUBLIC ${YOG_INCLUDE_DIR} ${YOG_SRC_DIR})
 target_link_libraries(yog_api PUBLIC yog_vm)
 
@@ -81,6 +81,8 @@ add_library(yog_shared SHARED
   src/vm/unify.c
   src/vm/engine.c
   src/api/yog.c
+  src/api/json.c
+  src/api/request.c
 )
 target_include_directories(yog_shared PUBLIC ${YOG_INCLUDE_DIR} ${YOG_SRC_DIR})
 target_compile_definitions(yog_shared PRIVATE YOG_SHARED_EXPORTS)
@@ -116,6 +118,7 @@ yog_test(test_ir     tests/ir/test_ir.c         yog_ir)
 yog_test(test_vm     tests/vm/test_vm.c         yog_api)
 yog_test(test_api    tests/api/test_api.c       yog_api)
 yog_test(test_v2     tests/api/test_v2.c        yog_api)
+yog_test(test_json   tests/api/test_json.c      yog_api)
 
 add_executable(test_security tests/security/test_security.c)
 target_link_libraries(test_security PRIVATE yog_api Threads::Threads)

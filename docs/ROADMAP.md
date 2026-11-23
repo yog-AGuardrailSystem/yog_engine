@@ -181,3 +181,10 @@ items can only be verified by CI or on another machine.
 | P1-2 | done | `require_approval`, obligations, lattice, exit code 4, API/yogc |
 | P1-3 | partial | in, matches, glob, under, starts_with, ends_with, contains, cidr (IPv4 only) |
 | P1-6 | done | reference interpreter rewritten; `diff_v2.py` (81 curated + 3,000 random per seed) |
+| P1-1 (JSON) | done | `yog_check_json`, strict JSON reader, typed flattening, `yogc check-json` / `batch-json`; 161 checks in `test_json` |
+| P0-1/2/3 | done | `docs/SPEC.md`, `INTERFACES.md`, `THREAT_MODEL.md`, `RFC_TEMPLATE.md` written to match the implementation |
+| P1-4 | done | state/time are request inputs (`state`, `state_version`, `now`); policies compare them with ordinary goals |
+| P1-5 | partial | imports are expanded by the Python loader (`yog_platform/imports.py`), not by a C API |
+| P2-5 | partial | Ed25519 (RFC 8032 vectors), signed bundles, hash-chained audit log: in `yog_platform/`, tested |
+| P2-6 | done | decision cache (`yog_platform/cache.py`) |
+| P3-7 (core) | done | approval tokens bound to request hash, policy hash, expiry, single use |

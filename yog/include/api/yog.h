@@ -165,6 +165,27 @@ YOG_API YogLimits yog_get_limits(const Yog *yog);
 YOG_API bool yog_check(Yog *yog, const char *actor, const char *action, const char *resource,
                        const char *context, bool trace, YogResult *result, YogError *error);
 
+/*
+ * Checks one request given as JSON (see docs/INTERFACES.md):
+ *   {"actor": "..", "action": "..", "resource": "..",
+ *    "args": {..}, "env": {..}, "state": {"version": 1, "values": {..}},
+ *    "now": 1700000000, "facts": [{"predicate": "p", "args": [..]}], "request_id": ".."}
+ * The optional objects become typed facts (arg/2, env/2, state/2, now/1, state_version/1) that the
+ * policy reads through matching `input` declarations.  Values never pass through policy text, so they
+ * cannot forge facts.  Strings must be valid UTF-8; null, floats and nested arrays are rejected.
+ * Same contract as yog_check(): false means an evaluation or input error and the decision is DENY.
+ */
+YOG_API bool yog_check_json(Yog *yog, const char *json, size_t length, bool trace,
+                            YogResult *result, YogError *error);
+
+/* Serialises a result as one JSON object; free with yog_string_free().  `yog` may be NULL. */
+YOG_API char *yog_result_to_json(const Yog *yog, const YogResult *result);
+
+/* {"error":{"message":..,"line":..,"column":..}} for a failed call; free with yog_string_free(). */
+YOG_API char *yog_error_to_json(const YogError *error);
+
+YOG_API void yog_string_free(char *text);
+
 /* Evaluate every `query` in the policy, printing in the reference format. */
 YOG_API bool yog_run_queries(Yog *yog, FILE *out, bool trace);
 

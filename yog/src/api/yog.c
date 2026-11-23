@@ -9,6 +9,7 @@
  * engine).
  */
 #include "api/yog.h"
+#include "api/yog_internal.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -301,9 +302,6 @@ bool yog_check(Yog *yog, const char *actor, const char *action, const char *reso
 {
     YogModule *context_module = NULL;
     char *context_source = NULL;
-    YogEngine *engine = NULL;
-    YogEngineResult engine_result;
-    YogEvalError eval_error;
     bool ok;
 
     if (error != NULL) {
@@ -328,11 +326,38 @@ bool yog_check(Yog *yog, const char *actor, const char *action, const char *reso
         }
     }
 
+    ok = yog_check_with_context_module(yog, actor, action, resource, context_module, trace,
+                                       result, error);
+    yog_ir_free(context_module);
+    free(context_source);
+    return ok;
+}
+
+bool yog_check_with_context_module(Yog *yog, const char *actor, const char *action,
+                                   const char *resource, const YogModule *context_module,
+                                   bool trace, YogResult *result, YogError *error)
+{
+    YogEngine *engine = NULL;
+    YogEngineResult engine_result;
+    YogEvalError eval_error;
+    bool ok;
+
+    if (error != NULL) {
+        error->line = 0;
+        error->column = 0;
+        error->message[0] = '\0';
+    }
+    if (result != NULL) {
+        memset(result, 0, sizeof(*result));
+        result->decision = YOG_DENY;
+    }
+    if (yog == NULL || result == NULL || actor == NULL || action == NULL || resource == NULL)
+        return fail(error, 0, 0, "yog_check() received a null argument", NULL);
+
     memset(&engine_result, 0, sizeof(engine_result));
+    memset(&eval_error, 0, sizeof(eval_error));
     engine = yog_engine_create(yog->module, &eval_error);
     if (engine == NULL) {
-        yog_ir_free(context_module);
-        free(context_source);
         (void)fail(error, 0, 0, "%s", eval_error.message);
         return false;
     }
@@ -341,8 +366,6 @@ bool yog_check(Yog *yog, const char *actor, const char *action, const char *reso
     ok = yog_engine_check(engine, actor, action, resource, context_module,
                           trace, &engine_result, &eval_error);
     yog_engine_free(engine);
-    yog_ir_free(context_module);
-    free(context_source);
 
     if (!ok) {
         (void)fail(error, eval_error.line, eval_error.column, "%s", eval_error.message);
