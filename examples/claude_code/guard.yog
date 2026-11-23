@@ -1,0 +1,66 @@
+version 2
+
+# A guard policy for Claude Code, used through yog_platform.claude_hook (see its docstring for the
+# .claude/settings.json to add).  The hook sets: env("cwd", dir), env("stage", s), env("context_tainted", b);
+# the Bash command is analysed into arg("shell.*", ...), the WebFetch url into arg("http.*", ...), and every
+# tool's raw input is available as arg("input.<field>", value).
+
+input arg(text, any)
+input env(text, any)
+
+fact known_tool("Read")
+fact known_tool("Write")
+fact known_tool("Edit")
+fact known_tool("MultiEdit")
+fact known_tool("Glob")
+fact known_tool("Grep")
+fact known_tool("Bash")
+fact known_tool("WebFetch")
+fact known_tool("WebSearch")
+fact known_tool("TodoWrite")
+fact known_tool("Task")
+
+# ---- never ------------------------------------------------------------------------------------------
+deny run_tool(Agent, Tool):
+    arg("shell.parsed", false)
+
+deny run_tool(Agent, Tool):
+    arg("shell.rm_rf", true)
+
+deny run_tool(Agent, Tool):
+    arg("shell.pipe_to_shell", true)
+
+deny run_tool(Agent, Tool):
+    arg("shell.sudo", true)
+
+deny run_tool(Agent, Tool):
+    arg("shell.arg", A)
+    matches(A, "(^|/)(\.env|id_rsa|id_ed25519|\.aws/credentials|\.ssh/config)($| )")
+
+deny run_tool(Agent, Tool):
+    arg("input.file_path", P)
+    matches(P, "(^|/)(\.env|id_rsa|id_ed25519|credentials)$")
+
+deny run_tool(Agent, Tool):
+    arg("input.file_path", P)
+    env("cwd", C)
+    not under(P, C)
+
+deny run_tool(Agent, Tool):
+    arg("http.host_is_private", true)
+
+# ---- ask the user -----------------------------------------------------------------------------------
+require_approval run_tool(Agent, Tool):
+    arg("shell.program", Prog)
+    in(Prog, "curl", "wget", "ssh", "scp", "nc", "ncat", "git")
+
+require_approval run_tool(Agent, Tool):
+    arg("shell.has_subshell", true)
+
+require_approval run_tool(Agent, Tool):
+    env("context_tainted", true)
+    in(Tool, "Bash", "Write", "Edit", "MultiEdit")
+
+# ---- everything else on the list is fine -------------------------------------------------------------
+allow run_tool(Agent, Tool):
+    known_tool(Tool)

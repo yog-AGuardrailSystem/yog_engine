@@ -66,8 +66,12 @@ class Gateway:
     def __init__(self, pdp, *, tools: Optional[Mapping[str, Mapping]] = None, downstream: Optional[Callable] = None,
                  approvals: Optional[ApprovalManager] = None, env: Optional[Mapping[str, Any]] = None,
                  state_provider: Optional[Callable[[], Optional[dict]]] = None, audit=None,
-                 limiter: Optional[RateLimiter] = None, clock: Callable[[], float] = time.time):
-        """``tools`` maps a tool name to ``{"extract": [(argument, extractor), ...]}``."""
+                 limiter: Optional[RateLimiter] = None, clock: Callable[[], float] = time.time,
+                 ask_user: bool = False):
+        """``tools`` maps a tool name to ``{"extract": [(argument, extractor), ...]}``.
+
+        ``ask_user``: when there is no approval service, report REQUIRE_APPROVAL as ``approval_required`` so the
+        host (for example a Claude Code hook) can ask a human, instead of refusing the call outright."""
         self._pdp = pdp
         self._tools = dict(tools or {})
         self._downstream = downstream
@@ -77,6 +81,7 @@ class Gateway:
         self._audit = audit
         self._limiter = limiter or RateLimiter(clock)
         self._clock = clock
+        self._ask_user = ask_user
         self._tainted: set = set()                     # agents whose context has seen untrusted content
         self._handlers: dict[str, Callable] = {"audit": self._ob_audit, "rate_limit": self._ob_rate_limit,
                                                "max_output_bytes": self._ob_max_output}
@@ -130,6 +135,9 @@ class Gateway:
         if decision == "REQUIRE_APPROVAL":
             if not approval_token or self._approvals is None:
                 if self._approvals is None:
+                    if self._ask_user:
+                        auth.status = "approval_required"        # the host asks a human; nothing is created here
+                        return self._record(auth)
                     auth.reason = "approval is required but no approval service is configured"
                     return self._record(auth)
                 approval = self._approvals.create(request, policy_hash)

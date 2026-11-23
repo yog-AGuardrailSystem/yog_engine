@@ -144,7 +144,7 @@ def extract(arguments: dict, field: str = "command") -> dict:
     if pipeline:
         commands.append(pipeline)
 
-    programs, all_flags, paths = [], [], []
+    programs, all_flags, paths, arg_words = [], [], [], []
     rm_rf = sudo = eval_used = pipe_to_shell = False
     for pipeline in commands:
         names = []
@@ -152,6 +152,7 @@ def extract(arguments: dict, field: str = "command") -> dict:
             words = [t for k, t in simple if k == "word"]
             targets = [t for k, t in simple if k == "redirect"]
             paths += [_normalise(t) for t in targets if _is_pathlike(t)]
+            arg_words += targets
             idx = 0
             while idx < len(words) and (_base(words[idx]) in _WRAPPERS or "=" in words[idx].split("/")[0]):
                 if _base(words[idx]) in ("sudo", "doas"):
@@ -168,6 +169,7 @@ def extract(arguments: dict, field: str = "command") -> dict:
             names.append(name)
             programs.append(name)
             all_flags += [a for a in args if a.startswith("-") and a != "-"]
+            arg_words += [a for a in args if not (a.startswith("-") and a != "-")]
             paths += [_normalise(a) for a in args if _is_pathlike(a)]
             if name == "eval" or (name in _SHELLS and "-c" in args):
                 eval_used = True          # the string it runs is not analysed: a policy should deny or ask
@@ -185,6 +187,9 @@ def extract(arguments: dict, field: str = "command") -> dict:
         "program": sorted(set(programs)),
         "flag": sorted(set(all_flags)),
         "path": sorted(set(paths)),
+        # every non-flag argument as written (not normalised): lets a policy match secret file names such as
+        # ".env" and see the string handed to `bash -c`.  Capped so a huge command cannot bloat the request.
+        "arg": sorted({w[:4096] for w in arg_words})[:128],
         "rm_rf": rm_rf,
         "sudo": sudo,
         "pipe_to_shell": pipe_to_shell,
