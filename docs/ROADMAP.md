@@ -206,3 +206,4 @@ items can only be verified by CI or on another machine.
 | P0-10 | partial | `CONTRIBUTING.md` added; no repo triage report |
 | F4 | done | delegation chains: gateway builds `acting_for`/`delegated`/`has_scope`/`chain_depth` facts from a trusted `Principal`; scopes only narrow (`yog_platform/delegation.py`, `examples/ai_guardrails/delegation.yog`) |
 | F1 | done | shadow (log-only) mode in gateway, sidecar (`--shadow`) and Claude hook; documented in OPERATIONS.md |
+| F2 | done | `compare` CLI and `yog_platform/compare.py`: bounded enumeration with counterexamples, never claims equivalence unless exhaustive; `yog_platform/smt.py`: optional Z3 proof for the supported fragment, counterexamples replayed on the reference |

@@ -86,6 +86,39 @@ def cmd_diff(args) -> int:
     return 1 if changes and args.fail_on_change else 0
 
 
+def cmd_compare(args) -> int:
+    """Exit 0: the new policy is not more permissive (proven or, if inconclusive, not found); 1: it is more
+    permissive (with ``--fail-on-broader``); 2: inconclusive and ``--require-proof`` was given."""
+    from . import compare
+    with open(args.old, encoding="utf-8") as a, open(args.new, encoding="utf-8") as b:
+        old, new = a.read(), b.read()
+    report = compare.compare_policies(old, new, limit=args.limit)
+    if args.smt:
+        from . import smt
+        try:
+            report["smt"] = smt.compare_smt(old, new)
+        except smt.Unsupported as exc:
+            report["smt"] = {"verdict": "unsupported", "reason": str(exc)}
+    if args.json:
+        print(json.dumps(report, indent=2, default=str))
+    else:
+        print(f"verdict: {report['verdict']} (checked {report['checked']} of {report['universe_size']} requests, "
+              f"{'exhaustive' if report['exhaustive'] else 'bounded, NOT exhaustive'})")
+        for name in ("new_permits_more", "new_denies_more", "approval_changes", "obligation_changes"):
+            if report[name + "_count"]:
+                print(f"  {name}: {report[name + '_count']}")
+                for item in report[name][:3]:
+                    print(f"    {item['old']} -> {item['new']}  {json.dumps(item['request'])}")
+        if "smt" in report:
+            print(f"smt: {report['smt']['verdict']} - {report['smt'].get('reason', '')}")
+    broader = report["new_permits_more_count"] > 0 or report.get("smt", {}).get("verdict") == "no"
+    if args.fail_on_broader and broader:
+        return 1
+    if args.require_proof and report["verdict"] == "inconclusive" and report.get("smt", {}).get("verdict") != "yes":
+        return 2
+    return 0
+
+
 # ------------------------------------------------------------------ bundles
 
 def _read_hex(path: str) -> bytes:
@@ -198,6 +231,12 @@ def main(argv=None) -> int:
     p = sub.add_parser("diff"); p.add_argument("old"); p.add_argument("new"); p.add_argument("--requests", required=True)
     p.add_argument("--yogc"); p.add_argument("--fail-on-change", action="store_true")
     p.set_defaults(run=cmd_diff)
+    p = sub.add_parser("compare", help="what does the new policy permit that the old one did not?")
+    p.add_argument("old"); p.add_argument("new"); p.add_argument("--json", action="store_true")
+    p.add_argument("--limit", type=int, default=5000, help="maximum requests to enumerate")
+    p.add_argument("--smt", action="store_true", help="also run the symbolic comparison (needs z3-solver)")
+    p.add_argument("--fail-on-broader", action="store_true"); p.add_argument("--require-proof", action="store_true")
+    p.set_defaults(run=cmd_compare)
 
     p = sub.add_parser("bundle"); p.set_defaults(run=cmd_bundle)
     bsub = p.add_subparsers(dest="action", required=True)
