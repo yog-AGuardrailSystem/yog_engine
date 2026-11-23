@@ -188,7 +188,7 @@ items can only be verified by CI or on another machine.
 | P2-5 | partial | Ed25519 (RFC 8032 vectors), signed bundles, hash-chained audit log: in `yog_platform/`, tested |
 | P2-6 | done | decision cache (`yog_platform/cache.py`) |
 | P3-7 (core) | done | approval tokens bound to request hash, policy hash, expiry, single use |
-| P3-1/P3-2 (bindings) | partial | Python and Rust bindings and the Windows Go adapter updated to the new `YogResult` layout, `REQUIRE_APPROVAL`, obligations and `check_json`; a C test pins the struct layout. **Rust is unverified** (cargo not installed); Python binding tests need CI (Application Control blocks `yog.dll` here) |
+| P3-1/P3-2 (bindings) | partial | Python and Rust bindings and the Windows Go adapter updated to the new `YogResult` layout, `REQUIRE_APPROVAL`, obligations and `check_json`; a C test pins the struct layout. The Rust binding and its tests compile and pass on CI (first verified 2026-11-23); cargo is still not installed locally, and the Python binding tests run on CI only (Application Control blocks `yog.dll` here) |
 | P3-4 | done (Python) | sidecar in `yog_platform/sidecar.py` (the roadmap said Rust; Rust is not installed here); 65 platform tests |
 | P2-3 | partial | atomic policy swap in `PolicyManager` (stage, self-test, swap, close old); no C-level refcounted handle |
 | P4-1 | done | `Syncer` pulls signed bundles from a directory or HTTP registry; refuses downgrade, tampering and corrupt registries and keeps serving |
@@ -218,3 +218,4 @@ items can only be verified by CI or on another machine.
 | F9b | done | first-argument fact index (hash of the first argument, source order kept, pruning only): a lookup late in a 2,000-user policy went from 250 to 1.6 microseconds; suites identical; see BENCHMARKS.md |
 | F9e | UNVERIFIED | WebAssembly: `yog/src/api/wasm.c` (3 integer/JSON entry points), `-DYOG_WASM=ON` CMake target, `bindings/wasm` (ES module wrapper, TypeScript types, README), non-blocking CI job `wasm`. The wrapper's fail-closed logic is tested here under Node with a stand-in module (7 tests); the real Emscripten build and `engine.test.mjs` have not run anywhere yet |
 | F-docs | done | `docs/COMPARISON.md`: feature table against Cedar, OPA, OpenFGA and the agent-guardrail products, what YOG matches, what it does not claim, sources |
+| P2-2 | partial | first-argument index over facts (see F9b); not done: indexing of rule and decision clauses, a name-and-arity hash for predicate lookup |
