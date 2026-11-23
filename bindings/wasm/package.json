@@ -1,0 +1,16 @@
+{
+  "name": "yog-engine-wasm",
+  "version": "0.2.0-alpha.1",
+  "description": "WebAssembly build of the YOG policy engine (UNVERIFIED until the CI wasm job passes)",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "files": ["index.js", "index.d.ts", "dist/yog.js", "dist/yog.wasm"],
+  "scripts": {
+    "test": "node --test test/"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

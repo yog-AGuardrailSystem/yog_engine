@@ -66,6 +66,26 @@ add_library(yog_api STATIC src/api/yog.c src/api/json.c src/api/request.c)
 target_include_directories(yog_api PUBLIC ${YOG_INCLUDE_DIR} ${YOG_SRC_DIR})
 target_link_libraries(yog_api PUBLIC yog_vm)
 
+# ---- WebAssembly (UNVERIFIED until the CI `wasm` job passes) ----
+# Configure with:  emcmake cmake -S yog -B yog/build-wasm -DYOG_WASM=ON
+# Produces yog.js + yog.wasm for bindings/wasm.  Only the module is built (no tests, tools or shared library).
+option(YOG_WASM "Build only the WebAssembly module (use with emcmake)" OFF)
+if(YOG_WASM)
+  if(NOT EMSCRIPTEN)
+    message(FATAL_ERROR "YOG_WASM needs the Emscripten toolchain: run cmake through emcmake")
+  endif()
+  add_executable(yog_wasm src/api/wasm.c)
+  target_link_libraries(yog_wasm PRIVATE yog_api)
+  set_target_properties(yog_wasm PROPERTIES OUTPUT_NAME yog SUFFIX ".js")
+  target_link_options(yog_wasm PRIVATE
+    --no-entry
+    -sMODULARIZE=1 -sEXPORT_ES6=1 -sEXPORT_NAME=createYog -sENVIRONMENT=web,node
+    -sALLOW_MEMORY_GROWTH=1 -sFILESYSTEM=0
+    "-sEXPORTED_FUNCTIONS=['_yog_wasm_compile','_yog_wasm_check_json','_yog_wasm_free_string','_yog_free','_yog_policy_version','_yog_version','_malloc','_free']"
+    "-sEXPORTED_RUNTIME_METHODS=['UTF8ToString','stringToUTF8','lengthBytesUTF8','getValue','setValue']")
+  return()
+endif()
+
 # ---- shared library for language bindings (Python ctypes, Rust, Go, ...) ----
 # The same public ABI as yog_api, built as a DLL/shared object.  Sources are
 # compiled directly so the exported symbols are exactly those marked YOG_API.

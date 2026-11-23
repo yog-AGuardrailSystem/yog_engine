@@ -159,6 +159,29 @@ jobs:
           ./benchmarks/results/bin/yog-go-bench --mode load \
             --policy benchmarks/generated/common-small.yog
 
+  wasm:
+    name: WebAssembly build (UNVERIFIED, non-blocking)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 20
+    container:
+      image: emscripten/emsdk:3.1.64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Build the module
+        run: |
+          emcmake cmake -S yog -B yog/build-wasm -DYOG_WASM=ON -DCMAKE_BUILD_TYPE=Release
+          cmake --build yog/build-wasm
+          mkdir -p bindings/wasm/dist
+          cp yog/build-wasm/yog.js yog/build-wasm/yog.wasm bindings/wasm/dist/
+
+      - name: Test the JavaScript wrapper under Node
+        run: node --test bindings/wasm/test
+
   python-tests:
     name: Python reference tests
     runs-on: ubuntu-latest
