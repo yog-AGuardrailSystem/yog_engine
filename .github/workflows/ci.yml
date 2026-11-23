@@ -85,6 +85,10 @@ jobs:
         shell: bash
         run: python yog/tests/differential/diff_v2.py --yogc "$YOGC"
 
+      - name: Exhaustive small-model differential (C engine vs reference)
+        shell: bash
+        run: python yog/tests/differential/diff_small_models.py --yogc "$YOGC"
+
       - name: Platform tests against the real engine
         if: runner.os != 'Windows'
         shell: bash

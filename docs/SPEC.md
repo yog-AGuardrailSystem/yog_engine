@@ -215,3 +215,39 @@ See [SECURITY.md](SECURITY.md).
 Policies without a `version` statement or any v2 construct behave exactly as before. The C ABI and result
 struct changed in 0.2.0 (new `YogDecision` value, obligations). The text context string of `yog_check()`
 remains for trusted callers; untrusted values must use the JSON path.
+
+## Appendix A. Decision semantics and the laws they satisfy
+
+Evaluation of one request against one policy, in full:
+
+```
+decide(policy, request):
+    facts := facts of the policy + facts derived from the request (section 9)
+    if no allow/deny/require_approval clause defines the requested action:   return DENY (undefined action)
+    if some deny clause is satisfied:                                        return DENY, no obligations
+    if some require_approval clause is satisfied:                            return REQUIRE_APPROVAL, obligations(those clauses)
+    if some allow clause is satisfied:                                       return ALLOW, obligations(those clauses)
+    return DENY (default deny)
+    any evaluation error (type error, limit exceeded, malformed request):    return error, which callers treat as DENY
+obligations(clauses) = the obligation goals of the satisfied clauses of the winning kind, in clause order, de-duplicated
+```
+
+Laws that follow, each checked by `tests/platform/test_laws.py` over generated policies and by
+`yog/tests/differential/diff_small_models.py` (exhaustively, C engine against the reference interpreter, for every policy of
+at most two clauses over a fixed vocabulary):
+
+1. **Determinism.** The same policy and request always give the same result.
+2. **Order independence.** Reordering clauses never changes the decision or the set of obligations (it can change their
+   order, which follows clause order).
+3. **Deny monotonicity.** Adding a `deny` clause never makes a decision more permissive (DENY < REQUIRE_APPROVAL < ALLOW).
+4. **Allow monotonicity.** Adding an `allow` clause never makes a decision less permissive.
+5. **Precedence.** A satisfied `deny` clause cannot be overridden by any `require_approval` or `allow` clause; a satisfied
+   `require_approval` clause overrides every satisfied `allow` clause.
+6. **Obligation locality.** Obligations come only from clauses of the winning kind; a DENY carries none.
+7. **Safe normalisation.** `under`, `matches`, `glob` and `cidr` never raise outside the evaluation-error channel and run in
+   time bounded by the input size (the regular-expression engine is a Thompson simulation: no backtracking).
+
+What is *not* claimed: there is no machine-checked proof of these laws. Cedar's team proves its authorizer in Lean and
+differentially tests the Rust code against that model; the equivalent here would be a Lean or Coq model of this
+pseudo-code plus a proof of laws 1-6, with the C engine tested against it. That work is not done; the evidence today is the
+generated and exhaustive tests above.
