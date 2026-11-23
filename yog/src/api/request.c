@@ -333,11 +333,11 @@ bool yog_check_json(Yog *yog, const char *json, size_t length, bool trace,
 
     yog_symbol_table_init(&symbols);
     if (!yog_sema_check(builder.program, &symbols, &sema_error)) {
-        (void)snprintf(builder.message, sizeof(builder.message), "request facts: %s", sema_error.message);
+        (void)snprintf(builder.message, sizeof(builder.message), "request facts: %.160s", sema_error.message);
         goto done;
     }
     if (!yog_ir_build(builder.program, &symbols, "", &context, &ir_error)) {
-        (void)snprintf(builder.message, sizeof(builder.message), "request facts: %s", ir_error.message);
+        (void)snprintf(builder.message, sizeof(builder.message), "request facts: %.160s", ir_error.message);
         yog_symbol_table_free(&symbols);
         goto done;
     }
