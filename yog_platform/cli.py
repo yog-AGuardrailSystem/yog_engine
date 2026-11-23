@@ -55,7 +55,11 @@ def cmd_analyze(args) -> int:
     with open(args.file, encoding="utf-8") as handle:
         source = handle.read()
     known = args.known_obligations.split(",") if args.known_obligations else None
-    findings = analysis.analyze(source, known_obligations=known)
+    schema = None
+    if args.schema:
+        from .schema import Schema
+        schema = Schema.load(args.schema)
+    findings = analysis.analyze(source, known_obligations=known, schema=schema)
     if args.json:
         print(json.dumps(findings, indent=2))
     else:
@@ -84,6 +88,57 @@ def cmd_diff(args) -> int:
     print(json.dumps(changes, indent=2))
     print(f"{len(changes)} of {len(requests)} request(s) changed", file=sys.stderr)
     return 1 if changes and args.fail_on_change else 0
+
+
+def cmd_compare(args) -> int:
+    """Exit 0: the new policy is not more permissive (proven or, if inconclusive, not found); 1: it is more
+    permissive (with ``--fail-on-broader``); 2: inconclusive and ``--require-proof`` was given."""
+    from . import compare
+    with open(args.old, encoding="utf-8") as a, open(args.new, encoding="utf-8") as b:
+        old, new = a.read(), b.read()
+    report = compare.compare_policies(old, new, limit=args.limit)
+    if args.smt:
+        from . import smt
+        try:
+            report["smt"] = smt.compare_smt(old, new)
+        except smt.Unsupported as exc:
+            report["smt"] = {"verdict": "unsupported", "reason": str(exc)}
+    if args.json:
+        print(json.dumps(report, indent=2, default=str))
+    else:
+        print(f"verdict: {report['verdict']} (checked {report['checked']} of {report['universe_size']} requests, "
+              f"{'exhaustive' if report['exhaustive'] else 'bounded, NOT exhaustive'})")
+        for name in ("new_permits_more", "new_denies_more", "approval_changes", "obligation_changes"):
+            if report[name + "_count"]:
+                print(f"  {name}: {report[name + '_count']}")
+                for item in report[name][:3]:
+                    print(f"    {item['old']} -> {item['new']}  {json.dumps(item['request'])}")
+        if "smt" in report:
+            print(f"smt: {report['smt']['verdict']} - {report['smt'].get('reason', '')}")
+    broader = report["new_permits_more_count"] > 0 or report.get("smt", {}).get("verdict") == "no"
+    if args.fail_on_broader and broader:
+        return 1
+    if args.require_proof and report["verdict"] == "inconclusive" and report.get("smt", {}).get("verdict") != "yes":
+        return 2
+    return 0
+
+
+def cmd_import_cedar(args) -> int:
+    from .cedar_import import ConversionError, convert
+    with open(args.file, encoding="utf-8") as handle:
+        text = handle.read()
+    try:
+        source, mapping = convert(text, all_actions=args.actions.split(",") if args.actions else None)
+    except ConversionError as exc:
+        print(f"{args.file}: {exc}", file=sys.stderr)
+        return 1
+    if args.out:
+        with open(args.out, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(source)
+        print(f"wrote {args.out}: {len(mapping)} clause(s) from {len({m['cedar_line'] for m in mapping})} Cedar polic(ies)", file=sys.stderr)
+    else:
+        print(source, end="")
+    return 0
 
 
 # ------------------------------------------------------------------ bundles
@@ -143,6 +198,14 @@ def cmd_bundle(args) -> int:
     return 2
 
 
+def _decision_log(args):
+    if not args.decision_log:
+        return None
+    from .decision_log import DecisionLog, redact_values
+    return DecisionLog(args.decision_log, include_input=args.decision_log_input,
+                       redact=None if args.decision_log_raw else redact_values)
+
+
 def cmd_serve(args) -> int:
     from .audit import AuditLog
     from .cache import DecisionCache
@@ -162,7 +225,11 @@ def cmd_serve(args) -> int:
             manager.load_bundle(json.load(handle))
     audit = AuditLog(args.audit) if args.audit else None
     sidecar = Sidecar(manager, audit=audit, cache=DecisionCache(ttl=args.cache_ttl) if args.cache_ttl > 0 else None,
-                      trusted_bundle_dir=args.bundle_dir)
+                      trusted_bundle_dir=args.bundle_dir, shadow=args.shadow,
+                      decision_log=_decision_log(args))
+    if args.otlp_endpoint:
+        from .telemetry import OtlpExporter
+        OtlpExporter(args.otlp_endpoint, sidecar.metrics_snapshot, interval=args.otlp_interval).start()
     if args.registry:
         syncer = Syncer(manager, args.registry, args.channel)
         stop = threading.Event()
@@ -192,12 +259,23 @@ def main(argv=None) -> int:
     p.set_defaults(run=cmd_fmt)
     p = sub.add_parser("analyze"); p.add_argument("file"); p.add_argument("--json", action="store_true")
     p.add_argument("--strict", action="store_true"); p.add_argument("--known-obligations")
+    p.add_argument("--schema", help="tool schema JSON: adds checks A009-A013")
     p.set_defaults(run=cmd_analyze)
     p = sub.add_parser("test"); p.add_argument("file"); p.add_argument("--yogc")
     p.set_defaults(run=cmd_test)
     p = sub.add_parser("diff"); p.add_argument("old"); p.add_argument("new"); p.add_argument("--requests", required=True)
     p.add_argument("--yogc"); p.add_argument("--fail-on-change", action="store_true")
     p.set_defaults(run=cmd_diff)
+    p = sub.add_parser("compare", help="what does the new policy permit that the old one did not?")
+    p.add_argument("old"); p.add_argument("new"); p.add_argument("--json", action="store_true")
+    p.add_argument("--limit", type=int, default=5000, help="maximum requests to enumerate")
+    p.add_argument("--smt", action="store_true", help="also run the symbolic comparison (needs z3-solver)")
+    p.add_argument("--fail-on-broader", action="store_true"); p.add_argument("--require-proof", action="store_true")
+    p.set_defaults(run=cmd_compare)
+    p = sub.add_parser("import-cedar", help="convert a subset of Cedar policies to YOG v2")
+    p.add_argument("file"); p.add_argument("-o", "--out")
+    p.add_argument("--actions", help="comma-separated action names, for policies whose action is unconstrained")
+    p.set_defaults(run=cmd_import_cedar)
 
     p = sub.add_parser("bundle"); p.set_defaults(run=cmd_bundle)
     bsub = p.add_subparsers(dest="action", required=True)
@@ -213,6 +291,12 @@ def main(argv=None) -> int:
     p.add_argument("--yogc"); p.add_argument("--engine", choices=["yogc", "library"], default="yogc")
     p.add_argument("--audit"); p.add_argument("--host", default="127.0.0.1"); p.add_argument("--port", type=int, default=8787)
     p.add_argument("--cache-ttl", type=float, default=30.0); p.add_argument("--bundle-dir")
+    p.add_argument("--decision-log", help="write OPA-shaped decision log lines to this file")
+    p.add_argument("--decision-log-input", action="store_true", help="include the request (values redacted)")
+    p.add_argument("--decision-log-raw", action="store_true", help="with --decision-log-input: do not redact values")
+    p.add_argument("--otlp-endpoint", help="send metrics to an OpenTelemetry collector (http://host:4318)")
+    p.add_argument("--otlp-interval", type=float, default=30.0)
+    p.add_argument("--shadow", action="store_true", help="log-only: record decisions, answer ALLOW (see docs/OPERATIONS.md)")
     p.add_argument("--registry"); p.add_argument("--channel", default="stable"); p.add_argument("--sync-interval", type=float, default=30.0)
 
     args = parser.parse_args(argv)

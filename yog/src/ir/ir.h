@@ -76,6 +76,11 @@ typedef struct {
 /* Declared argument types of an `input` predicate. */
 typedef enum { YOG_TYPE_ANY = 0, YOG_TYPE_TEXT, YOG_TYPE_INT, YOG_TYPE_BOOL } YogArgType;
 
+/* First-argument index over a predicate's facts (see ir_build.c).  Facts are ground, so the first argument of
+ * every fact is a constant; the index maps the hash of that constant to the facts that may match, in source
+ * order.  It only prunes candidates: unification still decides, so a hash collision is harmless. */
+typedef struct YogFactIndex YogFactIndex;
+
 typedef struct {
     YogText          name;
     size_t           arity;
@@ -84,6 +89,7 @@ typedef struct {
     size_t          *facts;
     size_t           fact_count;
     size_t           fact_capacity;
+    YogFactIndex    *fact_index;     /* NULL when the predicate has few facts or the build skipped it */
     size_t          *rules;
     size_t           rule_count;
     size_t           rule_capacity;
@@ -135,6 +141,12 @@ typedef struct YogModule {
     size_t          variable_count;   /* informational: total slots allocated */
     int             language_version; /* from the `version` statement; 1 when absent */
 } YogModule;
+
+/* Hash of a value's kind and content: equal values always hash equal. */
+uint64_t yog_value_hash(const YogValue *value);
+/* Positions (indexes into predicate->facts, ascending) of the facts whose first argument may equal a value
+ * with this hash.  Only call when predicate->fact_index is not NULL. */
+const size_t *yog_fact_index_candidates(const YogIRPredicate *predicate, uint64_t hash, size_t *count);
 
 typedef struct {
     int  line;

@@ -31,7 +31,13 @@ def _text_result(request_id, text: str, *, error: bool, extra: Optional[dict] = 
 
 class McpProxy:
     def __init__(self, gateway: Gateway, server_command: list, agent_id: str, *,
-                 read_agent: Callable[[], Optional[str]], write_agent: Callable[[str], None]):
+                 read_agent: Callable[[], Optional[str]], write_agent: Callable[[str], None],
+                 visible: Optional[Callable[[list], list]] = None):
+        """``visible(names)`` returns the tool names to show the agent in ``tools/list`` (see
+        :func:`yog_platform.partial_eval.visible_tools`).  It only trims the list; every call is still
+        authorised.  If it raises, the full list is shown."""
+        self._visible = visible
+        self._list_ids: set = set()
         self._gateway = gateway
         self._command = server_command
         self._agent = agent_id
@@ -66,6 +72,9 @@ class McpProxy:
             else:
                 self._to_server(line)
             return
+        if isinstance(message, dict) and message.get("method") == "tools/list" and self._visible is not None:
+            with self._pending_lock:
+                self._list_ids.add(json.dumps(message.get("id")))
         if not (isinstance(message, dict) and message.get("method") == "tools/call"):
             self._to_server(line)
             return
@@ -103,6 +112,16 @@ class McpProxy:
         if isinstance(message, dict) and "result" in message and "id" in message:
             with self._pending_lock:
                 handlers = self._pending.pop(json.dumps(message["id"]), None)
+                was_list = json.dumps(message["id"]) in self._list_ids
+                self._list_ids.discard(json.dumps(message["id"]))
+            if was_list and isinstance(message["result"], dict) and isinstance(message["result"].get("tools"), list):
+                try:
+                    names = [t.get("name") for t in message["result"]["tools"] if isinstance(t, dict)]
+                    keep = set(self._visible([n for n in names if isinstance(n, str)]))
+                    message["result"]["tools"] = [t for t in message["result"]["tools"]
+                                                   if not isinstance(t, dict) or t.get("name") in keep]
+                except Exception:
+                    pass                                  # the list is a convenience; never break it
             if handlers:
                 try:
                     for content in message["result"].get("content", []) if isinstance(message["result"], dict) else []:

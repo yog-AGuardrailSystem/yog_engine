@@ -25,14 +25,29 @@ YOG never reads a clock or a database. The caller supplies `state` (with `state_
 echoes them. The gateway owns freshness: reject state older than your bound, and keep counters (rate limits) in a
 store outside YOG. Replaying a request with the same policy and state gives the same decision.
 
+## Trying a policy first: shadow mode
+`serve --shadow`, `claude_hook --shadow` and `Gateway(mode="shadow")` decide and audit exactly as in enforcement but
+never block: the sidecar answers ALLOW with `enforced: false` and the real answer in `shadow_decision`; the gateway
+audits `would_have_status` / `would_have_decision`; obligations other than `audit` are not performed and no approval
+is created. Roll out in three steps: run in shadow, read the audit log (and the `shadow_would_deny` /
+`shadow_would_approve` metrics) for false positives, then switch to enforcement. Malformed calls are still refused by
+the gateway; a client must not use shadow mode as a security control.
+
 ## Failure behaviour
 Any engine crash, hang, missing policy or audit-write failure yields DENY with an error. Clients must treat anything
 but an explicit ALLOW as a refusal. A partition between gateway and sidecar means deny unless you configure an explicit,
 logged read-only allowlist (not provided by default).
 
 ## Observability
-`GET /metrics` (decision counts, errors, cache hits), `GET /healthz`, hash-chained audit log (verify with the audit
-verifier). OpenTelemetry export is not implemented.
+- `GET /metrics`: Prometheus text: decision counts by outcome, errors, cache hits and a `yog_decision_seconds`
+  latency histogram. `GET /healthz`.
+- `serve --decision-log FILE`: one OPA-shaped JSON line per decision (`decision_id`, `path`, `input_hash`, `result`,
+  `bundles.policy.revision`, `metrics.timer_decision_ns`). Requests are not logged unless you add
+  `--decision-log-input` (values redacted; `--decision-log-raw` keeps them). A decision-log write failure is counted
+  (`decision_log_failures`) and never changes a decision; the hash-chained audit log is the tamper-evident record.
+- `serve --otlp-endpoint http://collector:4318`: exports the counters and the latency histogram as OTLP/HTTP JSON metrics
+  every `--otlp-interval` seconds on a background thread; export failures are swallowed and counted. Trace export
+  is not implemented.
 
 ## Known gaps
 No supervised soak test, no external security review, no published packages. See `docs/ROADMAP.md`.

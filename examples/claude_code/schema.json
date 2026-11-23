@@ -1,0 +1,19 @@
+{
+  "tools": {
+    "Read": {"args": {"file_path": "text", "offset": "int", "limit": "int"}, "required": ["file_path"]},
+    "Write": {"args": {"file_path": "text", "content": "text"}, "required": ["file_path", "content"]},
+    "Edit": {"args": {"file_path": "text", "old_string": "text", "new_string": "text", "replace_all": "bool"},
+             "required": ["file_path", "old_string", "new_string"]},
+    "MultiEdit": {"args": {"file_path": "text", "edits": "any"}, "required": ["file_path"]},
+    "Glob": {"args": {"pattern": "text", "path": "text"}, "required": ["pattern"]},
+    "Grep": {"args": {"pattern": "text", "path": "text", "glob": "text", "output_mode": "text"}, "required": ["pattern"]},
+    "Bash": {"args": {"command": "text", "description": "text", "timeout": "int", "run_in_background": "bool"},
+             "required": ["command"]},
+    "WebFetch": {"args": {"url": "text", "prompt": "text"}, "required": ["url"]},
+    "WebSearch": {"args": {"query": "text"}, "required": ["query"]},
+    "TodoWrite": {"args": {"todos": "any"}, "required": ["todos"]},
+    "Task": {"args": {"description": "text", "prompt": "text", "subagent_type": "text"}, "required": ["prompt"]}
+  },
+  "obligations": {"audit": 1, "rate_limit": 2, "max_output_bytes": 1},
+  "env": {"stage": "text", "cwd": "text", "context_tainted": "bool"}
+}

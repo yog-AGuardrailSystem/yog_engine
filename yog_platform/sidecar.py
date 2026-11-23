@@ -16,6 +16,7 @@ from __future__ import annotations
 import hashlib
 import json
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Optional
 
@@ -24,6 +25,7 @@ from .audit import AuditLog
 from .cache import DecisionCache
 from .engine import EngineError
 from .policy import PolicyError, PolicyManager
+from .telemetry import Histogram
 
 MAX_BODY = 1 << 20
 
@@ -38,6 +40,7 @@ class Metrics:
     def __init__(self):
         self._lock = threading.Lock()
         self.counts: dict[str, int] = {}
+        self.latency = Histogram()            # seconds to decide one request
 
     def inc(self, name: str, by: int = 1) -> None:
         with self._lock:
@@ -51,13 +54,16 @@ class Metrics:
             lines.append(f"yog_{name}_total {counts[name]}")
         for name in sorted(extra):
             lines.append(f"yog_{name} {extra[name]}")
+        lines.append(self.latency.prometheus("yog_decision_seconds"))
         return "\n".join(lines) + "\n"
 
 
 class Sidecar:
     def __init__(self, manager: PolicyManager, *, audit: Optional[AuditLog] = None,
-                 cache: Optional[DecisionCache] = None, trusted_bundle_dir: Optional[str] = None):
+                 cache: Optional[DecisionCache] = None, trusted_bundle_dir: Optional[str] = None, shadow: bool = False, decision_log=None):
         self.manager = manager
+        self.decision_log = decision_log      # a yog_platform.decision_log.DecisionLog, optional
+        self.shadow = shadow          # decide and audit as usual, but answer ALLOW (see handle_check)
         self.audit = audit
         self.cache = cache
         self.metrics = Metrics()
@@ -66,13 +72,29 @@ class Sidecar:
     # -- core ---------------------------------------------------------------
     def handle_check(self, body: bytes) -> tuple[int, dict]:
         self.metrics.inc("requests")
+        started = time.perf_counter()
         try:
-            return self._check(body)
+            status, reply = self._check(body)
         except Exception as exc:                                  # never let a bug become an allow
             self.metrics.inc("internal_errors")
-            return _deny(f"internal error: {type(exc).__name__}")
+            status, reply = _deny(f"internal error: {type(exc).__name__}")
+        self.metrics.latency.observe(time.perf_counter() - started)
+        if self.shadow:
+            return self._as_shadow(status, reply)
+        return status, reply
+
+    def _as_shadow(self, status: int, reply: dict) -> tuple[int, dict]:
+        """Shadow mode: report what the policy decided, but tell the caller to proceed.  The real answer stays in
+        ``shadow_decision``; obligations are dropped because nothing is being enforced."""
+        real = reply.get("decision", "DENY")
+        self.metrics.inc("shadow_would_" + {"DENY": "deny", "REQUIRE_APPROVAL": "approve"}.get(real, "allow"))
+        out = dict(reply)
+        out.update(decision="ALLOW", shadow_decision=real, enforced=False, obligations=[],
+                   reason="shadow mode: " + str(reply.get("reason", "")))
+        return 200, out
 
     def _check(self, body: bytes) -> tuple[int, dict]:
+        started = time.perf_counter()
         if len(body) > MAX_BODY:
             self.metrics.inc("rejected")
             return _deny("request is larger than 1 MiB", 413)
@@ -121,6 +143,7 @@ class Sidecar:
             "obligations": result.get("obligations", []),
             "cached": from_cache,
             "error": "error" in result,
+            "shadow": self.shadow,
         }
         if self.audit is not None:
             try:
@@ -129,6 +152,13 @@ class Sidecar:
                 self.metrics.inc("audit_failures")
                 return _deny("the audit log is not writable", 503, policy_hash=loaded.policy_hash)
 
+        if self.decision_log is not None:
+            try:
+                self.decision_log.write(self.decision_log.entry(
+                    request, result, request_hash=record["request_hash"], policy_hash=loaded.policy_hash,
+                    policy_version=loaded.policy_version, duration_ns=int((time.perf_counter() - started) * 1e9)))
+            except Exception:
+                self.metrics.inc("decision_log_failures")      # observability only: the decision stands
         out = dict(result)
         out.update(policy_hash=loaded.policy_hash, request_hash=record["request_hash"], cached=from_cache)
         if isinstance(request.get("request_id"), str):
@@ -177,6 +207,12 @@ class Sidecar:
             raise ValueError("bundle path is outside the bundle directory")
         with open(full, encoding="utf-8") as handle:
             return json.load(handle)
+
+    def metrics_snapshot(self) -> tuple:
+        """(counters, latency histogram) for the OTLP exporter."""
+        with self.metrics._lock:
+            counts = dict(self.metrics.counts)
+        return counts, self.metrics.latency
 
     def metrics_text(self) -> str:
         loaded = self.manager.current

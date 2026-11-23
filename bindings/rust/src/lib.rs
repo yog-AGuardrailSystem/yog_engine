@@ -434,3 +434,136 @@ fn raw_message(error: &RawError) -> String {
         .collect();
     String::from_utf8_lossy(&bytes).into_owned()
 }
+
+// ------------------------------------------------------------------------------------------------
+// Guarding a tool call
+// ------------------------------------------------------------------------------------------------
+
+/// A flat tool-argument value.  Nested values are deliberately not supported: the request is built here, with every
+/// string escaped, so that nothing an agent supplies can add or change a field of the request (the actor, the
+/// environment, the facts).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ArgValue {
+    Text(String),
+    Integer(i64),
+    Boolean(bool),
+}
+
+/// The result of asking the policy about a tool call.
+#[derive(Debug)]
+pub enum Verdict<T> {
+    /// The policy allowed the call and the tool ran.  `obligations` lists what the policy attached; every one of them
+    /// is a name the caller declared it performs.
+    Allowed {
+        value: T,
+        obligations: Vec<Obligation>,
+    },
+    /// Refused, or something needed to decide failed (a refusal either way).  The tool did not run.
+    Denied { reason: String },
+    /// A human must approve this exact call first.  The tool did not run.
+    NeedsApproval { reason: String },
+}
+
+impl<T> Verdict<T> {
+    pub fn is_allowed(&self) -> bool {
+        matches!(self, Verdict::Allowed { .. })
+    }
+}
+
+fn json_string(value: &str) -> String {
+    let mut out = String::with_capacity(value.len() + 2);
+    out.push('"');
+    for ch in value.chars() {
+        match ch {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04x}", c as u32)),
+            c => out.push(c),
+        }
+    }
+    out.push('"');
+    out
+}
+
+/// Puts a policy in front of one tool: `call` asks the policy and runs the tool only on ALLOW.
+///
+/// It fails closed: a policy error, an unknown decision, or an obligation the caller did not declare in `performs`
+/// all refuse the call.  Like every in-process guard it can be bypassed by code that calls the tool directly; for
+/// enforcement the agent must not hold the tool's credentials (docs/OPERATIONS.md).
+pub struct GuardedTool<'a> {
+    policy: &'a Yog,
+    actor: String,
+    tool: String,
+    performs: Vec<String>,
+}
+
+impl<'a> GuardedTool<'a> {
+    /// `performs` names the obligations (for example `"audit"`) the caller will carry out when a call is allowed.
+    pub fn new(policy: &'a Yog, actor: &str, tool: &str, performs: &[&str]) -> Self {
+        GuardedTool {
+            policy,
+            actor: actor.to_string(),
+            tool: tool.to_string(),
+            performs: performs.iter().map(|name| name.to_string()).collect(),
+        }
+    }
+
+    /// The JSON request sent to the policy (see docs/INTERFACES.md); arguments appear as `input.<name>`.
+    pub fn request_json(&self, args: &[(&str, ArgValue)]) -> String {
+        let mut fields = Vec::with_capacity(args.len());
+        for (name, value) in args {
+            let rendered = match value {
+                ArgValue::Text(text) => json_string(text),
+                ArgValue::Integer(number) => number.to_string(),
+                ArgValue::Boolean(flag) => flag.to_string(),
+            };
+            fields.push(format!("{}:{}", json_string(name), rendered));
+        }
+        format!(
+            "{{\"actor\":{},\"action\":\"run_tool\",\"resource\":{},\"args\":{{\"input\":{{{}}}}}}}",
+            json_string(&self.actor),
+            json_string(&self.tool),
+            fields.join(",")
+        )
+    }
+
+    pub fn call<T>(&self, args: &[(&str, ArgValue)], run: impl FnOnce() -> T) -> Verdict<T> {
+        let request = self.request_json(args);
+        let outcome = match self.policy.check_json(&request, false) {
+            Ok(outcome) => outcome,
+            Err(error) => {
+                return Verdict::Denied {
+                    reason: format!("policy error: {}", error.message),
+                }
+            }
+        };
+        match outcome.decision {
+            Decision::Allow => {
+                for obligation in &outcome.obligations {
+                    if !self.performs.iter().any(|name| *name == obligation.name) {
+                        return Verdict::Denied {
+                            reason: format!("cannot perform obligation {:?}", obligation.name),
+                        };
+                    }
+                }
+                Verdict::Allowed {
+                    value: run(),
+                    obligations: outcome.obligations,
+                }
+            }
+            Decision::Deny => Verdict::Denied {
+                reason: outcome.reason,
+            },
+            Decision::RequireApproval => Verdict::NeedsApproval {
+                reason: outcome.reason,
+            },
+            #[allow(unreachable_patterns)]
+            _ => Verdict::Denied {
+                reason: "unknown decision".to_string(),
+            },
+        }
+    }
+}

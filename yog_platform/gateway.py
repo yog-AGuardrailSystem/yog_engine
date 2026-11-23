@@ -42,6 +42,7 @@ class Authorization:
     approval: Optional[dict] = None
     approver: Optional[str] = None
     after: list = field(default_factory=list)      # post-execution obligation handlers
+    shadow: Optional[dict] = None                  # shadow mode: what enforcement would have done
 
 
 class RateLimiter:
@@ -67,11 +68,27 @@ class Gateway:
                  approvals: Optional[ApprovalManager] = None, env: Optional[Mapping[str, Any]] = None,
                  state_provider: Optional[Callable[[], Optional[dict]]] = None, audit=None,
                  limiter: Optional[RateLimiter] = None, clock: Callable[[], float] = time.time,
-                 ask_user: bool = False):
+                 ask_user: bool = False, principal_provider: Optional[Callable[[str], Any]] = None,
+                 mode: str = "enforce", schema=None, policy_source: Optional[str] = None):
         """``tools`` maps a tool name to ``{"extract": [(argument, extractor), ...]}``.
 
         ``ask_user``: when there is no approval service, report REQUIRE_APPROVAL as ``approval_required`` so the
-        host (for example a Claude Code hook) can ask a human, instead of refusing the call outright."""
+        host (for example a Claude Code hook) can ask a human, instead of refusing the call outright.
+
+        ``principal_provider(agent)`` returns a trusted :class:`~yog_platform.delegation.Principal` (or None);
+        its delegation facts are added to the request.  A malformed chain refuses the call.
+
+        ``mode``: ``"enforce"`` (default) or ``"shadow"``.  In shadow mode the gateway decides and audits exactly
+        as in enforce mode (``would_have_*`` in the audit record) but lets every well-formed call through: nothing
+        is blocked, no approval is created and only the ``audit`` obligation is performed.  Use it to try a
+        policy on real traffic before enforcing it."""
+        if mode not in ("enforce", "shadow"):
+            raise ValueError("mode must be 'enforce' or 'shadow'")
+        self._shadow = mode == "shadow"
+        self._policy_source = policy_source     # lets visible_tools() reason about the policy text
+        self._schema = schema        # a yog_platform.schema.Schema: refuse calls that do not conform
+        if self._shadow:
+            approvals, ask_user = None, True
         self._pdp = pdp
         self._tools = dict(tools or {})
         self._downstream = downstream
@@ -82,6 +99,7 @@ class Gateway:
         self._limiter = limiter or RateLimiter(clock)
         self._clock = clock
         self._ask_user = ask_user
+        self._principals = principal_provider
         self._tainted: set = set()                     # agents whose context has seen untrusted content
         self._handlers: dict[str, Callable] = {"audit": self._ob_audit, "rate_limit": self._ob_rate_limit,
                                                "max_output_bytes": self._ob_max_output}
@@ -98,6 +116,11 @@ class Gateway:
         state = self._state() if self._state else None
         if state:
             request["state"] = state
+        if self._principals is not None:
+            principal = self._principals(agent)
+            if principal is not None:
+                from .delegation import facts_for
+                request["facts"] = facts_for(principal)   # DelegationError refuses the call
         return request
 
     # ---------------------------------------------------------------- authorising
@@ -105,7 +128,12 @@ class Gateway:
         """Decides whether this call may run.  Performs the *before* obligations; the caller runs the tool and
         then each handler in ``after``."""
         if not isinstance(agent, str) or not isinstance(tool, str) or not isinstance(arguments, dict):
-            return self._record(Authorization("denied", reason="malformed tool call"))
+            return self._record(Authorization("denied", reason="malformed tool call"), shadowable=False)
+        if self._schema is not None:
+            problems = self._schema.validate_call(tool, arguments)
+            if problems:
+                reason = "the call does not match the schema: " + "; ".join(problems[:3])
+                return self._record(Authorization("denied", reason=reason))
         try:
             request = self.build_request(agent, tool, arguments)
         except Exception as exc:                          # an extractor or state failure is a refusal
@@ -153,6 +181,8 @@ class Gateway:
 
         try:
             for obligation in auth.obligations:
+                if self._shadow and obligation.get("name") != "audit":
+                    continue                      # shadow mode performs nothing but the audit record
                 handler = self._handlers.get(obligation.get("name"))
                 if handler is None:
                     raise Refusal(f"cannot perform obligation {obligation.get('name')!r}")
@@ -168,6 +198,19 @@ class Gateway:
             auth.after.append(lambda output, agent=agent: self._taint(agent, output))
         auth.status = "allowed"
         return self._record(auth)
+
+    def visible_tools(self, agent: str, tool_names) -> list:
+        """The tools worth showing this agent: those the policy could ever allow (a sound over-approximation, see
+        :mod:`yog_platform.partial_eval`).  Without ``policy_source`` every tool is shown.  Calls are authorised
+        regardless; this only keeps irrelevant tools out of the model's context."""
+        names = list(tool_names)
+        if self._policy_source is None:
+            return names
+        from .partial_eval import visible_tools
+        try:
+            return visible_tools(self._policy_source, names, action=ACTION, actor=agent)
+        except Exception:
+            return names
 
     def _taint(self, agent: str, output):
         self._tainted.add(agent)
@@ -238,7 +281,17 @@ class Gateway:
         return after
 
     # ------------------------------------------------------------------- recording
-    def _record(self, auth: Authorization) -> Authorization:
+    def _record(self, auth: Authorization, shadowable: bool = True) -> Authorization:
+        if self._shadow and shadowable:
+            auth.shadow = {"status": auth.status, "decision": auth.decision, "reason": auth.reason}
+            if self._audit is not None:
+                try:
+                    self._audit.append({"kind": "gateway", "shadow": True, "request_hash": auth.request_hash,
+                                        "would_have_status": auth.status, "would_have_decision": auth.decision})
+                except OSError:
+                    pass                          # shadow mode never blocks, even when it cannot record
+            auth.status, auth.reason, auth.approval = "allowed", "shadow mode: " + (auth.reason or auth.decision), None
+            return auth
         if self._audit is not None:
             try:
                 self._audit.append({"kind": "gateway", "request_hash": auth.request_hash, "status": auth.status,

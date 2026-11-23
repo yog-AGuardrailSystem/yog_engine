@@ -384,3 +384,25 @@ Not supported:
 5. Add concurrent-load throughput and peak RSS.
 6. Add an adversarial memory-ceiling experiment near the caps.
 7. Increase the request population for timing, not only for agreement.
+
+
+## First-argument fact index (2026-11-23)
+
+A predicate with 16 or more facts now gets an index from the hash of each fact's first argument to the facts that may
+match, in source order (`ir_build.c`; used in `solve_atom`, `engine.c`). It only prunes candidates, so unification still
+decides every match and a hash collision cannot change an answer. Predicates with fewer facts, and lookups whose first
+argument is still unbound, scan as before.
+
+Measured on one Windows laptop (MSVC Release, `bench_yog check`, `benchmarks/generated/large.yog`: 8,260 clauses, 2,000
+users), mean microseconds per check, same machine and corpus before and after. Single-machine numbers, not a study:
+
+| request | before | after |
+|---|---|---|
+| `u0000 can_access r0000` (matches the first fact) | 0.5 | 0.8 |
+| `u1500 can_access r0001` (late in the list) | 250 | 1.6 |
+| unknown user (full scan before) | 214 | 0.9 |
+
+The one regression is a small fixed cost (about 0.3 microseconds) on requests that used to match immediately. Decisions
+are unchanged: the C-versus-reference differential (including a case with 40 owner facts, integer and boolean first
+arguments and request-context keys), the exhaustive small-model differential, conformance and property suites pass.
+Text traces no longer list the facts the index skipped.

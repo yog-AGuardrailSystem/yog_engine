@@ -131,7 +131,7 @@ Arguments of the wrong type (for example an integer passed to `contains`) are an
 | `glob(Text, Pattern)` | the whole text matches; `*` is any run of bytes (including `/`), `?` any one byte |
 | `under(Path, Prefix)` | the normalised path equals the prefix or lies below it |
 | `starts_with(Text, S)`, `ends_with(Text, S)`, `contains(Text, S)` | bytewise prefix, suffix, substring |
-| `cidr(Ip, Network)` | the IPv4 address is inside `a.b.c.d/n` |
+| `cidr(Ip, Network)` | the address is inside the network: IPv4 `a.b.c.d/n` or IPv6 `addr/n` (n up to 128) |
 
 **Regular expressions** run on a linear-time NFA, so a hostile pattern cannot cause exponential
 blow-up. Supported syntax: literals, `.` (any byte), `[abc]` `[a-z]` `[^...]`, `\d \w \s` and their
@@ -147,8 +147,11 @@ under `/work`; `/work/../etc` is not under `/work`. It does **not** decode perce
 symlinks, treat `\` as a separator or fold case; extractors must do that first. Up to 128 segments and
 4,096 bytes.
 
-**`cidr`** accepts dotted-quad IPv4 with no leading zeros; a malformed address is simply not inside any
-network, while a malformed network in the policy is an evaluation error. IPv6 is not supported yet.
+**`cidr`** accepts dotted-quad IPv4 with no leading zeros and IPv6 in RFC 4291 text form: 1-4 hex digits per group, one
+`::` standing for one or more zero groups, an optional dotted IPv4 tail (`::ffff:10.1.2.3`); no zone ids (`%eth0`), no
+brackets. A malformed address is simply not inside any network, while a malformed network in the policy (including a
+prefix over 32 for IPv4 or 128 for IPv6) is an evaluation error. The families never mix: an IPv4 address is never inside
+an IPv6 network or the other way round (IPv4-mapped IPv6 addresses are not translated).
 
 ## 7. Obligations
 
@@ -215,3 +218,39 @@ See [SECURITY.md](SECURITY.md).
 Policies without a `version` statement or any v2 construct behave exactly as before. The C ABI and result
 struct changed in 0.2.0 (new `YogDecision` value, obligations). The text context string of `yog_check()`
 remains for trusted callers; untrusted values must use the JSON path.
+
+## Appendix A. Decision semantics and the laws they satisfy
+
+Evaluation of one request against one policy, in full:
+
+```
+decide(policy, request):
+    facts := facts of the policy + facts derived from the request (section 9)
+    if no allow/deny/require_approval clause defines the requested action:   return DENY (undefined action)
+    if some deny clause is satisfied:                                        return DENY, no obligations
+    if some require_approval clause is satisfied:                            return REQUIRE_APPROVAL, obligations(those clauses)
+    if some allow clause is satisfied:                                       return ALLOW, obligations(those clauses)
+    return DENY (default deny)
+    any evaluation error (type error, limit exceeded, malformed request):    return error, which callers treat as DENY
+obligations(clauses) = the obligation goals of the satisfied clauses of the winning kind, in clause order, de-duplicated
+```
+
+Laws that follow, each checked by `tests/platform/test_laws.py` over generated policies and by
+`yog/tests/differential/diff_small_models.py` (exhaustively, C engine against the reference interpreter, for every policy of
+at most two clauses over a fixed vocabulary):
+
+1. **Determinism.** The same policy and request always give the same result.
+2. **Order independence.** Reordering clauses never changes the decision or the set of obligations (it can change their
+   order, which follows clause order).
+3. **Deny monotonicity.** Adding a `deny` clause never makes a decision more permissive (DENY < REQUIRE_APPROVAL < ALLOW).
+4. **Allow monotonicity.** Adding an `allow` clause never makes a decision less permissive.
+5. **Precedence.** A satisfied `deny` clause cannot be overridden by any `require_approval` or `allow` clause; a satisfied
+   `require_approval` clause overrides every satisfied `allow` clause.
+6. **Obligation locality.** Obligations come only from clauses of the winning kind; a DENY carries none.
+7. **Safe normalisation.** `under`, `matches`, `glob` and `cidr` never raise outside the evaluation-error channel and run in
+   time bounded by the input size (the regular-expression engine is a Thompson simulation: no backtracking).
+
+What is *not* claimed: there is no machine-checked proof of these laws. Cedar's team proves its authorizer in Lean and
+differentially tests the Rust code against that model; the equivalent here would be a Lean or Coq model of this
+pseudo-code plus a proof of laws 1-6, with the C engine tested against it. That work is not done; the evidence today is the
+generated and exhaustive tests above.

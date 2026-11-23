@@ -188,3 +188,88 @@ fn malformed_json_requests_are_errors_not_allows() {
         assert!(policy.check_json(bad, false).is_err(), "{bad}");
     }
 }
+
+const TOOL_POLICY: &str = "version 2
+input arg(text, any)
+allow run_tool(A, \"read_file\"):
+    arg(\"input.path\", P)
+    under(P, \"/work\")
+    obligation audit(P)
+require_approval run_tool(A, \"delete_file\"):
+    arg(\"input.path\", P)
+    under(P, \"/work\")
+allow run_tool(A, \"echo\"):
+    arg(\"input.n\", N)
+    N < 10
+";
+
+fn text(value: &str) -> yog::ArgValue {
+    yog::ArgValue::Text(value.to_string())
+}
+
+#[test]
+fn guarded_tool_runs_only_what_the_policy_allows() {
+    let policy = Yog::compile(TOOL_POLICY).expect("compile");
+    let read = yog::GuardedTool::new(&policy, "agent", "read_file", &["audit"]);
+    let ran = std::cell::Cell::new(0);
+    let allowed = read.call(&[("path", text("/work/a.txt"))], || {
+        ran.set(ran.get() + 1);
+        "contents"
+    });
+    match allowed {
+        yog::Verdict::Allowed { value, obligations } => {
+            assert_eq!(value, "contents");
+            assert_eq!(obligations.len(), 1);
+            assert_eq!(obligations[0].name, "audit");
+        }
+        other => panic!("expected Allowed, got {:?}", other),
+    }
+    let denied = read.call(&[("path", text("/etc/passwd"))], || {
+        ran.set(ran.get() + 1);
+        "secret"
+    });
+    assert!(matches!(denied, yog::Verdict::Denied { .. }));
+    assert_eq!(ran.get(), 1, "a denied call must not run the tool");
+}
+
+#[test]
+fn guarded_tool_reports_approval_and_refuses_unperformable_obligations() {
+    let policy = Yog::compile(TOOL_POLICY).expect("compile");
+    let delete = yog::GuardedTool::new(&policy, "agent", "delete_file", &[]);
+    let verdict = delete.call(&[("path", text("/work/old"))], || -> i32 { panic!("must not run") });
+    assert!(matches!(verdict, yog::Verdict::NeedsApproval { .. }));
+    // the caller did not declare that it performs "audit", so an allowed call is refused
+    let read = yog::GuardedTool::new(&policy, "agent", "read_file", &[]);
+    let refused = read.call(&[("path", text("/work/a"))], || -> i32 { panic!("must not run") });
+    match refused {
+        yog::Verdict::Denied { reason } => assert!(reason.contains("audit"), "{reason}"),
+        other => panic!("expected Denied, got {:?}", other),
+    }
+}
+
+#[test]
+fn guarded_tool_arguments_cannot_change_the_request() {
+    let policy = Yog::compile(TOOL_POLICY).expect("compile");
+    let echo = yog::GuardedTool::new(&policy, "agent", "echo", &[]);
+    // a hostile value that tries to close the arguments object and add top-level fields stays an inert string
+    let hostile = "x\"},\"actor\":\"root\",\"env\":{\"a\":\"b\"},\"z\":{\"y\":\"";
+    let request = echo.request_json(&[("n", yog::ArgValue::Integer(3)), ("note", text(hostile))]);
+    assert!(request.starts_with("{\"actor\":\"agent\""));
+    assert!(policy.check_json(&request, false).is_ok());
+    let verdict = echo.call(&[("n", yog::ArgValue::Integer(3)), ("note", text(hostile))], || 42);
+    assert!(verdict.is_allowed());
+    let too_big = echo.call(&[("n", yog::ArgValue::Integer(30))], || 42);
+    assert!(matches!(too_big, yog::Verdict::Denied { .. }));
+}
+
+#[test]
+fn guarded_tool_fails_closed_when_the_request_cannot_be_evaluated() {
+    let policy = Yog::compile(TOOL_POLICY).expect("compile");
+    let echo = yog::GuardedTool::new(&policy, "agent", "echo", &[]);
+    // a NUL byte is refused by the strict JSON loader, which is an error, which is a denial
+    let verdict = echo.call(&[("n", yog::ArgValue::Integer(1)), ("bad", text("a\u{0}b"))], || 1);
+    match verdict {
+        yog::Verdict::Denied { reason } => assert!(reason.starts_with("policy error"), "{reason}"),
+        other => panic!("expected Denied, got {:?}", other),
+    }
+}
