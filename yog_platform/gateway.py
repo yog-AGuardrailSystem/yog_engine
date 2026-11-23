@@ -69,7 +69,7 @@ class Gateway:
                  state_provider: Optional[Callable[[], Optional[dict]]] = None, audit=None,
                  limiter: Optional[RateLimiter] = None, clock: Callable[[], float] = time.time,
                  ask_user: bool = False, principal_provider: Optional[Callable[[str], Any]] = None,
-                 mode: str = "enforce"):
+                 mode: str = "enforce", schema=None):
         """``tools`` maps a tool name to ``{"extract": [(argument, extractor), ...]}``.
 
         ``ask_user``: when there is no approval service, report REQUIRE_APPROVAL as ``approval_required`` so the
@@ -85,6 +85,7 @@ class Gateway:
         if mode not in ("enforce", "shadow"):
             raise ValueError("mode must be 'enforce' or 'shadow'")
         self._shadow = mode == "shadow"
+        self._schema = schema        # a yog_platform.schema.Schema: refuse calls that do not conform
         if self._shadow:
             approvals, ask_user = None, True
         self._pdp = pdp
@@ -127,6 +128,11 @@ class Gateway:
         then each handler in ``after``."""
         if not isinstance(agent, str) or not isinstance(tool, str) or not isinstance(arguments, dict):
             return self._record(Authorization("denied", reason="malformed tool call"), shadowable=False)
+        if self._schema is not None:
+            problems = self._schema.validate_call(tool, arguments)
+            if problems:
+                reason = "the call does not match the schema: " + "; ".join(problems[:3])
+                return self._record(Authorization("denied", reason=reason))
         try:
             request = self.build_request(agent, tool, arguments)
         except Exception as exc:                          # an extractor or state failure is a refusal

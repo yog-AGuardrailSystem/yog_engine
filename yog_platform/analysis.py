@@ -8,6 +8,14 @@ suppress them.
   A005 allow clause is shadowed by a require_approval clause (same reasoning)
   A006 duplicate clause            A007 action can never be allowed (no allow clause)
   A008 obligation the enforcement point does not implement (only with ``known_obligations``)
+
+With a :class:`~yog_platform.schema.Schema` the analysis also reports (see ``analysis_schema.py``):
+
+  A009 a tool name that is not in the schema is compared with, or tested against, the resource
+  A010 ``arg("input.<field>", ...)`` names a field the schema does not declare
+  A011 a literal or built-in does not fit the declared type of a field
+  A012 an obligation the schema does not list, or with the wrong number of arguments
+  A013 the clause is for a tool that is not in the schema, so the gateway never lets it match
 """
 from __future__ import annotations
 
@@ -54,7 +62,7 @@ def _normalise(clause):
     return clause.head.pred, head, conditions, obligations
 
 
-def analyze(source: str, *, known_obligations: Optional[Iterable[str]] = None) -> list[dict]:
+def analyze(source: str, *, known_obligations: Optional[Iterable[str]] = None, schema=None) -> list[dict]:
     ref = _ref()
     program = ref.Parser(ref.tokenize(source)).parse()
     findings: list[dict] = []
@@ -110,4 +118,7 @@ def analyze(source: str, *, known_obligations: Optional[Iterable[str]] = None) -
                 if isinstance(goal, ref.Obl) and goal.goal.pred not in known:
                     add("A008", goal.line, f"obligation {goal.goal.pred!r} is not implemented by the enforcement point",
                         "error")
+    if schema is not None:
+        from .analysis_schema import schema_checks
+        schema_checks(ref, program, schema, add)
     return sorted(findings, key=lambda f: (f["line"], f["code"]))

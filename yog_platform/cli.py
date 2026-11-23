@@ -55,7 +55,11 @@ def cmd_analyze(args) -> int:
     with open(args.file, encoding="utf-8") as handle:
         source = handle.read()
     known = args.known_obligations.split(",") if args.known_obligations else None
-    findings = analysis.analyze(source, known_obligations=known)
+    schema = None
+    if args.schema:
+        from .schema import Schema
+        schema = Schema.load(args.schema)
+    findings = analysis.analyze(source, known_obligations=known, schema=schema)
     if args.json:
         print(json.dumps(findings, indent=2))
     else:
@@ -225,6 +229,7 @@ def main(argv=None) -> int:
     p.set_defaults(run=cmd_fmt)
     p = sub.add_parser("analyze"); p.add_argument("file"); p.add_argument("--json", action="store_true")
     p.add_argument("--strict", action="store_true"); p.add_argument("--known-obligations")
+    p.add_argument("--schema", help="tool schema JSON: adds checks A009-A013")
     p.set_defaults(run=cmd_analyze)
     p = sub.add_parser("test"); p.add_argument("file"); p.add_argument("--yogc")
     p.set_defaults(run=cmd_test)

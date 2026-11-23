@@ -207,3 +207,4 @@ items can only be verified by CI or on another machine.
 | F4 | done | delegation chains: gateway builds `acting_for`/`delegated`/`has_scope`/`chain_depth` facts from a trusted `Principal`; scopes only narrow (`yog_platform/delegation.py`, `examples/ai_guardrails/delegation.yog`) |
 | F1 | done | shadow (log-only) mode in gateway, sidecar (`--shadow`) and Claude hook; documented in OPERATIONS.md |
 | F2 | done | `compare` CLI and `yog_platform/compare.py`: bounded enumeration with counterexamples, never claims equivalence unless exhaustive; `yog_platform/smt.py`: optional Z3 proof for the supported fragment, counterexamples replayed on the reference |
+| F3 | done | tool schema (`yog_platform/schema.py`): the gateway refuses calls that do not conform; analysis codes A009-A013 (`analysis_schema.py`); `analyze --schema`; sample `examples/claude_code/schema.json` |
