@@ -32,6 +32,14 @@ jobs:
       - name: AI guardrail examples
         run: python examples/ai_guardrails/enforce_demo.py --yogc yog/build/yogc
 
+      - name: Differential check of language version 2 (C engine vs reference)
+        run: python yog/tests/differential/diff_v2.py --yogc yog/build/yogc
+
+      - name: Platform tests against the real engine
+        run: |
+          python -m pip install pytest
+          YOGC="$PWD/yog/build/yogc" python -m pytest tests/platform -q
+
       - name: Benchmark smoke test
         run: |
           python benchmarks/gen_corpus.py

@@ -197,3 +197,5 @@ items can only be verified by CI or on another machine.
 | P3-6 | done (Python) | `yog_platform/gateway.py`: request building that keeps agent input apart from facts the gateway knows, approvals, obligations (audit, rate_limit, max_output_bytes), context taint, fail-closed; `mcp_proxy.py` stdio proxy; 49 end-to-end tests with the real extractors and policy (reference interpreter as PDP) |
 | P3-7 | done | approval flow wired through the gateway and the proxy (`_meta.yog_approval_token` is stripped before forwarding) |
 | P1-6 (JSON) | done | `reference/yog_ref.py` mirrors the C JSON loader (`request_to_facts`, `check_json`) |
+| P3-8 | partial | Python tooling (`python -m yog_platform`): formatter (idempotent, meaning-preserving), static analysis (A001-A008), `.yogtest` runner with clause coverage, policy diff, bundle keygen/build/verify, `serve`. Not done: REPL, LSP, VS Code extension, a C-level `yogc fmt/analyze` |
+| P2-1 | partial | structured trace converter (`yog_platform/trace.py`); the engine still emits text traces |
