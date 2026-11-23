@@ -75,10 +75,17 @@ typedef struct {
 
 /* Evaluation budgets.  A zero field keeps the built-in default; non-positive
  * max_depth also uses the default. Policies are untrusted input, so these caps
- * bound the work a single request may do. */
+ * bound the work a single request may do.  Exceeding any of them is an
+ * evaluation error, which callers must treat as DENY.
+ *
+ * Always zero-initialise this struct (YogLimits l = {0};) before setting the
+ * fields you care about, so new fields added later keep their defaults. */
 typedef struct {
-    size_t max_steps;   /* default YOG_VM_MAX_STEPS (1,000,000) */
-    int    max_depth;   /* default YOG_VM_MAX_DEPTH (256) */
+    size_t max_steps;     /* clause attempts; default 1,000,000 */
+    int    max_depth;     /* goal nesting;   default 256 */
+    size_t max_solutions; /* solutions enumerated per query; default 100,000 */
+    size_t max_millis;    /* wall-clock backstop per check; default 10,000 ms */
+    size_t max_memory;    /* evaluator bytes per check; default 64 MiB */
 } YogLimits;
 
 /* Version of the loaded library, e.g. "0.2.0-alpha.1".  Compare with

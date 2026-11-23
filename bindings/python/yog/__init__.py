@@ -28,7 +28,7 @@ import os
 import sys
 import threading
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 __all__ = [
     "Yog",
@@ -86,7 +86,13 @@ class _YogLimits(ctypes.Structure):
     _fields_ = [
         ("max_steps", ctypes.c_size_t),
         ("max_depth", ctypes.c_int),
+        ("max_solutions", ctypes.c_size_t),
+        ("max_millis", ctypes.c_size_t),
+        ("max_memory", ctypes.c_size_t),
     ]
+
+
+_RESOURCE_LIMIT_FIELDS = ("max_steps", "max_depth", "max_solutions", "max_millis", "max_memory")
 
 
 def _candidate_paths() -> list[Path]:
@@ -214,9 +220,29 @@ class Yog:
     @limits.setter
     def limits(self, limits: Tuple[int, int]) -> None:
         steps, depth = limits
-        _library().yog_set_limits(
-            self._require(), _YogLimits(ctypes.c_size_t(steps), ctypes.c_int(depth))
-        )
+        self.resource_limits = {"max_steps": steps, "max_depth": depth}
+
+    @property
+    def resource_limits(self) -> Dict[str, int]:
+        """Every evaluation budget currently in force.
+
+        Keys: ``max_steps``, ``max_depth``, ``max_solutions``, ``max_millis``
+        and ``max_memory`` (bytes).  Exceeding any of them raises
+        ``YogEvaluationError``, which callers must treat as DENY.
+        """
+        raw = _library().yog_get_limits(self._require())
+        return {name: int(getattr(raw, name)) for name in _RESOURCE_LIMIT_FIELDS}
+
+    @resource_limits.setter
+    def resource_limits(self, limits: Dict[str, int]) -> None:
+        """Update some budgets; keys not given keep their current value.
+        A value of 0 restores the built-in default."""
+        unknown = set(limits) - set(_RESOURCE_LIMIT_FIELDS)
+        if unknown:
+            raise ValueError(f"unknown limit(s): {', '.join(sorted(unknown))}")
+        merged = self.resource_limits
+        merged.update(limits)
+        _library().yog_set_limits(self._require(), _YogLimits(**merged))
 
     def check(
         self,

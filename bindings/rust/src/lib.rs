@@ -47,6 +47,12 @@ pub struct Limits {
     pub max_steps: usize,
     /// Non-positive keeps the built-in default (256).
     pub max_depth: c_int,
+    /// Solutions enumerated per query; zero keeps the default (100,000).
+    pub max_solutions: usize,
+    /// Wall-clock backstop per check in milliseconds; zero keeps the default (10,000).
+    pub max_millis: usize,
+    /// Evaluator memory per check in bytes; zero keeps the default (64 MiB).
+    pub max_memory: usize,
 }
 
 extern "C" {

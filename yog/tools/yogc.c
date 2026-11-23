@@ -100,8 +100,9 @@ static void explain_module(const Yog *yog)
     if (module == NULL) return;
     printf("policy: %zu predicates, %zu clauses, %zu queries\n",
            module->predicate_count, module->clause_count, module->query_count);
-    printf("limits: max_steps=%zu max_depth=%d\n",
-           limits.max_steps, limits.max_depth);
+    printf("limits: max_steps=%zu max_depth=%d max_solutions=%zu max_millis=%zu max_memory=%zu\n",
+           limits.max_steps, limits.max_depth, limits.max_solutions, limits.max_millis,
+           limits.max_memory);
 
     for (i = 0; i < module->predicate_count; ++i) {
         const YogIRPredicate *predicate = &module->predicates[i];
