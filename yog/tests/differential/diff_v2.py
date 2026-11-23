@@ -335,6 +335,35 @@ for _network in ["2001:db8::/32", "2001:db8::/112", "::1/128", "::/0", "fe80::/1
          'input ip(text)\nallow act(U, R):\n    ip(X)\n    cidr(X, "' + _network + '")\n',
          *[req("u", "act", "r", ("ip", [a])) for a in IPV6_ADDRESSES])
 
+# Predicates with 16 or more facts get a first-argument index in the C engine; these sets are big enough to be indexed,
+# and the requests look the first argument up as a module constant, a request-context value (text, integer, boolean)
+# and a value that does not exist, so a wrong or missing candidate would change a decision.
+_OWNERS = "".join(f'fact owner("u{i}", "r{i % 5}")\n' for i in range(40))
+_LIMITS = "".join(f'fact limit({i}, "t{i % 3}")\n' for i in range(30))
+_GATES = "".join(f'fact gate(true, "g{i}")\n' for i in range(20))
+case("indexing: large fact sets",
+     "input probe(text)\ninput n(int)\ninput flag(bool)\n" + _OWNERS + _LIMITS + _GATES + """
+allow act(U, R):
+    owner(U, R)
+allow act(U, R):
+    probe(P)
+    owner(P, R)
+    obligation tag("probe", P)
+require_approval act(U, R):
+    n(X)
+    limit(X, "t1")
+deny act(U, R):
+    flag(F)
+    gate(F, "g7")
+    n(X)
+    X > 25
+""",
+     *[req(actor, "act", resource, *facts)
+       for actor in ("u0", "u5", "u39", "u40", "x")
+       for resource in ("r0", "r4")
+       for facts in ([], [("probe", ["u7"])], [("probe", ["nobody"])], [("probe", [""])], [("n", [1])], [("n", [3]), ("flag", [True])],
+                     [("n", [29]), ("flag", [True])], [("n", [99])], [("flag", [False])], [("n", [-1])], [("n", [0])])])
+
 case("built-ins: regex", """
 input s(text)
 deny act(U, R):

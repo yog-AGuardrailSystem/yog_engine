@@ -295,11 +295,32 @@ static bool solve_atom(YogEngine *engine, size_t predicate,
         tracef(engine, "?- %s\n", text);
     }
 
+    if (symbol->fact_index != NULL && arg_count > 0) {
+        /* First-argument indexing: when the first argument is already a constant, only the facts whose first
+         * argument hashes alike can unify, so try just those, in source order. */
+        YogIRTerm key = args[0];
+        if (key.kind == YOG_IR_VAR) key.index += args_base;
+        key = yog_store_resolve(&engine->store, key);
+        if (key.kind == YOG_IR_CONST) {
+            const YogValue *value = yog_value_at(&engine->space, key.index);
+            if (value != NULL) {
+                size_t count = 0;
+                const size_t *candidates = yog_fact_index_candidates(symbol, yog_value_hash(value), &count);
+                for (i = 0; i < count; ++i) {
+                    const YogIRClause *clause = &engine->module->clauses[symbol->facts[candidates[i]]];
+                    if (!try_clause(engine, clause, NULL, args, arg_count, args_base, yield, user, depth + 1))
+                        return false;
+                }
+                goto after_facts;
+            }
+        }
+    }
     for (i = 0; i < symbol->fact_count; ++i) {
         const YogIRClause *clause = &engine->module->clauses[symbol->facts[i]];
         if (!try_clause(engine, clause, NULL, args, arg_count, args_base, yield, user, depth + 1))
             return false;
     }
+after_facts:
 
     /* Request context facts behave exactly like facts appended to the program. */
     for (i = 0; i < engine->match_count; ++i) {

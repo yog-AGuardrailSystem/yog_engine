@@ -279,12 +279,97 @@ static bool build_goal(BuildCtx *ctx, const YogGoal *goal, VarSlots *slots, YogI
 
 /* ------------------------------------------------------------------ module */
 
+/* ------------------------------------------------------------ first-argument fact index */
+
+#define YOG_FACT_INDEX_MIN_FACTS 16u
+
+struct YogFactIndex {
+    size_t *positions;     /* fact positions grouped by bucket, ascending within a bucket */
+    size_t *starts;        /* bucket_count + 1 offsets into positions */
+    size_t  bucket_count;  /* a power of two */
+};
+
+uint64_t yog_value_hash(const YogValue *value)
+{
+    uint64_t h = 14695981039346656037ull;
+    size_t i;
+    h = (h ^ (uint64_t)value->kind) * 1099511628211ull;
+    if (value->kind == YOG_VALUE_TEXT) {
+        for (i = 0; i < value->text.length; ++i)
+            h = (h ^ (uint64_t)(unsigned char)value->text.text[i]) * 1099511628211ull;
+    } else {
+        uint64_t bits = (uint64_t)value->integer;
+        for (i = 0; i < 8; ++i) {
+            h = (h ^ (bits & 0xFFu)) * 1099511628211ull;
+            bits >>= 8;
+        }
+    }
+    return h ^ (h >> 29);
+}
+
+const size_t *yog_fact_index_candidates(const YogIRPredicate *predicate, uint64_t hash, size_t *count)
+{
+    const YogFactIndex *index = predicate->fact_index;
+    size_t bucket = (size_t)(hash & (uint64_t)(index->bucket_count - 1u));
+    *count = index->starts[bucket + 1u] - index->starts[bucket];
+    return index->positions + index->starts[bucket];
+}
+
+/* Builds the index for one predicate; on any failure leaves fact_index NULL and the engine scans instead. */
+static void build_fact_index(const YogModule *module, YogIRPredicate *predicate)
+{
+    YogFactIndex *index;
+    uint64_t *hashes;
+    size_t bucket_count = 16u, i;
+    if (predicate->arity == 0 || predicate->fact_count < YOG_FACT_INDEX_MIN_FACTS) return;
+    while (bucket_count < predicate->fact_count) bucket_count <<= 1;
+    index = calloc(1, sizeof(*index));
+    hashes = malloc(predicate->fact_count * sizeof(*hashes));
+    if (index == NULL || hashes == NULL) goto fail;
+    index->bucket_count = bucket_count;
+    index->starts = calloc(bucket_count + 1u, sizeof(*index->starts));
+    index->positions = malloc(predicate->fact_count * sizeof(*index->positions));
+    if (index->starts == NULL || index->positions == NULL) goto fail;
+    for (i = 0; i < predicate->fact_count; ++i) {
+        const YogIRClause *clause = &module->clauses[predicate->facts[i]];
+        if (clause->head_count == 0 || clause->head[0].kind != YOG_IR_CONST ||
+            clause->head[0].index >= module->value_count)
+            goto fail;                      /* not the ground fact we expect: do not index */
+        hashes[i] = yog_value_hash(&module->values[clause->head[0].index]);
+        index->starts[(size_t)(hashes[i] & (uint64_t)(bucket_count - 1u)) + 1u]++;
+    }
+    for (i = 0; i < bucket_count; ++i) index->starts[i + 1u] += index->starts[i];
+    {
+        size_t *fill = malloc(bucket_count * sizeof(*fill));
+        if (fill == NULL) goto fail;
+        memcpy(fill, index->starts, bucket_count * sizeof(*fill));
+        for (i = 0; i < predicate->fact_count; ++i)
+            index->positions[fill[(size_t)(hashes[i] & (uint64_t)(bucket_count - 1u))]++] = i;
+        free(fill);
+    }
+    free(hashes);
+    predicate->fact_index = index;
+    return;
+fail:
+    if (index != NULL) {
+        free(index->positions);
+        free(index->starts);
+        free(index);
+    }
+    free(hashes);
+}
+
 static void free_module_contents(YogModule *module)
 {
     size_t i;
     if (module == NULL) return;
     for (i = 0; i < module->predicate_count; ++i) {
         free(module->predicates[i].facts);
+        if (module->predicates[i].fact_index != NULL) {
+            free(module->predicates[i].fact_index->positions);
+            free(module->predicates[i].fact_index->starts);
+            free(module->predicates[i].fact_index);
+        }
         free(module->predicates[i].rules);
         free(module->predicates[i].decisions);
         free(module->predicates[i].arg_types);
@@ -574,6 +659,8 @@ bool yog_ir_build(const YogProgram *program, const YogSymbolTable *symbols,
             return false;
         }
     }
+
+    for (i = 0; i < module->predicate_count; ++i) build_fact_index(module, &module->predicates[i]);
 
     *out_module = module;
     return true;
