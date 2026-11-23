@@ -1,8 +1,8 @@
-# YOG for WebAssembly (UNVERIFIED)
+# YOG for WebAssembly (experimental)
 
-This package wraps the C engine compiled to WebAssembly. It was written without an Emscripten toolchain on hand, so
-it has **not been built or run** by its author; the `wasm` job in `.github/workflows/ci.yml` is where it is first compiled
-and tested, and it is marked non-blocking until it passes. Treat everything here as untested until that job is green.
+This package wraps the C engine compiled to WebAssembly. It was written without an Emscripten toolchain on hand; the
+`wasm` job in `.github/workflows/ci.yml` built it and ran `node --test bindings/wasm/test` successfully once (2026-11-23).
+That job is still marked non-blocking, nothing is published to npm, and the module has had no use beyond those tests.
 
 ## Build
 

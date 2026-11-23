@@ -160,7 +160,7 @@ jobs:
             --policy benchmarks/generated/common-small.yog
 
   wasm:
-    name: WebAssembly build (UNVERIFIED, non-blocking)
+    name: WebAssembly build (non-blocking)
     runs-on: ubuntu-latest
     continue-on-error: true
     timeout-minutes: 20
