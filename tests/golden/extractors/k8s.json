@@ -1,0 +1,28 @@
+[
+  {"name": "privileged pod with an untagged image",
+   "input": {"manifest": {"kind": "Pod", "metadata": {"name": "p", "namespace": "prod"},
+                          "spec": {"containers": [{"image": "nginx", "securityContext": {"privileged": true}}]}}},
+   "expected": {"k8s": {"parsed": true, "kind": ["pod"], "namespace": ["prod"], "name": ["p"], "image": ["nginx"], "privileged": true, "host_network": false, "host_pid": false, "host_path": false, "run_as_root": true, "allow_privilege_escalation": false, "latest_tag": true, "capability_added": []}}},
+  {"name": "hardened deployment",
+   "input": {"manifest": {"kind": "Deployment", "metadata": {"name": "app"},
+                          "spec": {"template": {"spec": {"containers": [{"image": "repo/app:1.2.3",
+                            "securityContext": {"runAsNonRoot": true, "allowPrivilegeEscalation": false}}]}}}}},
+   "expected": {"k8s": {"parsed": true, "kind": ["deployment"], "namespace": ["default"], "name": ["app"], "image": ["repo/app:1.2.3"], "privileged": false, "host_network": false, "host_pid": false, "host_path": false, "run_as_root": false, "allow_privilege_escalation": false, "latest_tag": false, "capability_added": []}}},
+  {"name": "host access, capabilities and a digest-pinned image",
+   "input": {"manifest": {"kind": "Pod", "metadata": {"name": "h"},
+                          "spec": {"hostNetwork": true, "hostPID": true, "volumes": [{"name": "v", "hostPath": {"path": "/"}}],
+                                   "securityContext": {"runAsUser": 0},
+                                   "containers": [{"image": "r/x@sha256:abc", "securityContext": {"allowPrivilegeEscalation": true,
+                                                   "capabilities": {"add": ["net_admin", "SYS_ADMIN"]}}}]}}},
+   "expected": {"k8s": {"parsed": true, "kind": ["pod"], "namespace": ["default"], "name": ["h"], "image": ["r/x@sha256:abc"], "privileged": false, "host_network": true, "host_pid": true, "host_path": true, "run_as_root": true, "allow_privilege_escalation": true, "latest_tag": false, "capability_added": ["NET_ADMIN", "SYS_ADMIN"]}}},
+  {"name": "a manifest given as a JSON string",
+   "input": {"manifest": "{\"kind\": \"Pod\", \"metadata\": {\"name\": \"s\"}, \"spec\": {\"containers\": [{\"image\": \"a:latest\"}]}}"},
+   "expected": {"k8s": {"parsed": true, "kind": ["pod"], "namespace": ["default"], "name": ["s"], "image": ["a:latest"], "privileged": false, "host_network": false, "host_pid": false, "host_path": false, "run_as_root": true, "allow_privilege_escalation": false, "latest_tag": true, "capability_added": []}}},
+  {"name": "a list is the union of its items",
+   "input": {"manifest": {"kind": "List", "items": [
+       {"kind": "Pod", "metadata": {"name": "a", "namespace": "x"}, "spec": {"containers": [{"image": "i:1", "securityContext": {"runAsNonRoot": true}}]}},
+       {"kind": "Pod", "metadata": {"name": "b", "namespace": "y"}, "spec": {"containers": [{"image": "j:2", "securityContext": {"privileged": true}}]}}]}},
+   "expected": {"k8s": {"parsed": true, "kind": ["pod"], "namespace": ["x", "y"], "name": ["a", "b"], "image": ["i:1", "j:2"], "privileged": true, "host_network": false, "host_pid": false, "host_path": false, "run_as_root": true, "allow_privilege_escalation": false, "latest_tag": false, "capability_added": []}}},
+  {"name": "invalid JSON is not parsed", "input": {"manifest": "{nope"}, "expected": {"k8s": {"parsed": false}}},
+  {"name": "not an object is not parsed", "input": {"manifest": 5}, "expected": {"k8s": {"parsed": false}}}
+]
