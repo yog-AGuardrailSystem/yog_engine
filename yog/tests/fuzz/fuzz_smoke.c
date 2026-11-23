@@ -159,8 +159,8 @@ static const char JSON_POLICY[] =
 
 static const char *JSON_SEEDS[] = {
     "{\"actor\":\"u\",\"action\":\"act\",\"resource\":\"r\"}",
-    "{\"actor\":\"u\",\"action\":\"act\",\"resource\":\"r\",\"args\":{\"q\":\"select\",\"n\":7,\"a\":{\"b\":[1,2,true]}},"
-    "\"env\":{\"stage\":\"prod\"},\"state\":{\"version\":3,\"values\":{\"c\":4}},\"now\":100,\"request_id\":\"x\"}",
+    ("{\"actor\":\"u\",\"action\":\"act\",\"resource\":\"r\",\"args\":{\"q\":\"select\",\"n\":7,\"a\":{\"b\":[1,2,true]}},"
+     "\"env\":{\"stage\":\"prod\"},\"state\":{\"version\":3,\"values\":{\"c\":4}},\"now\":100,\"request_id\":\"x\"}"),
     "{\"actor\":\"caf\\u00e9\",\"action\":\"act\",\"resource\":\"\\ud83d\\ude00\",\"facts\":[{\"predicate\":\"p\",\"args\":[1,\"a\",false]}]}",
     "{\"actor\":\"u\",\"action\":\"act\",\"resource\":\"r\",\"args\":{\"n\":-9223372036854775808,\"z\":1.5e3,\"y\":null}}",
 };

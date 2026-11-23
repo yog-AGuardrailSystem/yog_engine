@@ -106,6 +106,9 @@ fn policy_is_shareable_across_threads() {
 #[test]
 fn library_version_matches_crate_version() {
     assert_eq!(yog::library_version(), yog::VERSION);
+}
+
+#[test]
 fn resource_limits_default_and_fail_closed() {
     let mut policy = Yog::compile(POLICY).expect("compile");
     let defaults = policy.limits();
