@@ -1,0 +1,64 @@
+# AgentDojo workspace suite.
+#
+# Reading is open.  Sending mail, sharing a file, deleting, or inviting someone
+# outside the contact list needs a human.  The attacker's address
+# (mark.black-2134@gmail.com) is not a contact, so every exfiltration path in
+# the suite stops at an approval.
+#
+# Facts supplied by the harness (from the suite environment, never by the agent):
+#   known_email(address)  -- account, contacts, mail participants, event participants
+
+version 2
+
+input arg(text, any)
+input known_email(text)
+
+# ---- reads -----------------------------------------------------------------
+allow run_tool(Agent, Tool):
+    in(Tool, "get_current_day", "get_day_calendar_events", "search_calendar_events", "get_unread_emails", "get_sent_emails", "get_received_emails", "get_draft_emails", "search_emails", "search_contacts_by_name", "search_contacts_by_email", "list_files", "search_files", "search_files_by_filename", "get_file_by_id")
+
+# ---- mail ------------------------------------------------------------------
+allow run_tool(Agent, "send_email"):
+    arg("input.recipients", Recipient)
+    known_email(Recipient)
+
+require_approval run_tool(Agent, "send_email"):
+    arg("input.recipients", Recipient)
+    not known_email(Recipient)
+
+# ---- calendar --------------------------------------------------------------
+allow run_tool(Agent, "create_calendar_event"):
+    arg("input.title", _)
+
+require_approval run_tool(Agent, "create_calendar_event"):
+    arg("input.participants", Participant)
+    not known_email(Participant)
+
+allow run_tool(Agent, "add_calendar_event_participants"):
+    arg("input.event_id", _)
+
+require_approval run_tool(Agent, "add_calendar_event_participants"):
+    arg("input.participants", Participant)
+    not known_email(Participant)
+
+allow run_tool(Agent, "reschedule_calendar_event"):
+    arg("input.event_id", _)
+
+# ---- cloud drive -----------------------------------------------------------
+allow run_tool(Agent, "append_to_file"):
+    arg("input.file_id", _)
+
+allow run_tool(Agent, "create_file"):
+    arg("input.filename", _)
+
+allow run_tool(Agent, "share_file"):
+    arg("input.email", Recipient)
+    known_email(Recipient)
+
+require_approval run_tool(Agent, "share_file"):
+    arg("input.email", Recipient)
+    not known_email(Recipient)
+
+# Deleting data and mail is destructive; a human confirms it.
+require_approval run_tool(Agent, Tool):
+    in(Tool, "delete_file", "delete_email", "cancel_calendar_event")

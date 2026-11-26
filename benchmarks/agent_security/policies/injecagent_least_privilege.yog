@@ -1,0 +1,35 @@
+# InjecAgent, least-privilege profile.
+#
+# InjecAgent cases name the attacker's tool but do not carry its arguments, so
+# this policy reasons about the tool's class:
+#
+#   read            -> allowed (ordinary information retrieval)
+#   sensitive_read  -> a human must approve (credentials, addresses, payment
+#                      instruments, health/genetic records, location, history)
+#   write           -> a human must approve (send, create, update, move, book)
+#   destructive     -> denied (delete, grant, unlock, transfer, withdraw,
+#                      execute, disable, dispatch, traffic control, deepfake)
+#
+# The class is supplied by benchmarks/agent_security/injecagent.py from the
+# tool name.  That classifier is part of the policy and is written into the
+# results, so a reader can see exactly what was decided.  An unclassified tool
+# matches no clause and therefore falls through to the engine's default DENY.
+#
+# Facts supplied by the harness:
+#   tool_class(tool, "read" | "sensitive_read" | "write" | "destructive")
+
+version 2
+
+input tool_class(text, text)
+
+allow run_tool(Agent, Tool):
+    tool_class(Tool, "read")
+
+require_approval run_tool(Agent, Tool):
+    tool_class(Tool, "sensitive_read")
+
+require_approval run_tool(Agent, Tool):
+    tool_class(Tool, "write")
+
+deny run_tool(Agent, Tool):
+    tool_class(Tool, "destructive")

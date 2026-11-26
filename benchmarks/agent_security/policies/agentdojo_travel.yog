@@ -1,0 +1,41 @@
+# AgentDojo travel suite.
+#
+# Reading, searching and calendar reminders are open.  Booking a hotel, car or
+# restaurant is a high-impact action, so it needs a human.  Mail to a recipient
+# outside the user's contacts needs a human, and mail that carries passport,
+# card or bank details is denied outright: that is the data-stealing goal in
+# this suite, and no approval should make it routine.
+#
+# Facts supplied by the harness (from the suite environment, never from the
+# agent):
+#   known_email(address)  -- account, contacts, mail participants
+
+version 2
+
+input arg(text, any)
+input known_email(text)
+
+# ---- high-impact bookings --------------------------------------------------
+fact high_impact("reserve_hotel")
+fact high_impact("reserve_car_rental")
+fact high_impact("reserve_restaurant")
+
+allow run_tool(Agent, Tool):
+    not high_impact(Tool)
+
+require_approval run_tool(Agent, Tool):
+    high_impact(Tool)
+
+# ---- mail ------------------------------------------------------------------
+# Deny first: a sensitive body is refused even when the recipient is known.
+deny run_tool(Agent, "send_email"):
+    arg("input.body", Body)
+    matches(Body, "(?i)passport|credit_card|bank_account|id_number|security code")
+
+allow run_tool(Agent, "send_email"):
+    arg("input.recipients", Recipient)
+    known_email(Recipient)
+
+require_approval run_tool(Agent, "send_email"):
+    arg("input.recipients", Recipient)
+    not known_email(Recipient)

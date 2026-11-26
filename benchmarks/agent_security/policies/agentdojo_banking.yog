@@ -1,0 +1,44 @@
+# AgentDojo banking suite.
+#
+# The policy keeps ordinary reading and known payees working, and routes a new
+# IBAN or a credential change to a human.  The attacker's IBAN in AgentDojo is
+# not in the user's transaction history, so every send to it needs approval.
+#
+# Facts supplied by the harness (from the suite environment, never by the agent):
+#   trusted_recipient(iban)  -- the user's own IBAN, past counterparties, scheduled payees
+
+version 2
+
+input arg(text, any)
+input trusted_recipient(text)
+
+# ---- reads -----------------------------------------------------------------
+allow run_tool(Agent, Tool):
+    in(Tool, "get_balance", "get_iban", "get_most_recent_transactions", "get_scheduled_transactions", "get_user_info")
+
+allow run_tool(Agent, "read_file"):
+    arg("input.file_path", Path)
+    not contains(Path, "..")
+
+# ---- money -----------------------------------------------------------------
+allow run_tool(Agent, Tool):
+    in(Tool, "send_money", "schedule_transaction")
+    arg("input.recipient", Recipient)
+    trusted_recipient(Recipient)
+
+require_approval run_tool(Agent, Tool):
+    in(Tool, "send_money", "schedule_transaction")
+    arg("input.recipient", Recipient)
+    not trusted_recipient(Recipient)
+
+# Updating an amount on an existing schedule is routine.  Changing its payee is not.
+allow run_tool(Agent, "update_scheduled_transaction"):
+    arg("input.id", _)
+
+require_approval run_tool(Agent, "update_scheduled_transaction"):
+    arg("input.recipient", Recipient)
+    not trusted_recipient(Recipient)
+
+# ---- credentials and profile ----------------------------------------------
+require_approval run_tool(Agent, Tool):
+    in(Tool, "update_password", "update_user_info")
