@@ -1,0 +1,55 @@
+# OWASP Agentic AI Top 10 coverage policy for YOG.
+#
+# Maps OWASP Agentic AI security risks (ASI01-ASI10) to enforceable YOG v2 rules.
+# Facts supplied by the harness / gateway:
+#   env("context_tainted", true)   -- agent has read untrusted content
+#   env("untrusted_input", true)   -- argument failed extractor / untrusted
+#   tool_risk(tool, risk)          -- "read" | "write" | "exec" | "sensitive" | "admin"
+#   trusted_delegate(agent, scope) -- agent holds delegated scope
+#   arg_tainted(arg, label)        -- argument contains tainted value
+
+version 2
+
+input env(text, bool)
+input tool_risk(text, text)
+input trusted_delegate(text, text)
+input arg_tainted(text, text)
+
+# ASI05: Unexpected Code Execution -- deny raw exec/eval tools.
+deny run_tool(Agent, Tool):
+    tool_risk(Tool, "exec")
+
+# ASI02 / ASI06: Tool Misuse & Memory/Context Poisoning -- deny unparsed/malformed tool args.
+deny run_tool(Agent, Tool):
+    env("untrusted_input", true)
+
+# ASI01 / ASI04: Prompt Injection & Poisoned Tool Output -> block exfiltration when tainted.
+deny run_tool(Agent, Tool):
+    env("context_tainted", true)
+    arg_tainted(Arg, "credential")
+
+deny run_tool(Agent, Tool):
+    env("context_tainted", true)
+    tool_risk(Tool, "admin")
+
+# ASI01 / ASI09: Tainted context + write/sensitive requires human approval.
+require_approval run_tool(Agent, Tool):
+    env("context_tainted", true)
+    tool_risk(Tool, "write")
+
+require_approval run_tool(Agent, Tool):
+    tool_risk(Tool, "sensitive")
+
+require_approval run_tool(Agent, Tool):
+    tool_risk(Tool, "admin")
+
+# ASI03 / ASI07: Identity & Inter-Agent Delegation -- require matching scope for writes.
+allow run_tool(Agent, Tool):
+    tool_risk(Tool, "read")
+    not env("untrusted_input", true)
+
+allow run_tool(Agent, Tool):
+    tool_risk(Tool, "write")
+    trusted_delegate(Agent, "write")
+    not env("context_tainted", true)
+    not env("untrusted_input", true)

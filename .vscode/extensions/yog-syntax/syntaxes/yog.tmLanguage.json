@@ -1,0 +1,50 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "YOG",
+  "scopeName": "source.yog",
+  "patterns": [
+    {
+      "name": "comment.line.number-sign.yog",
+      "match": "#.*$"
+    },
+    {
+      "name": "string.quoted.double.yog",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.yog",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "keyword.control.yog",
+      "match": "\\b(version|input|fact|rule|allow|deny|require_approval|obligate|query|not)\\b"
+    },
+    {
+      "name": "support.function.builtin.yog",
+      "match": "\\b(in|matches|glob|under|starts_with|ends_with|contains|cidr)\\b"
+    },
+    {
+      "name": "storage.type.yog",
+      "match": "\\b(text|int|bool)\\b"
+    },
+    {
+      "name": "constant.language.boolean.yog",
+      "match": "\\b(true|false)\\b"
+    },
+    {
+      "name": "constant.numeric.integer.yog",
+      "match": "\\b-?[0-9]+\\b"
+    },
+    {
+      "name": "variable.other.yog",
+      "match": "\\b[A-Z][A-Za-z0-9_]*\\b"
+    },
+    {
+      "name": "keyword.operator.comparison.yog",
+      "match": "==|!=|<=|>=|<|>"
+    }
+  ]
+}

@@ -69,7 +69,8 @@ class Gateway:
                  state_provider: Optional[Callable[[], Optional[dict]]] = None, audit=None,
                  limiter: Optional[RateLimiter] = None, clock: Callable[[], float] = time.time,
                  ask_user: bool = False, principal_provider: Optional[Callable[[str], Any]] = None,
-                 mode: str = "enforce", schema=None, policy_source: Optional[str] = None):
+                 mode: str = "enforce", schema=None, policy_source: Optional[str] = None,
+                 history=None, flow_tracker=None):
         """``tools`` maps a tool name to ``{"extract": [(argument, extractor), ...]}``.
 
         ``ask_user``: when there is no approval service, report REQUIRE_APPROVAL as ``approval_required`` so the
@@ -100,6 +101,8 @@ class Gateway:
         self._clock = clock
         self._ask_user = ask_user
         self._principals = principal_provider
+        self._history = history
+        self._flow = flow_tracker
         self._tainted: set = set()                     # agents whose context has seen untrusted content
         self._handlers: dict[str, Callable] = {"audit": self._ob_audit, "rate_limit": self._ob_rate_limit,
                                                "max_output_bytes": self._ob_max_output}
@@ -116,11 +119,18 @@ class Gateway:
         state = self._state() if self._state else None
         if state:
             request["state"] = state
+        extra_facts: list = []
         if self._principals is not None:
             principal = self._principals(agent)
             if principal is not None:
                 from .delegation import facts_for
-                request["facts"] = facts_for(principal)   # DelegationError refuses the call
+                extra_facts.extend(facts_for(principal))   # DelegationError refuses the call
+        if self._history is not None:
+            extra_facts.extend(self._history.facts_for(agent, tool, request["now"]))
+        if self._flow is not None:
+            extra_facts.extend(self._flow.inspect_arguments(agent, arguments))
+        if extra_facts:
+            request["facts"] = extra_facts
         return request
 
     # ---------------------------------------------------------------- authorising
@@ -196,6 +206,15 @@ class Gateway:
             # the output of this tool is untrusted content (a web page, a file from outside): once it
             # has been shown to the agent, its context is tainted until a human clears it
             auth.after.append(lambda output, agent=agent: self._taint(agent, output))
+        taint_label = (self._tools.get(tool) or {}).get("taint_output")
+        if self._flow is not None and taint_label:
+            auth.after.append(
+                lambda output, agent=agent, tool=tool, lbl=taint_label: (
+                    self._flow.record_output(agent, tool, output, label=lbl), output
+                )[1]
+            )
+        if self._history is not None:
+            self._history.record(agent, tool, auth.decision, request["now"])
         auth.status = "allowed"
         return self._record(auth)
 

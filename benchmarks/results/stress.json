@@ -1,0 +1,66 @@
+{
+  "generated_at": "2026-11-27T07:45:51+00:00",
+  "openfga_equivalence": {
+    "sizes": {
+      "small": {
+        "checked": 300,
+        "mismatches": 0
+      },
+      "medium": {
+        "checked": 300,
+        "mismatches": 0
+      },
+      "large": {
+        "checked": 300,
+        "mismatches": 0
+      }
+    },
+    "total_checked": 900,
+    "total_mismatches": 0
+  },
+  "concurrent_throughput": [
+    {
+      "threads": 1,
+      "total_calls": 500,
+      "errors": 0,
+      "throughput_per_s": 19226.9,
+      "p50_us": 37.7,
+      "p95_us": 81.5,
+      "p99_us": 305.8
+    },
+    {
+      "threads": 2,
+      "total_calls": 1000,
+      "errors": 0,
+      "throughput_per_s": 21275.5,
+      "p50_us": 37.0,
+      "p95_us": 78.5,
+      "p99_us": 140.9
+    },
+    {
+      "threads": 4,
+      "total_calls": 2000,
+      "errors": 0,
+      "throughput_per_s": 20505.2,
+      "p50_us": 37.5,
+      "p95_us": 92.1,
+      "p99_us": 196.4
+    },
+    {
+      "threads": 8,
+      "total_calls": 4000,
+      "errors": 0,
+      "throughput_per_s": 20017.1,
+      "p50_us": 37.3,
+      "p95_us": 87.3,
+      "p99_us": 194.1
+    }
+  ],
+  "memory_ceiling": {
+    "facts": 2000,
+    "decision": "ALLOW",
+    "current_kb": 1071.6,
+    "peak_kb": 2792.8,
+    "yogc_validated": true
+  }
+}

@@ -276,6 +276,11 @@ def main(argv=None) -> int:
     p.add_argument("file"); p.add_argument("-o", "--out")
     p.add_argument("--actions", help="comma-separated action names, for policies whose action is unconstrained")
     p.set_defaults(run=cmd_import_cedar)
+    p = sub.add_parser("repl", help="interactive policy REPL and trace debugger")
+    p.add_argument("file", nargs="?")
+    p.set_defaults(run=lambda a: __import__("yog_platform.repl", fromlist=["run_repl"]).run_repl(a.file))
+    p = sub.add_parser("lsp", help="start stdio Language Server Protocol server")
+    p.set_defaults(run=lambda _a: __import__("yog_platform.lsp", fromlist=["serve_stdio"]).serve_stdio())
 
     p = sub.add_parser("bundle"); p.set_defaults(run=cmd_bundle)
     bsub = p.add_subparsers(dest="action", required=True)

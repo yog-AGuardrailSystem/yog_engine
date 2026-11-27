@@ -13,6 +13,7 @@ if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 from benchmarks.agent_security.agentdojo_adapter import facts_for_environment  # noqa: E402
+from benchmarks.agent_security.evaluate_owasp import evaluate_owasp  # noqa: E402
 from benchmarks.agent_security.guard import (  # noqa: E402
     ToolGuard,
     facts_array,
@@ -85,10 +86,18 @@ def test_all_benchmark_policies_compile_and_decide():
         "agentdojo_slack",
         "agentdojo_travel",
         "injecagent_least_privilege",
+        "owasp_agentic",
     ):
         guard = ToolGuard(load_policy(name))
         dec = guard.check("unknown_tool", {})
         assert dec.decision in ("ALLOW", "DENY", "REQUIRE_APPROVAL")
+
+
+def test_owasp_agentic_coverage_suite():
+    report = evaluate_owasp()
+    assert report["scenarios_passed"] == report["scenarios_total"]
+    assert report["attack_interception_rate"] == 1.0
+    assert report["benign_utility_rate"] == 1.0
 
 
 def test_banking_and_injecagent_guard_decisions():

@@ -1,0 +1,35 @@
+{
+  "name": "yog-syntax",
+  "displayName": "YOG Policy Language",
+  "description": "Syntax highlighting for YOG (.yog) agent authorization policies",
+  "version": "0.2.0",
+  "publisher": "yog-project",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "yog",
+        "aliases": [
+          "YOG",
+          "yog"
+        ],
+        "extensions": [
+          ".yog"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "yog",
+        "scopeName": "source.yog",
+        "path": "./syntaxes/yog.tmLanguage.json"
+      }
+    ]
+  }
+}
