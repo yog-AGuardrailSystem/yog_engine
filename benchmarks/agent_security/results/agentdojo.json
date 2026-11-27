@@ -1,8 +1,8 @@
 {
-  "agentdojo_version": "unknown",
+  "agentdojo_version": "0.1.35",
   "benchmark": "AgentDojo",
   "benchmark_version": "v1",
-  "generated_at": "2026-11-26T18:31:38+00:00",
+  "generated_at": "2026-11-27T08:02:16+00:00",
   "measurement": "offline ground-truth policy interception",
   "suites": {
     "banking": {

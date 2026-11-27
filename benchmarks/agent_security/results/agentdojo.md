@@ -1,6 +1,6 @@
 # AgentDojo policy interception (offline)
 
-Generated 2026-11-26T18:31:38+00:00 from AgentDojo unknown, benchmark `v1`.
+Generated 2026-11-27T08:02:16+00:00 from AgentDojo 0.1.35, benchmark `v1`.
 
 This is **not** an attack-success-rate measurement. It runs the benchmark's
 ground-truth user and injection tool calls through a YOG policy, so it answers:

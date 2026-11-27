@@ -1,9 +1,13 @@
-# Agent Security Benchmarks (AgentDojo & InjecAgent)
+# Agent Security Benchmarks
 
 Deterministic, offline policy-interception harnesses for YOG against
 [AgentDojo](https://github.com/ethz-spylab/agentdojo) and
-[InjecAgent](https://github.com/uiuc-kang-lab/InjecAgent), plus a live
-AgentDojo `FunctionsRuntime` adapter.
+[InjecAgent](https://github.com/uiuc-kang-lab/InjecAgent), an OWASP Agentic AI
+(ASI01-ASI10) coverage suite, plus a live AgentDojo `FunctionsRuntime` adapter
+and ASR runner.
+
+The consolidated write-up is
+[`docs/AGENT_SECURITY_REPORT.md`](../../docs/AGENT_SECURITY_REPORT.md).
 
 ## What this measures (and what it does not)
 
@@ -16,11 +20,22 @@ AgentDojo `FunctionsRuntime` adapter.
   - *Interception:* fraction of injection/attack cases where at least one
     attacker call is `DENY` or `REQUIRE_APPROVAL` (not executed without human
     approval).
-- **Not measured:** End-to-end LLM attack success rate (ASR), which depends on
-  the model, prompt, and live environment.
+- **Not measured offline:** End-to-end LLM attack success rate (ASR), which
+  depends on the model, prompt, and live environment. `run_agentdojo_live.py`
+  runs that measurement but needs an API key and has not been run in CI.
 
 Both `agentdojo` and the InjecAgent JSON files are **optional** dependencies.
 Core repository tests run without them.
+
+## Results at a glance
+
+| Suite | Evidence | Result |
+| --- | --- | --- |
+| AgentDojo | 97 benign tasks, 27 injection tasks (26 measurable offline) | Assisted utility 100%; injection interception 24/26 (92.3%) |
+| InjecAgent | 2,108 cases across four datasets | User utility 100%; case interception 100%; hard DENY 56.7% (`dh`) / 3.1% (`ds`) |
+| OWASP Agentic | 12 scenarios (ASI01-ASI10 + 2 benign) | 12/12 pass; 100% attack interception; 100% benign utility |
+| OpenFGA | 900 requests | 0 translation mismatches |
+| Stress | 1-8 threads, 2,000 facts | ~19k-21k ops/s, 0 errors, 2,792.8 KiB peak heap |
 
 ## Commands
 
@@ -44,17 +59,23 @@ Requires InjecAgent's `tools.json` and `test_cases_*.json` (default:
 python benchmarks/agent_security/evaluate_injecagent.py
 ```
 
-Outputs `benchmarks/agent_security/results/injecagent.json` and
-`benchmarks/agent_security/results/injecagent.md`.
+Evaluates all four datasets (`dh_base`, `ds_base`, `dh_enhanced`,
+`ds_enhanced`). Outputs `benchmarks/agent_security/results/injecagent.json`
+and `benchmarks/agent_security/results/injecagent.md`.
+
+### OWASP Agentic AI coverage
+
+```powershell
+python benchmarks/agent_security/evaluate_owasp.py
+```
+
+Outputs `benchmarks/agent_security/results/owasp.json` and
+`benchmarks/agent_security/results/owasp.md`.
 
 ### Validate policies with the C engine
 
 ```powershell
-yog\build\yogc.exe validate benchmarks/agent_security/policies/agentdojo_banking.yog
-yog\build\yogc.exe validate benchmarks/agent_security/policies/agentdojo_workspace.yog
-yog\build\yogc.exe validate benchmarks/agent_security/policies/agentdojo_slack.yog
-yog\build\yogc.exe validate benchmarks/agent_security/policies/agentdojo_travel.yog
-yog\build\yogc.exe validate benchmarks/agent_security/policies/injecagent_least_privilege.yog
+Get-ChildItem benchmarks/agent_security/policies/*.yog | ForEach-Object { yog\build\yogc.exe validate $_.FullName }
 ```
 
 ## Live AgentDojo pipeline integration
@@ -80,6 +101,32 @@ utility, security = suite.run_task_with_pipeline(
 )
 ```
 
+`run_agentdojo_live.py` wraps this into a model-in-the-loop runner that reports
+utility and ASR with and without the guard:
+
+```powershell
+# No model calls; compiles the policy and prints the plan.
+%TEMP%\yog_ad_venv\Scripts\python.exe benchmarks/agent_security/run_agentdojo_live.py --suite banking --dry-run
+
+# One pair against a real model (needs the provider key).
+$env:OPENAI_API_KEY = "..."
+%TEMP%\yog_ad_venv\Scripts\python.exe benchmarks/agent_security/run_agentdojo_live.py `
+    --suite banking --model gpt-4o-mini-2024-07-18 `
+    --user-task user_task_0 --injection-task injection_task_0 --baseline
+```
+
+## Temporal and information-flow facts
+
+The agent policies can consume platform-projected facts from
+`yog_platform/history.py` and `yog_platform/info_flow.py`:
+
+- `recent_call`, `recent_calls_total`, `last_call_age`, `sequence_followed`
+- `arg_tainted`, `arg_flow`
+
+These are host-level features, not native C VM operators; a policy that needs
+them must run through the gateway (or another host that projects the facts).
+See `tests/platform/test_temporal_and_flow.py`.
+
 ## Limitations
 
 1. **Offline AgentDojo** evaluates ground-truth canonical calls rather than
@@ -90,6 +137,11 @@ utility, security = suite.run_task_with_pipeline(
 2. **Offline InjecAgent** datasets name attacker tools without attacker
    arguments, so `injecagent_least_privilege.yog` classifies tools by name
    (`read`, `sensitive_read`, `write`, `destructive`) rather than inspecting
-   parameters.
+   parameters. The 442 plain `read` attacker calls still pass; closing that
+   needs provenance or information-flow tracking.
 3. **Reference PDP:** The offline harness uses `yog_platform.pdp.ReferencePDP`
    so no C build is required; all policies are also validated with `yogc`.
+4. **No live ASR number:** the live runner exists and its `--dry-run` is
+   tested, but a model run needs an API key and budget.
+5. **OpenFGA** equivalence is against a local tuple-graph evaluator, not a live
+   server.

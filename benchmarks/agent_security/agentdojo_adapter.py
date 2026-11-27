@@ -102,13 +102,16 @@ def facts_for_environment(suite: str, env: Any) -> list[tuple[str, tuple]]:
     return facts
 
 
-def guarded_runtime_class(suite: str, guard: ToolGuard):
+def guarded_runtime_class(suite: str, guard: ToolGuard, decisions: list | None = None):
     """Return a ``FunctionsRuntime`` subclass that consults ``guard``.
 
     The class is built lazily so importing this module does not require
     AgentDojo.  The runtime recomputes facts from the environment on each call,
     so a tool that changes the environment (for example, adding a contact) is
     reflected in the next decision.
+
+    If ``decisions`` is a list, every :class:`Decision` is appended to it so a
+    live runner can report per-call counts without changing the policy.
     """
     from agentdojo.functions_runtime import FunctionsRuntime
 
@@ -116,6 +119,8 @@ def guarded_runtime_class(suite: str, guard: ToolGuard):
         def run_function(self, env, function, kwargs, raise_on_error=False):
             decision: Decision = guard.check(function, dict(kwargs),
                                              facts=facts_for_environment(suite, env) if env is not None else ())
+            if decisions is not None:
+                decisions.append(decision)
             if decision.blocked:
                 message = f"PolicyBlocked: {decision.decision}: {decision.reason}"
                 if raise_on_error:

@@ -22,6 +22,7 @@ from benchmarks.agent_security.guard import (  # noqa: E402
     summarize,
 )
 from benchmarks.agent_security.injecagent import (  # noqa: E402
+    EXPLICIT_CLASSES,
     classify_tool,
     default_data_dir,
     facts_for_tool,
@@ -133,6 +134,60 @@ def test_injecagent_precedence():
     assert classify_tool("GmailSendEmail", toolkit="Gmail") == "write"
     assert classify_tool("NortonIdentitySafeSearchPasswords", toolkit="NortonIdentitySafe") == "sensitive_read"
     assert classify_tool("GoogleSearchWebSearch", toolkit="GoogleSearch") == "read"
+
+
+def test_injecagent_user_tools_are_ordinary_reads():
+    user_tools = (
+        "AmazonGetProductDetails",
+        "EvernoteManagerSearchNotes",
+        "GitHubGetRepositoryDetails",
+        "GitHubGetUserDetails",
+        "GitHubSearchRepositories",
+        "GmailReadEmail",
+        "GmailSearchEmails",
+        "GoogleCalendarGetEventsFromSharedCalendar",
+        "GoogleCalendarReadEvents",
+        "ShopifyGetProductDetails",
+        "TeladocViewReviews",
+        "TodoistSearchTasks",
+        "TwilioGetReceivedSmsMessages",
+        "TwitterManagerGetUserProfile",
+        "TwitterManagerReadTweet",
+        "TwitterManagerSearchTweets",
+        "WebBrowserNavigateTo",
+    )
+    for tool in user_tools:
+        assert classify_tool(tool) == "read", tool
+
+
+def test_every_benchmark_tool_is_in_the_explicit_table():
+    tools_path = os.path.join(default_data_dir(), "tools.json")
+    if not os.path.exists(tools_path):
+        pytest.skip("InjecAgent data not present in %TEMP%\\injecagent")
+    referenced = set()
+    for filename in (
+        "test_cases_dh_base.json",
+        "test_cases_ds_base.json",
+        "test_cases_dh_enhanced.json",
+        "test_cases_ds_enhanced.json",
+    ):
+        path = os.path.join(default_data_dir(), filename)
+        if not os.path.exists(path):
+            continue
+        with open(path, encoding="utf-8") as handle:
+            for case in json.load(handle):
+                referenced.add(str(case.get("User Tool", "")))
+                referenced.update(str(tool) for tool in case.get("Attacker Tools") or [])
+    assert referenced
+    assert referenced - set(EXPLICIT_CLASSES) == set()
+
+
+def test_live_runner_dry_run():
+    if importlib.util.find_spec("agentdojo") is None:
+        pytest.skip("agentdojo not installed")
+    from benchmarks.agent_security.run_agentdojo_live import main as live_main
+
+    assert live_main(["--suite", "banking", "--dry-run"]) == 0
 
 
 def test_optional_agentdojo_offline_smoke():

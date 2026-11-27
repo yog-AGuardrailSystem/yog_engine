@@ -229,11 +229,18 @@ def main(argv=None) -> int:
         print("agentdojo is not installed: pip install agentdojo", file=sys.stderr)
         return 2
 
+    try:
+        from importlib.metadata import version as _package_version
+
+        agentdojo_version = _package_version("agentdojo")
+    except Exception:
+        agentdojo_version = getattr(agentdojo, "__version__", "unknown")
+
     suites = args.suite or list(SUITES)
     report = {
         "benchmark": "AgentDojo",
         "benchmark_version": args.benchmark_version,
-        "agentdojo_version": getattr(agentdojo, "__version__", "unknown"),
+        "agentdojo_version": agentdojo_version,
         "generated_at": _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds"),
         "measurement": "offline ground-truth policy interception",
         "suites": {},

@@ -1,6 +1,6 @@
 # OWASP Agentic AI Security Coverage
 
-Generated 2026-11-27T07:42:17+00:00. Policy: `owasp_agentic`.
+Generated 2026-11-27T08:02:08+00:00. Policy: `owasp_agentic`.
 
 - Scenarios passed: **12/12**
 - Attack interception rate (ASI01–ASI10): **100.0%**

@@ -193,6 +193,7 @@ YOG has the tests above, stated as evidence rather than proof ([`docs/SPEC.md`](
 | [`ROADMAP.md`](docs/ROADMAP.md) | every planned item with its real status |
 | [`COMPILER.md`](docs/COMPILER.md), [`ARCHITECTURE_CHEATSHEET.md`](docs/ARCHITECTURE_CHEATSHEET.md) | compiler internals and a plain-language tour |
 | [`CORRECTNESS.md`](docs/CORRECTNESS.md), [`BENCHMARKS.md`](docs/BENCHMARKS.md), [`PREREGISTRATION.md`](docs/PREREGISTRATION.md), [`BENCHMARK_REVIEW.md`](docs/BENCHMARK_REVIEW.md), [`RESEARCH.md`](docs/RESEARCH.md) | validation, the benchmark study and the research framing |
+| [`AGENT_SECURITY_REPORT.md`](docs/AGENT_SECURITY_REPORT.md) | AgentDojo, InjecAgent, OWASP Agentic, temporal/info-flow and OpenFGA results, with explicit limits |
 | [`RFC_TEMPLATE.md`](docs/RFC_TEMPLATE.md), [`../CONTRIBUTING.md`](CONTRIBUTING.md) | how to propose a language change; how to contribute |
 
 ## Known gaps
@@ -203,7 +204,9 @@ YOG has the tests above, stated as evidence rather than proof ([`docs/SPEC.md`](
 * The WebAssembly build has passed CI once and is non-blocking; the Docker and Kubernetes files are unverified.
 * The `compare` analysis is bounded, and the Z3 proof covers a fragment of the language.
 * The Cedar importer covers a subset (no entity hierarchies or entity attributes).
-* No REPL, language server or editor extension; no long fuzzing campaign.
+* A REPL, language server and VS Code syntax extension exist, but there is no debugger UI and no long fuzzing campaign.
+* The agent-security benchmarks measure offline policy interception, not live LLM attack success; the live ASR runner exists but has not been run with a model.
+* Native C temporal/sequence operators and VM history buffers are not implemented; `yog_platform` projects those facts for the gateway.
 * Only facts are indexed (not rule or decision clauses). The benchmark study found Cedar much faster on large deny and join
   workloads before indexing; that comparison has not been repeated.
 
@@ -213,6 +216,11 @@ The suite separates cold, load, warm and persistent-service boundaries, compares
 runtime, and checks every decision against an independent oracle. On the feature-matched corpus YOG was faster than Casbin
 and the OPA Go SDK in-process, but **Cedar was much faster on large deny and join workloads**, and OPA prepares a large
 policy faster than YOG compiles it. No general superiority is claimed. See [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md).
+
+Agent-facing evidence is separate and deliberately conservative: offline policy interception on AgentDojo and
+InjecAgent, OWASP Agentic AI coverage scenarios, OpenFGA translation equivalence, concurrency and memory ceilings.
+These are **not** live LLM attack-success-rate measurements. See
+[`docs/AGENT_SECURITY_REPORT.md`](docs/AGENT_SECURITY_REPORT.md).
 
 ## Contributing
 

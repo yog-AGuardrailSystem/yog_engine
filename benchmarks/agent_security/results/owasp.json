@@ -2,7 +2,7 @@
   "attack_interception_rate": 1.0,
   "benchmark": "OWASP Agentic AI Security",
   "benign_utility_rate": 1.0,
-  "generated_at": "2026-11-27T07:42:17+00:00",
+  "generated_at": "2026-11-27T08:02:08+00:00",
   "policy": "owasp_agentic",
   "results": [
     {
