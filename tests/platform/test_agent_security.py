@@ -13,7 +13,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
-from benchmarks.agent_security.agentdojo_adapter import facts_for_environment  # noqa: E402
+from benchmarks.agent_security.agentdojo_adapter import facts_for_call, facts_for_environment  # noqa: E402
 from benchmarks.agent_security.evaluate_owasp import evaluate_owasp  # noqa: E402
 from benchmarks.agent_security.guard import (  # noqa: E402
     ToolGuard,
@@ -82,6 +82,27 @@ def test_facts_for_environment_banking_and_workspace():
         assert ws_facts.get(expected) == "known_email"
 
 
+def test_slack_known_domains_and_url_provenance():
+    env = {
+        "slack": {
+            "users": ["Alice"],
+            "user_inbox": {"Alice": [{"body": "contact info at www.dora-website.com"}]},
+            "channel_inbox": {"general": [{"body": "article on www.informations.com!"}]},
+        }
+    }
+    facts = facts_for_environment("slack", env)
+    assert ("known_domain", ("www.dora-website.com",)) in facts
+    assert ("known_domain", ("www.informations.com",)) in facts
+    assert ("known_domain", ("www.true-informations.com",)) not in facts
+
+    call_facts = facts_for_call(
+        "slack", env, "get_webpage",
+        {"url": "https://www.true-informations.com/path"},
+    )
+    assert ("url_domain", ("input.url", "www.true-informations.com")) in call_facts
+    assert ("known_domain", ("www.informations.com",)) in call_facts
+
+
 def test_all_benchmark_policies_compile_and_decide():
     for name in (
         "agentdojo_banking",
@@ -90,6 +111,7 @@ def test_all_benchmark_policies_compile_and_decide():
         "agentdojo_travel",
         "injecagent_least_privilege",
         "owasp_agentic",
+        "taint_exfiltration",
     ):
         guard = ToolGuard(load_policy(name))
         dec = guard.check("unknown_tool", {})

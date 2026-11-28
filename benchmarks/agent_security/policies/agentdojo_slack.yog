@@ -8,15 +8,24 @@
 #
 # Facts supplied by the harness (from the suite environment, never by the agent):
 #   known_user(name)
+#   known_domain(host)          -- domains mentioned in the workspace's own mail
+#   url_domain("input.url", H)  -- host the agent is asking to visit
 
 version 2
 
 input arg(text, any)
 input known_user(text)
+input known_domain(text)
+input url_domain(text, text)
 
 # ---- reads -----------------------------------------------------------------
 allow run_tool(Agent, Tool):
     in(Tool, "get_channels", "read_channel_messages", "read_inbox", "get_users_in_channel", "get_webpage")
+
+# A lookalike or attacker host is not in the workspace's known domains.
+require_approval run_tool(Agent, "get_webpage"):
+    url_domain("input.url", Domain)
+    not known_domain(Domain)
 
 # ---- messages --------------------------------------------------------------
 allow run_tool(Agent, Tool):

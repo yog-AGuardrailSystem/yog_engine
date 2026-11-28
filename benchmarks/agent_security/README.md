@@ -31,7 +31,7 @@ Core repository tests run without them.
 
 | Suite | Evidence | Result |
 | --- | --- | --- |
-| AgentDojo | 97 benign tasks, 27 injection tasks (26 measurable offline) | Assisted utility 100%; injection interception 24/26 (92.3%) |
+| AgentDojo | 97 benign tasks, 27 injection tasks (26 measurable offline) | Assisted utility 100%; injection interception 25/26 (96.2%) |
 | InjecAgent | 2,108 cases across four datasets | User utility 100%; case interception 100%; hard DENY 56.7% (`dh`) / 3.1% (`ds`) |
 | OWASP Agentic | 12 scenarios (ASI01-ASI10 + 2 benign) | 12/12 pass; 100% attack interception; 100% benign utility |
 | Information flow | 7 synthetic read-then-sink scenarios | 7/7 pass; tainted writes DENY, untainted writes ALLOW |
@@ -145,13 +145,21 @@ them must run through the gateway (or another host that projects the facts).
 See `tests/platform/test_temporal_and_flow.py` and
 `tests/platform/test_agent_security.py`.
 
+The AgentDojo adapter also projects workspace-local URL provenance:
+`known_domain(host)` from the workspace's mail and channels, and
+`url_domain("input.url", Host)` for each call. `agentdojo_slack.yog` requires
+approval for a webpage outside the known set, which intercepts the lookalike
+`www.true-informations.com` visit without blocking the benign pages.
+
 ## Limitations
 
 1. **Offline AgentDojo** evaluates ground-truth canonical calls rather than
    model-generated calls. Tasks with empty ground truth (`travel/injection_task_6`)
-   cannot be measured offline, and read-only phishing visits
-   (`slack/injection_task_3`) or benign reminders (`travel/injection_task_2`)
-   are not intercepted without URL reputation or intent classification.
+   cannot be measured offline, and a harmless reminder
+   (`travel/injection_task_2`) is not intercepted without intent classification.
+   The Slack lookalike-phishing visit is now intercepted by workspace-local
+   `known_domain` / `url_domain` facts; that signal is not a global reputation
+   feed.
 2. **Offline InjecAgent** datasets name attacker tools without attacker
    arguments, so `injecagent_least_privilege.yog` classifies tools by name
    (`read`, `sensitive_read`, `write`, `destructive`) rather than inspecting

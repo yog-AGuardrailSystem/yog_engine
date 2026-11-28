@@ -218,9 +218,9 @@ and the OPA Go SDK in-process, but **Cedar was much faster on large deny and joi
 policy faster than YOG compiles it. No general superiority is claimed. See [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md).
 
 Agent-facing evidence is separate and deliberately conservative: offline policy interception on AgentDojo and
-InjecAgent, OWASP Agentic AI coverage scenarios, OpenFGA translation equivalence, concurrency and memory ceilings.
-These are **not** live LLM attack-success-rate measurements. See
-[`docs/AGENT_SECURITY_REPORT.md`](docs/AGENT_SECURITY_REPORT.md).
+InjecAgent, OWASP Agentic AI coverage scenarios, cross-step information flow, workspace-local URL provenance,
+OpenFGA translation equivalence, concurrency and memory ceilings. These are **not** live LLM attack-success-rate
+measurements. See [`docs/AGENT_SECURITY_REPORT.md`](docs/AGENT_SECURITY_REPORT.md).
 
 ## Contributing
 

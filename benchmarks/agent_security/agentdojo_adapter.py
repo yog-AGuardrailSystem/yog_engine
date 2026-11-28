@@ -20,9 +20,35 @@ installed; the offline evaluator does, and the unit tests use stand-ins.
 """
 from __future__ import annotations
 
-from typing import Any, Iterable
+import re
+from typing import Any, Iterable, Mapping
+from urllib.parse import urlsplit
 
 from .guard import Decision, ToolGuard
+
+_URL_RE = re.compile(r"(?:https?://)?(?:www\.)?[A-Za-z0-9][A-Za-z0-9.-]*\.[A-Za-z]{2,}")
+
+
+def _host_from_url(value: str) -> str:
+    """Return the lower-case host of a URL or bare domain, or ``""``."""
+    text = value.strip()
+    if not text:
+        return ""
+    candidate = text if "://" in text else "//" + text
+    try:
+        host = urlsplit(candidate).hostname or ""
+    except ValueError:
+        return ""
+    return host.lower().rstrip(".,;:!?)")
+
+
+def _domains_in_text(text: str) -> set[str]:
+    domains: set[str] = set()
+    for match in _URL_RE.findall(text):
+        host = _host_from_url(match)
+        if host:
+            domains.add(host)
+    return domains
 
 
 def _emails_from_mailbox(inbox: dict) -> set[str]:
@@ -91,6 +117,20 @@ def facts_for_environment(suite: str, env: Any) -> list[tuple[str, tuple]]:
         for user in slack.get("users") or []:
             if isinstance(user, str):
                 facts.append(("known_user", (user,)))
+        # Domains mentioned in the workspace's own mail and channels are
+        # trusted; a lookalike or attacker domain is not in this set.
+        domains: set[str] = set()
+        for inbox_key in ("user_inbox", "channel_inbox"):
+            inbox = slack.get(inbox_key) or {}
+            if not isinstance(inbox, dict):
+                continue
+            for messages in inbox.values():
+                if not isinstance(messages, list):
+                    continue
+                for message in messages:
+                    if isinstance(message, dict) and isinstance(message.get("body"), str):
+                        domains.update(_domains_in_text(message["body"]))
+        facts.extend(("known_domain", (domain,)) for domain in sorted(domains))
         # A user who has been invited but is not in the workspace yet is still a
         # name the policy may want to see; the environment's users list is the
         # authority for "known", so invited-only users go through approval.
@@ -99,6 +139,26 @@ def facts_for_environment(suite: str, env: Any) -> list[tuple[str, tuple]]:
         inbox = data.get("inbox") or {}
         facts.extend(("known_email", (address,)) for address in sorted(_emails_from_mailbox(inbox)))
 
+    return facts
+
+
+def facts_for_call(suite: str, env: Any, function: str,
+                   arguments: Mapping[str, Any]) -> list[tuple[str, tuple]]:
+    """Environment facts plus per-call URL provenance.
+
+    ``url_domain("input.url", Host)`` lets a policy compare the host a tool is
+    about to visit with the workspace's ``known_domain`` facts.  The agent
+    controls the URL, so this fact is only a projection of its argument, not a
+    trust signal by itself.
+    """
+    facts = list(facts_for_environment(suite, env)) if env is not None else []
+    if isinstance(arguments, Mapping):
+        for name in ("url", "href", "link"):
+            value = arguments.get(name)
+            if isinstance(value, str):
+                host = _host_from_url(value)
+                if host:
+                    facts.append(("url_domain", (f"input.{name}", host)))
     return facts
 
 
@@ -117,8 +177,10 @@ def guarded_runtime_class(suite: str, guard: ToolGuard, decisions: list | None =
 
     class GuardedRuntime(FunctionsRuntime):
         def run_function(self, env, function, kwargs, raise_on_error=False):
-            decision: Decision = guard.check(function, dict(kwargs),
-                                             facts=facts_for_environment(suite, env) if env is not None else ())
+            decision: Decision = guard.check(
+                function, dict(kwargs),
+                facts=facts_for_call(suite, env, function, dict(kwargs)) if env is not None else (),
+            )
             if decisions is not None:
                 decisions.append(decision)
             if decision.blocked:
