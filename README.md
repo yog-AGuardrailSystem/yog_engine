@@ -206,7 +206,7 @@ YOG has the tests above, stated as evidence rather than proof ([`docs/SPEC.md`](
 * The Cedar importer covers a subset (no entity hierarchies or entity attributes).
 * A REPL, language server and VS Code syntax extension exist, but there is no debugger UI and no long fuzzing campaign.
 * The agent-security benchmarks measure offline policy interception, not live LLM attack success; the live ASR runner exists but has not been run with a model.
-* Native C temporal/sequence operators and VM history buffers are not implemented; `yog_platform` projects those facts for the gateway.
+* Native C temporal/sequence operators and VM history buffers are not implemented; `yog_platform` projects those facts for the gateway, and the agent-security guard uses host-side taint to gate benchmark sinks.
 * Only facts are indexed (not rule or decision clauses). The benchmark study found Cedar much faster on large deny and join
   workloads before indexing; that comparison has not been repeated.
 

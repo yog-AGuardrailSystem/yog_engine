@@ -4,13 +4,14 @@ Status: working report for the `feat/agent-security-benchmarks` branch. All
 numbers below were produced by the commands in [Reproduce](#reproduce) on
 2026-11-27.
 
-This report covers five separate pieces of evidence:
+This report covers six separate pieces of evidence:
 
 1. **AgentDojo** policy interception (offline, deterministic).
 2. **InjecAgent** least-privilege interception (offline, deterministic).
 3. **OWASP Agentic AI (ASI01-ASI10)** policy coverage scenarios.
-4. **Temporal/history and information-flow** support in `yog_platform`.
-5. **OpenFGA translation equivalence**, concurrency and memory ceilings.
+4. **Temporal/history** support in `yog_platform`.
+5. **Cross-step information flow** with a synthetic read-then-sink evaluator.
+6. **OpenFGA translation equivalence**, concurrency and memory ceilings.
 
 ## The central honesty constraint
 
@@ -151,7 +152,7 @@ Result: **12/12 scenarios pass; 100% attack interception; 100% benign
 utility.** This is a coverage matrix over representative scenarios, not a
 claim that the policy prevents every instance of each OWASP risk.
 
-## 4. Temporal / history and information-flow support
+## 4. Temporal / history support
 
 These are **platform-level** features in `yog_platform/`, not native C lexer,
 parser, IR or VM operators. Policies consume projected facts, so the C core
@@ -164,20 +165,47 @@ stays pure and stateless.
 - `last_call_age(Agent, Tool, AgeSeconds)`
 - `sequence_followed(Agent, PriorTool, CurrentTool, WindowSeconds)`
 
+Tested in `tests/platform/test_temporal_and_flow.py` through the gateway.
+
+**Gap:** the C compiler/VM has no `within` / `after` / `before` / `sequence`
+operators and no history buffer. A policy author must run the gateway (or an
+equivalent host) to get these facts.
+
+## 5. Cross-step information flow
+
 `yog_platform/info_flow.py` tracks labeled values returned by source tools and
 inspects outgoing arguments recursively, emitting:
 
 - `arg_tainted(ArgPath, Label)`
 - `arg_flow(SourceTool, ArgPath, Label)`
 
-Tested in `tests/platform/test_temporal_and_flow.py` through the gateway.
+The benchmark guard adds `taint(Label)` when any argument carries that label, so
+a policy can gate a sink without binding an argument path. The live AgentDojo
+runtime calls `guard.observe()` after every successful tool call, and
+`ToolGuard` accepts an `InfoFlowTracker` plus a `taint_outputs` mapping.
 
-**Gap:** the C compiler/VM has no `within` / `after` / `before` / `sequence`
-operators and no history buffer. Argument-level taint is available to policies
-through facts, but it is not propagated by the VM itself. A policy author must
-run the gateway (or an equivalent host) to get these facts.
+Harness: `benchmarks/agent_security/evaluate_info_flow.py`. Policy:
+`policies/taint_exfiltration.yog`.
 
-## 5. OpenFGA and stress results
+| Scenario | With tracking | Without tracking | Expected |
+| --- | --- | --- | --- |
+| Secret in email body | DENY | ALLOW | DENY |
+| Secret in nested attachment | DENY | ALLOW | DENY |
+| Secret in outbound URL | DENY | ALLOW | DENY |
+| Secret in destructive SQL | DENY | DENY | DENY |
+| Benign write | ALLOW | ALLOW | ALLOW |
+| Source read | ALLOW | ALLOW | ALLOW |
+| Another agent's identical write | ALLOW | ALLOW | ALLOW |
+
+Result: **7/7 scenarios pass.** The core read-then-write sequence is `DENY`
+with tracking and `ALLOW` without it, which is exactly the read-only
+exfiltration gap that tool-level least privilege leaves open.
+
+**Gap:** taint is host-side fact projection, not VM-level propagation. It
+matches recorded string values (exact or substring for tokens of at least
+`min_token_len`) and does not follow base64, encryption or paraphrasing.
+
+## 6. OpenFGA and stress results
 
 Harness: `benchmarks/stress_bench.py`, adapter:
 `benchmarks/adapters/openfga_adapter.py`.
@@ -195,14 +223,15 @@ live OpenFGA server. `OpenFGAHttpClient` exists for a live comparison but no
 server was available. The Linux `bench.yml` numbers are produced by CI and are
 not committed from this machine.
 
-## 6. What is committed vs. what remains
+## 7. What is committed vs. what remains
 
 Implemented and tested on this branch:
 
 - Offline AgentDojo and InjecAgent harnesses with policies, results and tests.
 - Live AgentDojo ASR runner scaffold with a tested `--dry-run`.
 - OWASP Agentic AI coverage suite.
-- Platform-level temporal/history and argument-level information-flow facts.
+- Platform-level temporal/history facts and a cross-step information-flow
+  benchmark with a taint-aware guard and live-runtime hook.
 - OpenFGA translation adapter plus equivalence, concurrency and memory
   benchmarks.
 - Developer tooling from the same branch: REPL, LSP server and VS Code syntax
@@ -212,7 +241,8 @@ Not done, and not claimed:
 
 - Live LLM-in-the-loop ASR. Needs an API key and model budget.
 - Native C temporal/sequence operators and VM history buffers.
-- VM-level cross-step taint propagation (the host projects facts today).
+- VM-level taint propagation; the host projects the facts today, and the
+  benchmark now exercises that path.
 - Live OpenFGA server comparison.
 - Committed Linux benchmark numbers (requires a CI run).
 - URL reputation / intent classification, which the remaining AgentDojo misses
@@ -230,6 +260,9 @@ python benchmarks/agent_security/evaluate_injecagent.py
 # OWASP Agentic AI coverage
 python benchmarks/agent_security/evaluate_owasp.py
 
+# Cross-step information flow (synthetic)
+python benchmarks/agent_security/evaluate_info_flow.py
+
 # OpenFGA equivalence, concurrency and memory
 python benchmarks/stress_bench.py
 
@@ -245,4 +278,5 @@ Machine-readable results live next to this report's sources:
 - `benchmarks/agent_security/results/agentdojo.{json,md}`
 - `benchmarks/agent_security/results/injecagent.{json,md}`
 - `benchmarks/agent_security/results/owasp.{json,md}`
+- `benchmarks/agent_security/results/info_flow.{json,md}`
 - `benchmarks/results/stress.{json,md}`

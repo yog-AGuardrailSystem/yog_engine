@@ -1,6 +1,6 @@
 # YOG Roadmap
 
-Status: draft for team review. Baseline: `main` at `1306ac2`.
+Status: draft for team review. Baseline: `main` at `749c5c8`.
 
 YOG is the **policy decision point (PDP)** for agents calling MCP tools. It returns
 `ALLOW`, `DENY` or `REQUIRE_APPROVAL` (plus obligations). It never executes tools
@@ -162,7 +162,7 @@ Every feature merges with spec text, conformance cases, a reference-interpreter 
 - `benchmarks/run_benchmarks.py` and `benchmarks/compare.py`
 - Demo/pilot: scripted agent scenario and red-team suite in CI on Linux, Windows and macOS
 
-## 8. Status (updated with each commit on `feat/yog-v2`)
+## 8. Status (updated with each commit on the active feature branch)
 
 Legend: **done** = implemented, tested locally and in this branch; **partial** = some of the item is
 done (see note); **unverified** = written but not built or run on this machine; **todo** = not started.
@@ -177,9 +177,9 @@ items can only be verified by CI or on another machine.
 | P0-4 (a-d) | done | Apache-2.0, single version, `reference/yog_ref.py`, .gitignore |
 | P0-5 | done | step/depth/solution/time/memory limits |
 | P0-9 | done | roadmap aligned |
-| P1-1 | partial | `version`, `input`, bool, typed context done; JSON request loader: todo |
+| P1-1 | done | `version`, `input`, bool, typed context and the strict JSON request loader (see P1-1 JSON) |
 | P1-2 | done | `require_approval`, obligations, lattice, exit code 4, API/yogc |
-| P1-3 | partial | in, matches, glob, under, starts_with, ends_with, contains, cidr (IPv4 only) |
+| P1-3 | done | in, matches, glob, under, starts_with, ends_with, contains, cidr (IPv4 and IPv6, see F9a) |
 | P1-6 | done | reference interpreter rewritten; `diff_v2.py` (81 curated + 3,000 random per seed) |
 | P1-1 (JSON) | done | `yog_check_json`, strict JSON reader, typed flattening, `yogc check-json` / `batch-json`; 161 checks in `test_json` |
 | P0-1/2/3 | done | `docs/SPEC.md`, `INTERFACES.md`, `THREAT_MODEL.md`, `RFC_TEMPLATE.md` written to match the implementation |
@@ -200,9 +200,9 @@ items can only be verified by CI or on another machine.
 | P3-8 | partial | Python tooling (`python -m yog_platform`): formatter (idempotent, meaning-preserving), static analysis (A001-A013), `.yogtest` runner with clause coverage, policy diff, bundle keygen/build/verify, `serve`, interactive REPL (`repl.py`), LSP server (`lsp.py`) and a VS Code syntax extension (`.vscode/extensions/yog-syntax`). Not done: a C-level `yogc fmt/analyze` and a full debugger UI |
 | P2-1 | partial | structured trace converter (`yog_platform/trace.py`); the engine still emits text traces |
 
-| P3-10 | partial | Claude Code `PreToolUse` hook (`yog_platform/claude_hook.py`, `examples/claude_code/guard.yog`); shell extractor now exposes `arg` words so `cat .env` is caught. Not done: LangChain/OpenAI/Rust adapters |
+| P3-10 | done (stand-ins) | Claude Code `PreToolUse` hook (`yog_platform/claude_hook.py`, `examples/claude_code/guard.yog`) plus framework-independent, LangChain-style, OpenAI Agents SDK and Rust `GuardedTool` adapters (F9c/F9d). Stand-in tests; real LangChain/OpenAI libraries are not verified locally |
 | P4-2 | unverified | `deploy/Dockerfile`, `deploy/kubernetes/sidecar.yaml` written without a container runtime |
-| P4-4/P4-5 | partial | state contract and failure behaviour documented in `docs/OPERATIONS.md`; metrics endpoint exists, no OpenTelemetry |
+| P4-4/P4-5 | partial | state contract and failure behaviour documented in `docs/OPERATIONS.md`; metrics endpoint, decision log and OTLP/HTTP metrics exporter exist (F6); OpenTelemetry traces are not implemented |
 | P0-10 | partial | `CONTRIBUTING.md` added; no repo triage report |
 | F4 | done | delegation chains: gateway builds `acting_for`/`delegated`/`has_scope`/`chain_depth` facts from a trusted `Principal`; scopes only narrow (`yog_platform/delegation.py`, `examples/ai_guardrails/delegation.yog`) |
 | F1 | done | shadow (log-only) mode in gateway, sidecar (`--shadow`) and Claude hook; documented in OPERATIONS.md |
@@ -220,5 +220,5 @@ items can only be verified by CI or on another machine.
 | F-docs | done | `docs/COMPARISON.md`: feature table against Cedar, OPA, OpenFGA and the agent-guardrail products, what YOG matches, what it does not claim, sources |
 | P2-2 | partial | first-argument index over facts (see F9b); not done: indexing of rule and decision clauses, a name-and-arity hash for predicate lookup |
 | F10 | done (offline) | Agent security benchmarks: AgentDojo + InjecAgent offline policy interception (all four InjecAgent datasets), OWASP ASI01-ASI10 coverage, live AgentDojo ASR runner with a tested `--dry-run`. The live ASR number is **not** claimed because no model run has been made; see `docs/AGENT_SECURITY_REPORT.md` |
-| F11 | partial | temporal/history and argument-level information-flow facts in `yog_platform/history.py` and `info_flow.py`, projected for the gateway. Not native C lexer/parser/IR/VM operators and no VM history buffer |
+| F11 | partial | temporal/history and argument-level information-flow facts in `yog_platform/history.py` and `info_flow.py`, projected for the gateway. The agent-security guard now records tool outputs and enforces tainted sinks; `evaluate_info_flow.py` shows a tainted write `DENY` vs `ALLOW` without tracking. Not native C lexer/parser/IR/VM operators and no VM history buffer |
 | F12 | done (local evaluator) | OpenFGA translation adapter plus equivalence (900 requests, 0 mismatches), concurrency (~19k-21k ops/s) and memory-ceiling (2,792.8 KiB) benchmarks. Not compared against a live OpenFGA server |

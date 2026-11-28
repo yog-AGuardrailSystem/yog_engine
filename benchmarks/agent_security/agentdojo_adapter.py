@@ -126,7 +126,13 @@ def guarded_runtime_class(suite: str, guard: ToolGuard, decisions: list | None =
                 if raise_on_error:
                     raise PermissionError(message)
                 return "", message
-            return super().run_function(env, function, kwargs, raise_on_error)
+            result = super().run_function(env, function, kwargs, raise_on_error)
+            output, error = result if isinstance(result, tuple) and len(result) == 2 else (result, None)
+            if error is None:
+                # Cross-step information flow: a source tool's output becomes
+                # tainted values that later calls are checked against.
+                guard.observe(function, output)
+            return result
 
     GuardedRuntime.__name__ = f"YogGuarded{suite.title()}Runtime"
     return GuardedRuntime

@@ -3,8 +3,8 @@
 Deterministic, offline policy-interception harnesses for YOG against
 [AgentDojo](https://github.com/ethz-spylab/agentdojo) and
 [InjecAgent](https://github.com/uiuc-kang-lab/InjecAgent), an OWASP Agentic AI
-(ASI01-ASI10) coverage suite, plus a live AgentDojo `FunctionsRuntime` adapter
-and ASR runner.
+(ASI01-ASI10) coverage suite and a cross-step information-flow evaluator, plus
+a live AgentDojo `FunctionsRuntime` adapter and ASR runner.
 
 The consolidated write-up is
 [`docs/AGENT_SECURITY_REPORT.md`](../../docs/AGENT_SECURITY_REPORT.md).
@@ -34,6 +34,7 @@ Core repository tests run without them.
 | AgentDojo | 97 benign tasks, 27 injection tasks (26 measurable offline) | Assisted utility 100%; injection interception 24/26 (92.3%) |
 | InjecAgent | 2,108 cases across four datasets | User utility 100%; case interception 100%; hard DENY 56.7% (`dh`) / 3.1% (`ds`) |
 | OWASP Agentic | 12 scenarios (ASI01-ASI10 + 2 benign) | 12/12 pass; 100% attack interception; 100% benign utility |
+| Information flow | 7 synthetic read-then-sink scenarios | 7/7 pass; tainted writes DENY, untainted writes ALLOW |
 | OpenFGA | 900 requests | 0 translation mismatches |
 | Stress | 1-8 threads, 2,000 facts | ~19k-21k ops/s, 0 errors, 2,792.8 KiB peak heap |
 
@@ -71,6 +72,17 @@ python benchmarks/agent_security/evaluate_owasp.py
 
 Outputs `benchmarks/agent_security/results/owasp.json` and
 `benchmarks/agent_security/results/owasp.md`.
+
+### Cross-step information flow (synthetic)
+
+```powershell
+python benchmarks/agent_security/evaluate_info_flow.py
+```
+
+Runs a source tool, records its output in `yog_platform.info_flow`, then checks
+later sinks. The same write is `ALLOW` without tracking and `DENY` with it.
+Outputs `benchmarks/agent_security/results/info_flow.json` and
+`benchmarks/agent_security/results/info_flow.md`.
 
 ### Validate policies with the C engine
 
@@ -121,11 +133,17 @@ The agent policies can consume platform-projected facts from
 `yog_platform/history.py` and `yog_platform/info_flow.py`:
 
 - `recent_call`, `recent_calls_total`, `last_call_age`, `sequence_followed`
-- `arg_tainted`, `arg_flow`
+- `arg_tainted`, `arg_flow`, `taint`
+
+`ToolGuard` accepts an `InfoFlowTracker` and a `taint_outputs` mapping. The live
+AgentDojo runtime calls `guard.observe()` after every successful tool call, so a
+source tool's output taints later arguments. The synthetic evaluator uses this
+path with `policies/taint_exfiltration.yog`.
 
 These are host-level features, not native C VM operators; a policy that needs
 them must run through the gateway (or another host that projects the facts).
-See `tests/platform/test_temporal_and_flow.py`.
+See `tests/platform/test_temporal_and_flow.py` and
+`tests/platform/test_agent_security.py`.
 
 ## Limitations
 
@@ -137,11 +155,15 @@ See `tests/platform/test_temporal_and_flow.py`.
 2. **Offline InjecAgent** datasets name attacker tools without attacker
    arguments, so `injecagent_least_privilege.yog` classifies tools by name
    (`read`, `sensitive_read`, `write`, `destructive`) rather than inspecting
-   parameters. The 442 plain `read` attacker calls still pass; closing that
-   needs provenance or information-flow tracking.
+   parameters. The 442 plain `read` attacker calls still pass. The synthetic
+   information-flow evaluator closes the read-then-write sequence, but
+   InjecAgent itself cannot exercise it without arguments.
 3. **Reference PDP:** The offline harness uses `yog_platform.pdp.ReferencePDP`
    so no C build is required; all policies are also validated with `yogc`.
 4. **No live ASR number:** the live runner exists and its `--dry-run` is
    tested, but a model run needs an API key and budget.
 5. **OpenFGA** equivalence is against a local tuple-graph evaluator, not a live
    server.
+6. **Information flow** matches recorded string values (exact or substring for
+   tokens of at least `min_token_len`). It does not follow base64, encryption or
+   paraphrasing, and it is host-side fact projection rather than VM-level taint.

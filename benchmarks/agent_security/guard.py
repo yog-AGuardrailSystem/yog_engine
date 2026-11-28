@@ -30,6 +30,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
+from yog_platform.info_flow import InfoFlowTracker  # noqa: E402
 from yog_platform.pdp import ReferencePDP  # noqa: E402
 
 POLICY_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "policies")
@@ -111,13 +112,40 @@ class Decision:
 
 
 class ToolGuard:
-    """Evaluate ``run_tool(Agent, Tool)`` with the agent's arguments as ``arg("input.*")``."""
+    """Evaluate ``run_tool(Agent, Tool)`` with the agent's arguments as ``arg("input.*")``.
 
-    def __init__(self, policy: str, *, action: str = "run_tool", actor: str = "agent"):
+    If a :class:`InfoFlowTracker` is supplied, strings returned by tools listed
+    in ``taint_outputs`` are recorded and later projected into the request as
+    ``arg_tainted`` / ``arg_flow`` facts.  A ``taint(Label)`` fact is also added
+    when any argument carries that label, so a policy can gate a write without
+    binding an argument path.  This mirrors the production gateway and makes
+    cross-step exfiltration testable without changing the pure C core.
+    """
+
+    def __init__(self, policy: str, *, action: str = "run_tool", actor: str = "agent",
+                 flow: Optional[InfoFlowTracker] = None,
+                 taint_outputs: Optional[Mapping[str, str]] = None):
         self.policy = policy
         self.action = action
         self.actor = actor
         self._pdp = ReferencePDP(policy)
+        self.flow = flow
+        self.taint_outputs = dict(taint_outputs or {})
+
+    def _flow_facts(self, arguments: Optional[Mapping[str, Any]]) -> list[tuple[str, list]]:
+        if self.flow is None:
+            return []
+        entries = self.flow.inspect_arguments(self.actor, dict(arguments or {}))
+        facts: list[tuple[str, list]] = [
+            (entry["predicate"], list(entry["args"])) for entry in entries
+        ]
+        labels = {
+            entry["args"][1]
+            for entry in entries
+            if entry["predicate"] == "arg_tainted" and len(entry["args"]) == 2
+        }
+        facts.extend(("taint", [label]) for label in sorted(labels))
+        return facts
 
     def check(self, tool: str, arguments: Optional[Mapping[str, Any]] = None,
               facts: Iterable[tuple[str, Iterable[Any]]] = ()) -> Decision:
@@ -127,7 +155,7 @@ class ToolGuard:
                 "action": self.action,
                 "resource": tool,
                 "args": {"input": sanitize_arguments(dict(arguments or {}))},
-                "facts": facts_array(facts),
+                "facts": facts_array([*facts, *self._flow_facts(arguments)]),
             }
         except Exception as exc:                       # an argument we cannot represent is a refusal
             return Decision("DENY", f"malformed tool call: {type(exc).__name__}: {exc}")
@@ -147,6 +175,19 @@ class ToolGuard:
             return Decision("DENY", f"unknown decision {decision!r}", request=request)
         obligations = result.get("obligations") if isinstance(result.get("obligations"), list) else []
         return Decision(decision, str(result.get("reason", "")), obligations, request)
+
+    def observe(self, tool: str, output: Any) -> None:
+        """Record a successful tool output for later cross-step taint checks."""
+        if self.flow is None:
+            return
+        label = self.taint_outputs.get(tool)
+        if label:
+            self.flow.record_output(self.actor, tool, output, label=label)
+
+    def reset_taint(self) -> None:
+        """Clear this agent's recorded values (for example, after human review)."""
+        if self.flow is not None:
+            self.flow.clear(self.actor)
 
     def check_json(self, request: Mapping[str, Any]) -> Decision:
         """Check a raw YOG request (used by tests and the InjecAgent loader)."""

